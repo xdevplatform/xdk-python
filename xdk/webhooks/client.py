@@ -21,16 +21,16 @@ import time
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    CreateStreamLinkResponse,
-    DeleteStreamLinkResponse,
+    GetStreamLinksResponse,
     CreateWebhookReplayJobRequest,
     CreateWebhookReplayJobResponse,
-    GetStreamLinksResponse,
     GetResponse,
     CreateRequest,
     CreateResponse,
     ValidateResponse,
     DeleteResponse,
+    CreateStreamLinkResponse,
+    DeleteStreamLinkResponse,
 )
 
 
@@ -42,81 +42,16 @@ class WebhooksClient:
         self.client = client
 
 
-    def create_stream_link(
+    def get_stream_links(
         self,
-        webhook_id: Any,
-        tweet_fields: str = None,
-        expansions: str = None,
-        media_fields: str = None,
-        poll_fields: str = None,
-        user_fields: str = None,
-        place_fields: str = None,
-    ) -> CreateStreamLinkResponse:
+    ) -> GetStreamLinksResponse:
         """
-        Create stream link
-        Creates a link to deliver FilteredStream events to the given webhook.
-        Args:
-            webhook_id: The webhook ID to link to your FilteredStream ruleset.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            Returns:
-            CreateStreamLinkResponse: Response data
+        Get stream links
+        Get a list of webhook links associated with a filtered stream ruleset.
+        Returns:
+            GetStreamLinksResponse: Response data
         """
-        url = self.client.base_url + "/2/tweets/search/webhooks/{webhook_id}"
-        url = url.replace("{webhook_id}", str(webhook_id))
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if tweet_fields is not None:
-            params["tweet.fields"] = tweet_fields
-        if expansions is not None:
-            params["expansions"] = expansions
-        if media_fields is not None:
-            params["media.fields"] = media_fields
-        if poll_fields is not None:
-            params["poll.fields"] = poll_fields
-        if user_fields is not None:
-            params["user.fields"] = user_fields
-        if place_fields is not None:
-            params["place.fields"] = place_fields
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateStreamLinkResponse.model_validate(response_data)
-
-
-    def delete_stream_link(self, webhook_id: Any) -> DeleteStreamLinkResponse:
-        """
-        Delete stream link
-        Deletes a link from FilteredStream events to the given webhook.
-        Args:
-            webhook_id: The webhook ID to link to your FilteredStream ruleset.
-            Returns:
-            DeleteStreamLinkResponse: Response data
-        """
-        url = self.client.base_url + "/2/tweets/search/webhooks/{webhook_id}"
-        url = url.replace("{webhook_id}", str(webhook_id))
+        url = self.client.base_url + "/2/tweets/search/webhooks"
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -130,7 +65,7 @@ class WebhooksClient:
         # Prepare request data
         json_data = None
         # Make the request
-        response = self.client.session.delete(
+        response = self.client.session.get(
             url,
             params=params,
             headers=headers,
@@ -140,7 +75,7 @@ class WebhooksClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteStreamLinkResponse.model_validate(response_data)
+        return GetStreamLinksResponse.model_validate(response_data)
 
 
     def create_webhook_replay_job(
@@ -186,42 +121,6 @@ class WebhooksClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return CreateWebhookReplayJobResponse.model_validate(response_data)
-
-
-    def get_stream_links(
-        self,
-    ) -> GetStreamLinksResponse:
-        """
-        Get stream links
-        Get a list of webhook links associated with a filtered stream ruleset.
-        Returns:
-            GetStreamLinksResponse: Response data
-        """
-        url = self.client.base_url + "/2/tweets/search/webhooks"
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetStreamLinksResponse.model_validate(response_data)
 
 
     def get(self, webhook_config_fields: List = None) -> GetResponse:
@@ -379,3 +278,104 @@ class WebhooksClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return DeleteResponse.model_validate(response_data)
+
+
+    def create_stream_link(
+        self,
+        webhook_id: Any,
+        tweet_fields: str = None,
+        expansions: str = None,
+        media_fields: str = None,
+        poll_fields: str = None,
+        user_fields: str = None,
+        place_fields: str = None,
+    ) -> CreateStreamLinkResponse:
+        """
+        Create stream link
+        Creates a link to deliver FilteredStream events to the given webhook.
+        Args:
+            webhook_id: The webhook ID to link to your FilteredStream ruleset.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            Returns:
+            CreateStreamLinkResponse: Response data
+        """
+        url = self.client.base_url + "/2/tweets/search/webhooks/{webhook_id}"
+        url = url.replace("{webhook_id}", str(webhook_id))
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if tweet_fields is not None:
+            params["tweet.fields"] = tweet_fields
+        if expansions is not None:
+            params["expansions"] = expansions
+        if media_fields is not None:
+            params["media.fields"] = media_fields
+        if poll_fields is not None:
+            params["poll.fields"] = poll_fields
+        if user_fields is not None:
+            params["user.fields"] = user_fields
+        if place_fields is not None:
+            params["place.fields"] = place_fields
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return CreateStreamLinkResponse.model_validate(response_data)
+
+
+    def delete_stream_link(self, webhook_id: Any) -> DeleteStreamLinkResponse:
+        """
+        Delete stream link
+        Deletes a link from FilteredStream events to the given webhook.
+        Args:
+            webhook_id: The webhook ID to link to your FilteredStream ruleset.
+            Returns:
+            DeleteStreamLinkResponse: Response data
+        """
+        url = self.client.base_url + "/2/tweets/search/webhooks/{webhook_id}"
+        url = url.replace("{webhook_id}", str(webhook_id))
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteStreamLinkResponse.model_validate(response_data)

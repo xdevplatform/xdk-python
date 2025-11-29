@@ -34,24 +34,6 @@ class CreateReplayJobResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for delete_subscription
-
-
-class DeleteSubscriptionResponse(BaseModel):
-    """Response model for delete_subscription"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for get_subscription_count
-
-
-class GetSubscriptionCountResponse(BaseModel):
-    """Response model for get_subscription_count"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
 # Models for validate_subscription
 
 
@@ -72,5 +54,23 @@ class CreateSubscriptionRequest(BaseModel):
 
 class CreateSubscriptionResponse(BaseModel):
     """Response model for create_subscription"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for get_subscription_count
+
+
+class GetSubscriptionCountResponse(BaseModel):
+    """Response model for get_subscription_count"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for delete_subscription
+
+
+class DeleteSubscriptionResponse(BaseModel):
+    """Response model for delete_subscription"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")

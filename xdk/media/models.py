@@ -16,17 +16,17 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
-# Models for initialize_upload
+# Models for append_upload
 
 
-class InitializeUploadRequest(BaseModel):
-    """Request model for initialize_upload"""
+class AppendUploadRequest(BaseModel):
+    """Request model for append_upload"""
 
     model_config = ConfigDict(populate_by_name=True)
 
 
-class InitializeUploadResponse(BaseModel):
-    """Response model for initialize_upload"""
+class AppendUploadResponse(BaseModel):
+    """Response model for append_upload"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -61,39 +61,6 @@ class DeleteSubtitlesResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for get_by_keys
-
-
-class GetByKeysResponse(BaseModel):
-    """Response model for get_by_keys"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for append_upload
-
-
-class AppendUploadRequest(BaseModel):
-    """Request model for append_upload"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AppendUploadResponse(BaseModel):
-    """Response model for append_upload"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for get_by_key
-
-
-class GetByKeyResponse(BaseModel):
-    """Response model for get_by_key"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
 # Models for get_upload_status
 
 
@@ -118,6 +85,15 @@ class UploadResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+# Models for finalize_upload
+
+
+class FinalizeUploadResponse(BaseModel):
+    """Response model for finalize_upload"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 # Models for create_metadata
 
 
@@ -133,11 +109,17 @@ class CreateMetadataResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for finalize_upload
+# Models for initialize_upload
 
 
-class FinalizeUploadResponse(BaseModel):
-    """Response model for finalize_upload"""
+class InitializeUploadRequest(BaseModel):
+    """Request model for initialize_upload"""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class InitializeUploadResponse(BaseModel):
+    """Response model for initialize_upload"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -147,5 +129,23 @@ class FinalizeUploadResponse(BaseModel):
 
 class GetAnalyticsResponse(BaseModel):
     """Response model for get_analytics"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for get_by_keys
+
+
+class GetByKeysResponse(BaseModel):
+    """Response model for get_by_keys"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for get_by_key
+
+
+class GetByKeyResponse(BaseModel):
+    """Response model for get_by_key"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")

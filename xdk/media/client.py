@@ -21,23 +21,23 @@ import time
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    InitializeUploadRequest,
-    InitializeUploadResponse,
+    AppendUploadRequest,
+    AppendUploadResponse,
     CreateSubtitlesRequest,
     CreateSubtitlesResponse,
     DeleteSubtitlesRequest,
     DeleteSubtitlesResponse,
-    GetByKeysResponse,
-    AppendUploadRequest,
-    AppendUploadResponse,
-    GetByKeyResponse,
     GetUploadStatusResponse,
     UploadRequest,
     UploadResponse,
+    FinalizeUploadResponse,
     CreateMetadataRequest,
     CreateMetadataResponse,
-    FinalizeUploadResponse,
+    InitializeUploadRequest,
+    InitializeUploadResponse,
     GetAnalyticsResponse,
+    GetByKeysResponse,
+    GetByKeyResponse,
 )
 
 
@@ -49,17 +49,20 @@ class MediaClient:
         self.client = client
 
 
-    def initialize_upload(
-        self, body: Optional[InitializeUploadRequest] = None
-    ) -> InitializeUploadResponse:
+    def append_upload(
+        self, id: Any, body: Optional[AppendUploadRequest] = None
+    ) -> AppendUploadResponse:
         """
-        Initialize media upload
-        Initializes a media upload.
-        body: Request body
+        Append Media upload
+        Appends data to a Media upload request.
+        Args:
+            id: The media identifier for the media to perform the append operation.
+            body: Request body
         Returns:
-            InitializeUploadResponse: Response data
+            AppendUploadResponse: Response data
         """
-        url = self.client.base_url + "/2/media/upload/initialize"
+        url = self.client.base_url + "/2/media/upload/{id}/append"
+        url = url.replace("{id}", str(id))
         # Ensure we have a valid access token
         if self.client.oauth2_auth and self.client.token:
             # Check if token needs refresh
@@ -96,7 +99,7 @@ class MediaClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return InitializeUploadResponse.model_validate(response_data)
+        return AppendUploadResponse.model_validate(response_data)
 
 
     def create_subtitles(
@@ -199,152 +202,6 @@ class MediaClient:
         return DeleteSubtitlesResponse.model_validate(response_data)
 
 
-    def get_by_keys(
-        self, media_keys: List, media_fields: List = None
-    ) -> GetByKeysResponse:
-        """
-        Get Media by media keys
-        Retrieves details of Media files by their media keys.
-        Args:
-            media_keys: A comma separated list of Media Keys. Up to 100 are allowed in a single request.
-            media_fields: A comma separated list of Media fields to display.
-            Returns:
-            GetByKeysResponse: Response data
-        """
-        url = self.client.base_url + "/2/media"
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        if media_keys is not None:
-            params["media_keys"] = ",".join(str(item) for item in media_keys)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByKeysResponse.model_validate(response_data)
-
-
-    def append_upload(
-        self, id: Any, body: Optional[AppendUploadRequest] = None
-    ) -> AppendUploadResponse:
-        """
-        Append Media upload
-        Appends data to a Media upload request.
-        Args:
-            id: The media identifier for the media to perform the append operation.
-            body: Request body
-        Returns:
-            AppendUploadResponse: Response data
-        """
-        url = self.client.base_url + "/2/media/upload/{id}/append"
-        url = url.replace("{id}", str(id))
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        else:
-            response = self.client.session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return AppendUploadResponse.model_validate(response_data)
-
-
-    def get_by_key(self, media_key: Any, media_fields: List = None) -> GetByKeyResponse:
-        """
-        Get Media by media key
-        Retrieves details of a specific Media file by its media key.
-        Args:
-            media_key: A single Media Key.
-            media_fields: A comma separated list of Media fields to display.
-            Returns:
-            GetByKeyResponse: Response data
-        """
-        url = self.client.base_url + "/2/media/{media_key}"
-        url = url.replace("{media_key}", str(media_key))
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByKeyResponse.model_validate(response_data)
-
-
     def get_upload_status(
         self, media_id: Any, command: str = None
     ) -> GetUploadStatusResponse:
@@ -440,6 +297,47 @@ class MediaClient:
         return UploadResponse.model_validate(response_data)
 
 
+    def finalize_upload(self, id: Any) -> FinalizeUploadResponse:
+        """
+        Finalize Media upload
+        Finalizes a Media upload request.
+        Args:
+            id: The media id of the targeted media to finalize.
+            Returns:
+            FinalizeUploadResponse: Response data
+        """
+        url = self.client.base_url + "/2/media/upload/{id}/finalize"
+        url = url.replace("{id}", str(id))
+        # Ensure we have a valid access token
+        if self.client.oauth2_auth and self.client.token:
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        if self.client.oauth2_session:
+            response = self.client.oauth2_session.post(
+                url,
+                params=params,
+                headers=headers,
+            )
+        else:
+            response = self.client.session.post(
+                url,
+                params=params,
+                headers=headers,
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return FinalizeUploadResponse.model_validate(response_data)
+
+
     def create_metadata(
         self, body: Optional[CreateMetadataRequest] = None
     ) -> CreateMetadataResponse:
@@ -490,17 +388,17 @@ class MediaClient:
         return CreateMetadataResponse.model_validate(response_data)
 
 
-    def finalize_upload(self, id: Any) -> FinalizeUploadResponse:
+    def initialize_upload(
+        self, body: Optional[InitializeUploadRequest] = None
+    ) -> InitializeUploadResponse:
         """
-        Finalize Media upload
-        Finalizes a Media upload request.
-        Args:
-            id: The media id of the targeted media to finalize.
-            Returns:
-            FinalizeUploadResponse: Response data
+        Initialize media upload
+        Initializes a media upload.
+        body: Request body
+        Returns:
+            InitializeUploadResponse: Response data
         """
-        url = self.client.base_url + "/2/media/upload/{id}/finalize"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/media/upload/initialize"
         # Ensure we have a valid access token
         if self.client.oauth2_auth and self.client.token:
             # Check if token needs refresh
@@ -508,27 +406,36 @@ class MediaClient:
                 self.client.refresh_token()
         params = {}
         headers = {}
+        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
         # Make the request
         if self.client.oauth2_session:
             response = self.client.oauth2_session.post(
                 url,
                 params=params,
                 headers=headers,
+                json=json_data,
             )
         else:
             response = self.client.session.post(
                 url,
                 params=params,
                 headers=headers,
+                json=json_data,
             )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return FinalizeUploadResponse.model_validate(response_data)
+        return InitializeUploadResponse.model_validate(response_data)
 
 
     def get_analytics(
@@ -592,3 +499,96 @@ class MediaClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return GetAnalyticsResponse.model_validate(response_data)
+
+
+    def get_by_keys(
+        self, media_keys: List, media_fields: List = None
+    ) -> GetByKeysResponse:
+        """
+        Get Media by media keys
+        Retrieves details of Media files by their media keys.
+        Args:
+            media_keys: A comma separated list of Media Keys. Up to 100 are allowed in a single request.
+            media_fields: A comma separated list of Media fields to display.
+            Returns:
+            GetByKeysResponse: Response data
+        """
+        url = self.client.base_url + "/2/media"
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        # Ensure we have a valid access token
+        if self.client.oauth2_auth and self.client.token:
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        params = {}
+        if media_keys is not None:
+            params["media_keys"] = ",".join(str(item) for item in media_keys)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByKeysResponse.model_validate(response_data)
+
+
+    def get_by_key(self, media_key: Any, media_fields: List = None) -> GetByKeyResponse:
+        """
+        Get Media by media key
+        Retrieves details of a specific Media file by its media key.
+        Args:
+            media_key: A single Media Key.
+            media_fields: A comma separated list of Media fields to display.
+            Returns:
+            GetByKeyResponse: Response data
+        """
+        url = self.client.base_url + "/2/media/{media_key}"
+        url = url.replace("{media_key}", str(media_key))
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        # Ensure we have a valid access token
+        if self.client.oauth2_auth and self.client.token:
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        params = {}
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByKeyResponse.model_validate(response_data)
