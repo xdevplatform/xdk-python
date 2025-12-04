@@ -21,9 +21,9 @@ import time
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    GetAiResponse,
     GetPersonalizedResponse,
     GetByWoeidResponse,
+    GetAiResponse,
 )
 
 
@@ -33,46 +33,6 @@ class TrendsClient:
 
     def __init__(self, client: Client):
         self.client = client
-
-
-    def get_ai(self, id: Any, news_fields: List = None) -> GetAiResponse:
-        """
-        Get AI Trends by ID
-        Retrieves an AI trend by its ID.
-        Args:
-            id: The ID of the ai trend.
-            news_fields: A comma separated list of News fields to display.
-            Returns:
-            GetAiResponse: Response data
-        """
-        url = self.client.base_url + "/2/ai_trends/{id}"
-        url = url.replace("{id}", str(id))
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if news_fields is not None:
-            params["news.fields"] = ",".join(str(item) for item in news_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetAiResponse.model_validate(response_data)
 
 
     def get_personalized(
@@ -87,8 +47,24 @@ class TrendsClient:
             GetPersonalizedResponse: Response data
         """
         url = self.client.base_url + "/2/users/personalized_trends"
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
@@ -101,18 +77,14 @@ class TrendsClient:
         # Prepare request data
         json_data = None
         # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # The setup_authentication macro already sets the Authorization header
+        # Use regular session since we're using bearer token authentication
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
@@ -136,6 +108,7 @@ class TrendsClient:
         """
         url = self.client.base_url + "/2/trends/by/woeid/{woeid}"
         url = url.replace("{woeid}", str(woeid))
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -164,3 +137,44 @@ class TrendsClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return GetByWoeidResponse.model_validate(response_data)
+
+
+    def get_ai(self, id: Any, news_fields: List = None) -> GetAiResponse:
+        """
+        Get AI Trends by ID
+        Retrieves an AI trend by its ID.
+        Args:
+            id: The ID of the ai trend.
+            news_fields: A comma separated list of News fields to display.
+            Returns:
+            GetAiResponse: Response data
+        """
+        url = self.client.base_url + "/2/ai_trends/{id}"
+        url = url.replace("{id}", str(id))
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if news_fields is not None:
+            params["news.fields"] = ",".join(str(item) for item in news_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetAiResponse.model_validate(response_data)

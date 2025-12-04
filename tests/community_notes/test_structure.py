@@ -104,6 +104,49 @@ class TestCommunityNotesStructure:
         ), f"Paginated method search_eligible_posts should have pagination parameters"
 
 
+    def test_evaluate_exists(self):
+        """Test that evaluate method exists with correct signature."""
+        # Check method exists
+        method = getattr(CommunityNotesClient, "evaluate", None)
+        assert (
+            method is not None
+        ), f"Method evaluate does not exist on CommunityNotesClient"
+        # Check method is callable
+        assert callable(method), f"evaluate is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"evaluate should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from evaluate"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_evaluate_return_annotation(self):
+        """Test that evaluate has proper return type annotation."""
+        method = getattr(CommunityNotesClient, "evaluate")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method evaluate should have return type annotation"
+
+
     def test_delete_exists(self):
         """Test that delete method exists with correct signature."""
         # Check method exists
@@ -192,49 +235,6 @@ class TestCommunityNotesStructure:
         ), f"Method create should have return type annotation"
 
 
-    def test_evaluate_exists(self):
-        """Test that evaluate method exists with correct signature."""
-        # Check method exists
-        method = getattr(CommunityNotesClient, "evaluate", None)
-        assert (
-            method is not None
-        ), f"Method evaluate does not exist on CommunityNotesClient"
-        # Check method is callable
-        assert callable(method), f"evaluate is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"evaluate should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from evaluate"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_evaluate_return_annotation(self):
-        """Test that evaluate has proper return type annotation."""
-        method = getattr(CommunityNotesClient, "evaluate")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method evaluate should have return type annotation"
-
-
     def test_search_written_exists(self):
         """Test that search_written method exists with correct signature."""
         # Check method exists
@@ -307,9 +307,9 @@ class TestCommunityNotesStructure:
         """Test that all expected methods exist on the client."""
         expected_methods = [
             "search_eligible_posts",
+            "evaluate",
             "delete",
             "create",
-            "evaluate",
             "search_written",
         ]
         for expected_method in expected_methods:

@@ -50,6 +50,7 @@ class ComplianceClient:
         """
         url = self.client.base_url + "/2/compliance/jobs/{id}"
         url = url.replace("{id}", str(id))
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -94,6 +95,7 @@ class ComplianceClient:
             GetJobsResponse: Response data
         """
         url = self.client.base_url + "/2/compliance/jobs"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -137,6 +139,7 @@ class ComplianceClient:
             CreateJobsResponse: Response data
         """
         url = self.client.base_url + "/2/compliance/jobs"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"

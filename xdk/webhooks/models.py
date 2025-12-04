@@ -40,6 +40,24 @@ class CreateResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+# Models for validate
+
+
+class ValidateResponse(BaseModel):
+    """Response model for validate"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for delete
+
+
+class DeleteResponse(BaseModel):
+    """Response model for delete"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 # Models for create_webhook_replay_job
 
 
@@ -78,23 +96,5 @@ class DeleteStreamLinkResponse(BaseModel):
 
 class GetStreamLinksResponse(BaseModel):
     """Response model for get_stream_links"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for validate
-
-
-class ValidateResponse(BaseModel):
-    """Response model for validate"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for delete
-
-
-class DeleteResponse(BaseModel):
-    """Response model for delete"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")

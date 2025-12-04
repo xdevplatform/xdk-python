@@ -25,6 +25,21 @@ class SearchEligiblePostsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+# Models for evaluate
+
+
+class EvaluateRequest(BaseModel):
+    """Request model for evaluate"""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class EvaluateResponse(BaseModel):
+    """Response model for evaluate"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 # Models for delete
 
 
@@ -45,21 +60,6 @@ class CreateRequest(BaseModel):
 
 class CreateResponse(BaseModel):
     """Response model for create"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for evaluate
-
-
-class EvaluateRequest(BaseModel):
-    """Request model for evaluate"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class EvaluateResponse(BaseModel):
-    """Response model for evaluate"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 

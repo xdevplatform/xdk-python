@@ -17,41 +17,41 @@ from typing import Dict, List, Optional, Union, Any, Callable
 from .oauth2_auth import OAuth2PKCEAuth
 from .paginator import Cursor, cursor, PaginationError
 
-from .news.client import NewsClient
-
-from .spaces.client import SpacesClient
-
 from .media.client import MediaClient
 
-from .general.client import GeneralClient
+from .connections.client import ConnectionsClient
 
-from .activity.client import ActivityClient
+from .direct_messages.client import DirectMessagesClient
 
 from .users.client import UsersClient
 
 from .communities.client import CommunitiesClient
 
-from .direct_messages.client import DirectMessagesClient
+from .lists.client import ListsClient
+
+from .usage.client import UsageClient
+
+from .stream.client import StreamClient
+
+from .community_notes.client import CommunityNotesClient
+
+from .compliance.client import ComplianceClient
+
+from .spaces.client import SpacesClient
+
+from .webhooks.client import WebhooksClient
+
+from .posts.client import PostsClient
+
+from .general.client import GeneralClient
 
 from .trends.client import TrendsClient
 
 from .account_activity.client import AccountActivityClient
 
-from .compliance.client import ComplianceClient
+from .news.client import NewsClient
 
-from .stream.client import StreamClient
-
-from .lists.client import ListsClient
-
-from .connections.client import ConnectionsClient
-
-from .posts.client import PostsClient
-
-from .usage.client import UsageClient
-
-from .webhooks.client import WebhooksClient
-
-from .community_notes.client import CommunityNotesClient
+from .activity.client import ActivityClient
 
 
 class Client:
@@ -62,6 +62,7 @@ class Client:
         self,
         base_url: str = "https://api.x.com",
         bearer_token: str = None,
+        access_token: str = None,
         client_id: str = None,
         client_secret: str = None,
         redirect_uri: str = None,
@@ -72,19 +73,27 @@ class Client:
         """Initialize the X API client.
         Args:
             base_url: The base URL for the X API (defaults to https://api.x.com).
-            bearer_token: The bearer token for the X API.
-            client_id: The client ID for the X API.
+            bearer_token: The bearer token for the X API (app-only authentication).
+            access_token: The OAuth2 access token for user context (can be used directly as bearer token).
+            client_id: The client ID for the X API (required for OAuth2 PKCE flow).
             client_secret: The client secret for the X API.
             redirect_uri: The redirect URI for OAuth2 authorization.
-            token: An existing OAuth2 token dictionary (if available).
+            token: An existing OAuth2 token dictionary (if available). If provided, access_token will be extracted.
             scope: Space-separated string or list of strings for OAuth2 authorization scopes.
             authorization_base_url: The base URL for OAuth2 authorization (defaults to https://x.com/i).
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.4.2"})
+        self.session.headers.update({"User-Agent": "xdk-python/0.4.3"})
         self.base_url = base_url
         self.bearer_token = bearer_token
+        # Extract access_token from token dict if provided, otherwise use direct access_token parameter
+        # This matches TypeScript's behavior where accessToken can be passed directly
+        if token and isinstance(token, dict) and "access_token" in token:
+            self._access_token = token["access_token"]
+        else:
+            self._access_token = access_token
         # Set up OAuth2 PKCE authentication if credentials are provided
+        # This is only needed for OAuth2 flows (getting authorization URL, exchanging codes, refreshing tokens)
         self.oauth2_auth = None
         if client_id or token:
             self.oauth2_auth = OAuth2PKCEAuth(
@@ -96,25 +105,32 @@ class Client:
                 token=token,
                 scope=scope,
             )
+            # If we have oauth2_auth with a token, ensure access_token is set
+            if (
+                self.oauth2_auth
+                and self.oauth2_auth.token
+                and "access_token" in self.oauth2_auth.token
+            ):
+                self._access_token = self.oauth2_auth.token["access_token"]
         # Initialize clients for each tag
-        self.news = NewsClient(self)
-        self.spaces = SpacesClient(self)
         self.media = MediaClient(self)
-        self.general = GeneralClient(self)
-        self.activity = ActivityClient(self)
+        self.connections = ConnectionsClient(self)
+        self.direct_messages = DirectMessagesClient(self)
         self.users = UsersClient(self)
         self.communities = CommunitiesClient(self)
-        self.direct_messages = DirectMessagesClient(self)
+        self.lists = ListsClient(self)
+        self.usage = UsageClient(self)
+        self.stream = StreamClient(self)
+        self.community_notes = CommunityNotesClient(self)
+        self.compliance = ComplianceClient(self)
+        self.spaces = SpacesClient(self)
+        self.webhooks = WebhooksClient(self)
+        self.posts = PostsClient(self)
+        self.general = GeneralClient(self)
         self.trends = TrendsClient(self)
         self.account_activity = AccountActivityClient(self)
-        self.compliance = ComplianceClient(self)
-        self.stream = StreamClient(self)
-        self.lists = ListsClient(self)
-        self.connections = ConnectionsClient(self)
-        self.posts = PostsClient(self)
-        self.usage = UsageClient(self)
-        self.webhooks = WebhooksClient(self)
-        self.community_notes = CommunityNotesClient(self)
+        self.news = NewsClient(self)
+        self.activity = ActivityClient(self)
 
     @property
 
@@ -139,9 +155,20 @@ class Client:
 
     def access_token(self):
         """Get the current access token if available."""
+        # First check if we have a direct access_token (matches TypeScript behavior)
+        if hasattr(self, "_access_token") and self._access_token:
+            return self._access_token
+        # Fall back to oauth2_auth if available
         if self.oauth2_auth:
             return self.oauth2_auth.access_token
         return None
+
+    @access_token.setter
+
+
+    def access_token(self, value):
+        """Set the access token."""
+        self._access_token = value
 
 
     def get_authorization_url(self, state=None):
@@ -166,7 +193,11 @@ class Client:
         """
         if not self.oauth2_auth:
             raise ValueError("OAuth2 credentials not configured")
-        return self.oauth2_auth.exchange_code(code, code_verifier)
+        token = self.oauth2_auth.exchange_code(code, code_verifier)
+        # Update access_token after exchange (matches TypeScript behavior)
+        if token and "access_token" in token:
+            self._access_token = token["access_token"]
+        return token
 
 
     def fetch_token(self, authorization_response):
@@ -178,14 +209,22 @@ class Client:
         """
         if not self.oauth2_auth:
             raise ValueError("OAuth2 credentials not configured")
-        return self.oauth2_auth.fetch_token(authorization_response)
+        token = self.oauth2_auth.fetch_token(authorization_response)
+        # Update access_token after fetch (matches TypeScript behavior)
+        if token and "access_token" in token:
+            self._access_token = token["access_token"]
+        return token
 
 
     def refresh_token(self):
         """Refresh the OAuth2 token."""
         if not self.oauth2_auth:
             raise ValueError("OAuth2 credentials not configured")
-        return self.oauth2_auth.refresh_token()
+        token = self.oauth2_auth.refresh_token()
+        # Update access_token after refresh (matches TypeScript behavior)
+        if token and "access_token" in token:
+            self._access_token = token["access_token"]
+        return token
 
 
     def is_token_expired(self):

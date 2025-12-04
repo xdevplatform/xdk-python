@@ -44,6 +44,7 @@ class UsageClient:
             GetResponse: Response data
         """
         url = self.client.base_url + "/2/usage/tweets"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"

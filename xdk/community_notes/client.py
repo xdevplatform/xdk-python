@@ -22,11 +22,11 @@ if TYPE_CHECKING:
     from ..client import Client
 from .models import (
     SearchEligiblePostsResponse,
+    EvaluateRequest,
+    EvaluateResponse,
     DeleteResponse,
     CreateRequest,
     CreateResponse,
-    EvaluateRequest,
-    EvaluateResponse,
     SearchWrittenResponse,
 )
 
@@ -70,8 +70,24 @@ class CommunityNotesClient:
             SearchEligiblePostsResponse: Response data
         """
         url = self.client.base_url + "/2/notes/search/posts_eligible_for_notes"
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
@@ -100,24 +116,79 @@ class CommunityNotesClient:
         # Prepare request data
         json_data = None
         # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # The setup_authentication macro already sets the Authorization header
+        # Use regular session since we're using bearer token authentication
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return SearchEligiblePostsResponse.model_validate(response_data)
+
+
+    def evaluate(self, body: Optional[EvaluateRequest] = None) -> EvaluateResponse:
+        """
+        Evaluate a Community Note
+        Endpoint to evaluate a community note.
+        body: Request body
+        Returns:
+            EvaluateResponse: Response data
+        """
+        url = self.client.base_url + "/2/evaluate_note"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Make the request
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # The setup_authentication macro already sets the Authorization header
+        # Use regular session since we're using bearer token authentication
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return EvaluateResponse.model_validate(response_data)
 
 
     def delete(self, id: Any) -> DeleteResponse:
@@ -131,8 +202,24 @@ class CommunityNotesClient:
         """
         url = self.client.base_url + "/2/notes/{id}"
         url = url.replace("{id}", str(id))
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
@@ -141,18 +228,14 @@ class CommunityNotesClient:
         # Prepare request data
         json_data = None
         # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.delete(
-                url,
-                params=params,
-                headers=headers,
-            )
-        else:
-            response = self.client.session.delete(
-                url,
-                params=params,
-                headers=headers,
-            )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # The setup_authentication macro already sets the Authorization header
+        # Use regular session since we're using bearer token authentication
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
@@ -170,8 +253,24 @@ class CommunityNotesClient:
             CreateResponse: Response data
         """
         url = self.client.base_url + "/2/notes"
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
@@ -187,74 +286,21 @@ class CommunityNotesClient:
                 else body
             )
         # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        else:
-            response = self.client.session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # The setup_authentication macro already sets the Authorization header
+        # Use regular session since we're using bearer token authentication
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return CreateResponse.model_validate(response_data)
-
-
-    def evaluate(self, body: Optional[EvaluateRequest] = None) -> EvaluateResponse:
-        """
-        Evaluate a Community Note
-        Endpoint to evaluate a community note.
-        body: Request body
-        Returns:
-            EvaluateResponse: Response data
-        """
-        url = self.client.base_url + "/2/evaluate_note"
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        else:
-            response = self.client.session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return EvaluateResponse.model_validate(response_data)
 
 
     def search_written(
@@ -276,8 +322,24 @@ class CommunityNotesClient:
             SearchWrittenResponse: Response data
         """
         url = self.client.base_url + "/2/notes/search/notes_written"
-        # Ensure we have a valid access token
-        if self.client.oauth2_auth and self.client.token:
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
@@ -294,18 +356,14 @@ class CommunityNotesClient:
         # Prepare request data
         json_data = None
         # Make the request
-        if self.client.oauth2_session:
-            response = self.client.oauth2_session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # The setup_authentication macro already sets the Authorization header
+        # Use regular session since we're using bearer token authentication
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
