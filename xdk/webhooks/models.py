@@ -16,29 +16,41 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
-# Models for validate
+# Models for get
 
 
-class ValidateResponse(BaseModel):
-    """Response model for validate"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for delete
-
-
-class DeleteResponse(BaseModel):
-    """Response model for delete"""
+class GetResponse(BaseModel):
+    """Response model for get"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for get_stream_links
+# Models for create
 
 
-class GetStreamLinksResponse(BaseModel):
-    """Response model for get_stream_links"""
+class CreateRequest(BaseModel):
+    """Request model for create"""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateResponse(BaseModel):
+    """Response model for create"""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for create_webhook_replay_job
+
+
+class CreateWebhookReplayJobRequest(BaseModel):
+    """Request model for create_webhook_replay_job"""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateWebhookReplayJobResponse(BaseModel):
+    """Response model for create_webhook_replay_job"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -61,40 +73,28 @@ class DeleteStreamLinkResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for create_webhook_replay_job
+# Models for get_stream_links
 
 
-class CreateWebhookReplayJobRequest(BaseModel):
-    """Request model for create_webhook_replay_job"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateWebhookReplayJobResponse(BaseModel):
-    """Response model for create_webhook_replay_job"""
+class GetStreamLinksResponse(BaseModel):
+    """Response model for get_stream_links"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for get
+# Models for validate
 
 
-class GetResponse(BaseModel):
-    """Response model for get"""
+class ValidateResponse(BaseModel):
+    """Response model for validate"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-# Models for create
+# Models for delete
 
 
-class CreateRequest(BaseModel):
-    """Request model for create"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateResponse(BaseModel):
-    """Response model for create"""
+class DeleteResponse(BaseModel):
+    """Response model for delete"""
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")

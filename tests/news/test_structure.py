@@ -28,51 +28,6 @@ class TestNewsStructure:
         self.news_client = getattr(self.client, "news")
 
 
-    def test_get_exists(self):
-        """Test that get method exists with correct signature."""
-        # Check method exists
-        method = getattr(NewsClient, "get", None)
-        assert method is not None, f"Method get does not exist on NewsClient"
-        # Check method is callable
-        assert callable(method), f"get is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "news.fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_return_annotation(self):
-        """Test that get has proper return type annotation."""
-        method = getattr(NewsClient, "get")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get should have return type annotation"
-
-
     def test_search_exists(self):
         """Test that search method exists with correct signature."""
         # Check method exists
@@ -120,11 +75,56 @@ class TestNewsStructure:
         ), f"Method search should have return type annotation"
 
 
+    def test_get_exists(self):
+        """Test that get method exists with correct signature."""
+        # Check method exists
+        method = getattr(NewsClient, "get", None)
+        assert method is not None, f"Method get does not exist on NewsClient"
+        # Check method is callable
+        assert callable(method), f"get is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "news.fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_return_annotation(self):
+        """Test that get has proper return type annotation."""
+        method = getattr(NewsClient, "get")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "get",
             "search",
+            "get",
         ]
         for expected_method in expected_methods:
             assert hasattr(

@@ -17,41 +17,41 @@ from typing import Dict, List, Optional, Union, Any, Callable
 from .oauth2_auth import OAuth2PKCEAuth
 from .paginator import Cursor, cursor, PaginationError
 
-from .connections.client import ConnectionsClient
-
-from .trends.client import TrendsClient
-
-from .direct_messages.client import DirectMessagesClient
-
-from .users.client import UsersClient
-
-from .posts.client import PostsClient
+from .news.client import NewsClient
 
 from .spaces.client import SpacesClient
 
-from .news.client import NewsClient
-
-from .compliance.client import ComplianceClient
-
-from .usage.client import UsageClient
-
 from .media.client import MediaClient
 
-from .account_activity.client import AccountActivityClient
-
-from .community_notes.client import CommunityNotesClient
-
-from .lists.client import ListsClient
-
-from .webhooks.client import WebhooksClient
-
-from .communities.client import CommunitiesClient
+from .general.client import GeneralClient
 
 from .activity.client import ActivityClient
 
+from .users.client import UsersClient
+
+from .communities.client import CommunitiesClient
+
+from .direct_messages.client import DirectMessagesClient
+
+from .trends.client import TrendsClient
+
+from .account_activity.client import AccountActivityClient
+
+from .compliance.client import ComplianceClient
+
 from .stream.client import StreamClient
 
-from .general.client import GeneralClient
+from .lists.client import ListsClient
+
+from .connections.client import ConnectionsClient
+
+from .posts.client import PostsClient
+
+from .usage.client import UsageClient
+
+from .webhooks.client import WebhooksClient
+
+from .community_notes.client import CommunityNotesClient
 
 
 class Client:
@@ -81,7 +81,7 @@ class Client:
             authorization_base_url: The base URL for OAuth2 authorization (defaults to https://x.com/i).
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.4.1"})
+        self.session.headers.update({"User-Agent": "xdk-python/0.4.2"})
         self.base_url = base_url
         self.bearer_token = bearer_token
         # Set up OAuth2 PKCE authentication if credentials are provided
@@ -97,24 +97,24 @@ class Client:
                 scope=scope,
             )
         # Initialize clients for each tag
-        self.connections = ConnectionsClient(self)
-        self.trends = TrendsClient(self)
-        self.direct_messages = DirectMessagesClient(self)
-        self.users = UsersClient(self)
-        self.posts = PostsClient(self)
-        self.spaces = SpacesClient(self)
         self.news = NewsClient(self)
-        self.compliance = ComplianceClient(self)
-        self.usage = UsageClient(self)
+        self.spaces = SpacesClient(self)
         self.media = MediaClient(self)
-        self.account_activity = AccountActivityClient(self)
-        self.community_notes = CommunityNotesClient(self)
-        self.lists = ListsClient(self)
-        self.webhooks = WebhooksClient(self)
-        self.communities = CommunitiesClient(self)
-        self.activity = ActivityClient(self)
-        self.stream = StreamClient(self)
         self.general = GeneralClient(self)
+        self.activity = ActivityClient(self)
+        self.users = UsersClient(self)
+        self.communities = CommunitiesClient(self)
+        self.direct_messages = DirectMessagesClient(self)
+        self.trends = TrendsClient(self)
+        self.account_activity = AccountActivityClient(self)
+        self.compliance = ComplianceClient(self)
+        self.stream = StreamClient(self)
+        self.lists = ListsClient(self)
+        self.connections = ConnectionsClient(self)
+        self.posts = PostsClient(self)
+        self.usage = UsageClient(self)
+        self.webhooks = WebhooksClient(self)
+        self.community_notes = CommunityNotesClient(self)
 
     @property
 
@@ -144,15 +144,38 @@ class Client:
         return None
 
 
-    def get_authorization_url(self):
-        """Get the authorization URL for the OAuth2 PKCE flow."""
+    def get_authorization_url(self, state=None):
+        """Get the authorization URL for the OAuth2 PKCE flow.
+        Args:
+            state: Optional state parameter for security.
+        Returns:
+            str: The authorization URL.
+        """
         if not self.oauth2_auth:
             raise ValueError("OAuth2 credentials not configured")
-        return self.oauth2_auth.get_authorization_url()
+        return self.oauth2_auth.get_authorization_url(state)
+
+
+    def exchange_code(self, code, code_verifier=None):
+        """Exchange authorization code for tokens (matches TypeScript API).
+        Args:
+            code: The authorization code from the callback.
+            code_verifier: Optional code verifier (uses stored verifier if not provided).
+        Returns:
+            Dict[str, Any]: The token dictionary
+        """
+        if not self.oauth2_auth:
+            raise ValueError("OAuth2 credentials not configured")
+        return self.oauth2_auth.exchange_code(code, code_verifier)
 
 
     def fetch_token(self, authorization_response):
-        """Fetch token using authorization response."""
+        """Fetch token using authorization response URL (legacy method).
+        Args:
+            authorization_response: The full callback URL received after authorization.
+        Returns:
+            Dict[str, Any]: The token dictionary
+        """
         if not self.oauth2_auth:
             raise ValueError("OAuth2 credentials not configured")
         return self.oauth2_auth.fetch_token(authorization_response)

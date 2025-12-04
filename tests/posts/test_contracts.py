@@ -27,8 +27,8 @@ class TestPostsContracts:
         self.posts_client = getattr(self.client, "posts")
 
 
-    def test_search_all_request_structure(self):
-        """Test search_all request structure."""
+    def test_get_liking_users_request_structure(self):
+        """Test get_liking_users request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -41,11 +41,11 @@ class TestPostsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["query"] = "test_query"
+            kwargs["id"] = "test_value"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.posts_client, "search_all")
+                method = getattr(self.posts_client, "get_liking_users")
                 result = method(**kwargs)
                 # Check if this is a streaming operation (returns Generator)
                 import types
@@ -80,7 +80,7 @@ class TestPostsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/tweets/search/all"
+                expected_path = "/2/tweets/{id}/liking_users"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -96,12 +96,12 @@ class TestPostsContracts:
                     # For regular operations, verify we got a result
                     assert result is not None, "Method should return a result"
             except Exception as e:
-                pytest.fail(f"Contract test failed for search_all: {e}")
+                pytest.fail(f"Contract test failed for get_liking_users: {e}")
 
 
-    def test_search_all_required_parameters(self):
-        """Test that search_all handles parameters correctly."""
-        method = getattr(self.posts_client, "search_all")
+    def test_get_liking_users_required_parameters(self):
+        """Test that get_liking_users handles parameters correctly."""
+        method = getattr(self.posts_client, "get_liking_users")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -115,8 +115,8 @@ class TestPostsContracts:
                 method()
 
 
-    def test_search_all_response_structure(self):
-        """Test search_all response structure validation."""
+    def test_get_liking_users_response_structure(self):
+        """Test get_liking_users response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {
@@ -129,10 +129,10 @@ class TestPostsContracts:
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["query"] = "test_value"
+            kwargs["id"] = "test"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.posts_client, "search_all")
+            method = getattr(self.posts_client, "get_liking_users")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed
@@ -144,8 +144,8 @@ class TestPostsContracts:
                 )
 
 
-    def test_get_by_id_request_structure(self):
-        """Test get_by_id request structure."""
+    def test_get_quoted_request_structure(self):
+        """Test get_quoted request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -162,7 +162,7 @@ class TestPostsContracts:
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.posts_client, "get_by_id")
+                method = getattr(self.posts_client, "get_quoted")
                 result = method(**kwargs)
                 # Check if this is a streaming operation (returns Generator)
                 import types
@@ -197,7 +197,7 @@ class TestPostsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/tweets/{id}"
+                expected_path = "/2/tweets/{id}/quote_tweets"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -213,12 +213,12 @@ class TestPostsContracts:
                     # For regular operations, verify we got a result
                     assert result is not None, "Method should return a result"
             except Exception as e:
-                pytest.fail(f"Contract test failed for get_by_id: {e}")
+                pytest.fail(f"Contract test failed for get_quoted: {e}")
 
 
-    def test_get_by_id_required_parameters(self):
-        """Test that get_by_id handles parameters correctly."""
-        method = getattr(self.posts_client, "get_by_id")
+    def test_get_quoted_required_parameters(self):
+        """Test that get_quoted handles parameters correctly."""
+        method = getattr(self.posts_client, "get_quoted")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -232,8 +232,8 @@ class TestPostsContracts:
                 method()
 
 
-    def test_get_by_id_response_structure(self):
-        """Test get_by_id response structure validation."""
+    def test_get_quoted_response_structure(self):
+        """Test get_quoted response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {
@@ -249,124 +249,7 @@ class TestPostsContracts:
             kwargs["id"] = "test"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.posts_client, "get_by_id")
-            result = method(**kwargs)
-            # Verify response object has expected attributes
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_delete_request_structure(self):
-        """Test delete request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": None,
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_session.delete.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["id"] = "test_value"
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.posts_client, "delete")
-                result = method(**kwargs)
-                # Check if this is a streaming operation (returns Generator)
-                import types
-                is_streaming = isinstance(result, types.GeneratorType)
-                if is_streaming:
-                    # For streaming operations, we need to set up the mock to handle streaming
-                    # Mock the streaming response
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Mock iter_content to yield some test data
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content.return_value = [test_data]
-                    # Update the session mock to return our streaming response
-                    mock_session.delete.return_value = mock_streaming_response
-                    # Consume the generator to trigger the HTTP request
-                    try:
-                        next(result)
-                    except StopIteration:
-                        pass  # Expected when stream ends
-                    except Exception:
-                        pass  # Ignore other exceptions in test data processing
-                # Verify the request was made
-                mock_session.delete.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.delete.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/tweets/{id}"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                pytest.fail(f"Contract test failed for delete: {e}")
-
-
-    def test_delete_required_parameters(self):
-        """Test that delete handles parameters correctly."""
-        method = getattr(self.posts_client, "delete")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.delete.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            with pytest.raises((TypeError, ValueError, Exception)):
-                method()
-
-
-    def test_delete_response_structure(self):
-        """Test delete response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response with expected structure
-            mock_response_data = {
-                "data": None,
-            }
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.raise_for_status.return_value = None
-            mock_session.delete.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["id"] = "test"
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.posts_client, "delete")
+            method = getattr(self.posts_client, "get_quoted")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed
@@ -620,8 +503,8 @@ class TestPostsContracts:
                 )
 
 
-    def test_get_liking_users_request_structure(self):
-        """Test get_liking_users request structure."""
+    def test_get_counts_all_request_structure(self):
+        """Test get_counts_all request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -634,11 +517,11 @@ class TestPostsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["id"] = "test_value"
+            kwargs["query"] = "test_query"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.posts_client, "get_liking_users")
+                method = getattr(self.posts_client, "get_counts_all")
                 result = method(**kwargs)
                 # Check if this is a streaming operation (returns Generator)
                 import types
@@ -673,7 +556,7 @@ class TestPostsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/tweets/{id}/liking_users"
+                expected_path = "/2/tweets/counts/all"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -689,12 +572,12 @@ class TestPostsContracts:
                     # For regular operations, verify we got a result
                     assert result is not None, "Method should return a result"
             except Exception as e:
-                pytest.fail(f"Contract test failed for get_liking_users: {e}")
+                pytest.fail(f"Contract test failed for get_counts_all: {e}")
 
 
-    def test_get_liking_users_required_parameters(self):
-        """Test that get_liking_users handles parameters correctly."""
-        method = getattr(self.posts_client, "get_liking_users")
+    def test_get_counts_all_required_parameters(self):
+        """Test that get_counts_all handles parameters correctly."""
+        method = getattr(self.posts_client, "get_counts_all")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -708,8 +591,8 @@ class TestPostsContracts:
                 method()
 
 
-    def test_get_liking_users_response_structure(self):
-        """Test get_liking_users response structure validation."""
+    def test_get_counts_all_response_structure(self):
+        """Test get_counts_all response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {
@@ -722,252 +605,10 @@ class TestPostsContracts:
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["id"] = "test"
+            kwargs["query"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.posts_client, "get_liking_users")
-            result = method(**kwargs)
-            # Verify response object has expected attributes
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_get_quoted_request_structure(self):
-        """Test get_quoted request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": None,
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["id"] = "test_value"
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.posts_client, "get_quoted")
-                result = method(**kwargs)
-                # Check if this is a streaming operation (returns Generator)
-                import types
-                is_streaming = isinstance(result, types.GeneratorType)
-                if is_streaming:
-                    # For streaming operations, we need to set up the mock to handle streaming
-                    # Mock the streaming response
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Mock iter_content to yield some test data
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content.return_value = [test_data]
-                    # Update the session mock to return our streaming response
-                    mock_session.get.return_value = mock_streaming_response
-                    # Consume the generator to trigger the HTTP request
-                    try:
-                        next(result)
-                    except StopIteration:
-                        pass  # Expected when stream ends
-                    except Exception:
-                        pass  # Ignore other exceptions in test data processing
-                # Verify the request was made
-                mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/tweets/{id}/quote_tweets"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                pytest.fail(f"Contract test failed for get_quoted: {e}")
-
-
-    def test_get_quoted_required_parameters(self):
-        """Test that get_quoted handles parameters correctly."""
-        method = getattr(self.posts_client, "get_quoted")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.get.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            with pytest.raises((TypeError, ValueError, Exception)):
-                method()
-
-
-    def test_get_quoted_response_structure(self):
-        """Test get_quoted response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response with expected structure
-            mock_response_data = {
-                "data": None,
-            }
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.raise_for_status.return_value = None
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["id"] = "test"
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.posts_client, "get_quoted")
-            result = method(**kwargs)
-            # Verify response object has expected attributes
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_get_insights_historical_request_structure(self):
-        """Test get_insights_historical request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": None,
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["tweet_ids"] = ["test_item"]
-            kwargs["end_time"] = "test_end_time"
-            kwargs["start_time"] = "test_start_time"
-            kwargs["granularity"] = "test_granularity"
-            kwargs["requested_metrics"] = ["test_item"]
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.posts_client, "get_insights_historical")
-                result = method(**kwargs)
-                # Check if this is a streaming operation (returns Generator)
-                import types
-                is_streaming = isinstance(result, types.GeneratorType)
-                if is_streaming:
-                    # For streaming operations, we need to set up the mock to handle streaming
-                    # Mock the streaming response
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Mock iter_content to yield some test data
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content.return_value = [test_data]
-                    # Update the session mock to return our streaming response
-                    mock_session.get.return_value = mock_streaming_response
-                    # Consume the generator to trigger the HTTP request
-                    try:
-                        next(result)
-                    except StopIteration:
-                        pass  # Expected when stream ends
-                    except Exception:
-                        pass  # Ignore other exceptions in test data processing
-                # Verify the request was made
-                mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/insights/historical"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                pytest.fail(f"Contract test failed for get_insights_historical: {e}")
-
-
-    def test_get_insights_historical_required_parameters(self):
-        """Test that get_insights_historical handles parameters correctly."""
-        method = getattr(self.posts_client, "get_insights_historical")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.get.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            with pytest.raises((TypeError, ValueError, Exception)):
-                method()
-
-
-    def test_get_insights_historical_response_structure(self):
-        """Test get_insights_historical response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response with expected structure
-            mock_response_data = {
-                "data": None,
-            }
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.raise_for_status.return_value = None
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["tweet_ids"] = ["test"]
-            kwargs["end_time"] = "test_value"
-            kwargs["start_time"] = "test_value"
-            kwargs["granularity"] = "test_value"
-            kwargs["requested_metrics"] = ["test"]
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.posts_client, "get_insights_historical")
+            method = getattr(self.posts_client, "get_counts_all")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed
@@ -1102,8 +743,8 @@ class TestPostsContracts:
                 )
 
 
-    def test_get_reposted_by_request_structure(self):
-        """Test get_reposted_by request structure."""
+    def test_search_all_request_structure(self):
+        """Test search_all request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -1116,11 +757,11 @@ class TestPostsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["id"] = "test_value"
+            kwargs["query"] = "test_query"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.posts_client, "get_reposted_by")
+                method = getattr(self.posts_client, "search_all")
                 result = method(**kwargs)
                 # Check if this is a streaming operation (returns Generator)
                 import types
@@ -1155,7 +796,7 @@ class TestPostsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/tweets/{id}/retweeted_by"
+                expected_path = "/2/tweets/search/all"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -1171,12 +812,12 @@ class TestPostsContracts:
                     # For regular operations, verify we got a result
                     assert result is not None, "Method should return a result"
             except Exception as e:
-                pytest.fail(f"Contract test failed for get_reposted_by: {e}")
+                pytest.fail(f"Contract test failed for search_all: {e}")
 
 
-    def test_get_reposted_by_required_parameters(self):
-        """Test that get_reposted_by handles parameters correctly."""
-        method = getattr(self.posts_client, "get_reposted_by")
+    def test_search_all_required_parameters(self):
+        """Test that search_all handles parameters correctly."""
+        method = getattr(self.posts_client, "search_all")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -1190,8 +831,8 @@ class TestPostsContracts:
                 method()
 
 
-    def test_get_reposted_by_response_structure(self):
-        """Test get_reposted_by response structure validation."""
+    def test_search_all_response_structure(self):
+        """Test search_all response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {
@@ -1204,131 +845,10 @@ class TestPostsContracts:
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["id"] = "test"
+            kwargs["query"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.posts_client, "get_reposted_by")
-            result = method(**kwargs)
-            # Verify response object has expected attributes
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_get_insights28hr_request_structure(self):
-        """Test get_insights28hr request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": None,
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["tweet_ids"] = ["test_item"]
-            kwargs["granularity"] = "test_granularity"
-            kwargs["requested_metrics"] = ["test_item"]
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.posts_client, "get_insights28hr")
-                result = method(**kwargs)
-                # Check if this is a streaming operation (returns Generator)
-                import types
-                is_streaming = isinstance(result, types.GeneratorType)
-                if is_streaming:
-                    # For streaming operations, we need to set up the mock to handle streaming
-                    # Mock the streaming response
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Mock iter_content to yield some test data
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content.return_value = [test_data]
-                    # Update the session mock to return our streaming response
-                    mock_session.get.return_value = mock_streaming_response
-                    # Consume the generator to trigger the HTTP request
-                    try:
-                        next(result)
-                    except StopIteration:
-                        pass  # Expected when stream ends
-                    except Exception:
-                        pass  # Ignore other exceptions in test data processing
-                # Verify the request was made
-                mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/insights/28hr"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                pytest.fail(f"Contract test failed for get_insights28hr: {e}")
-
-
-    def test_get_insights28hr_required_parameters(self):
-        """Test that get_insights28hr handles parameters correctly."""
-        method = getattr(self.posts_client, "get_insights28hr")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.get.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            with pytest.raises((TypeError, ValueError, Exception)):
-                method()
-
-
-    def test_get_insights28hr_response_structure(self):
-        """Test get_insights28hr response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response with expected structure
-            mock_response_data = {
-                "data": None,
-            }
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.raise_for_status.return_value = None
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["tweet_ids"] = ["test"]
-            kwargs["granularity"] = "test_value"
-            kwargs["requested_metrics"] = ["test"]
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.posts_client, "get_insights28hr")
+            method = getattr(self.posts_client, "search_all")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed
@@ -1457,8 +977,8 @@ class TestPostsContracts:
                 )
 
 
-    def test_search_recent_request_structure(self):
-        """Test search_recent request structure."""
+    def test_get_by_id_request_structure(self):
+        """Test get_by_id request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -1471,11 +991,11 @@ class TestPostsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["query"] = "test_query"
+            kwargs["id"] = "test_value"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.posts_client, "search_recent")
+                method = getattr(self.posts_client, "get_by_id")
                 result = method(**kwargs)
                 # Check if this is a streaming operation (returns Generator)
                 import types
@@ -1510,7 +1030,7 @@ class TestPostsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/tweets/search/recent"
+                expected_path = "/2/tweets/{id}"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -1526,12 +1046,12 @@ class TestPostsContracts:
                     # For regular operations, verify we got a result
                     assert result is not None, "Method should return a result"
             except Exception as e:
-                pytest.fail(f"Contract test failed for search_recent: {e}")
+                pytest.fail(f"Contract test failed for get_by_id: {e}")
 
 
-    def test_search_recent_required_parameters(self):
-        """Test that search_recent handles parameters correctly."""
-        method = getattr(self.posts_client, "search_recent")
+    def test_get_by_id_required_parameters(self):
+        """Test that get_by_id handles parameters correctly."""
+        method = getattr(self.posts_client, "get_by_id")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -1545,8 +1065,8 @@ class TestPostsContracts:
                 method()
 
 
-    def test_search_recent_response_structure(self):
-        """Test search_recent response structure validation."""
+    def test_get_by_id_response_structure(self):
+        """Test get_by_id response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {
@@ -1559,10 +1079,248 @@ class TestPostsContracts:
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["query"] = "test_value"
+            kwargs["id"] = "test"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.posts_client, "search_recent")
+            method = getattr(self.posts_client, "get_by_id")
+            result = method(**kwargs)
+            # Verify response object has expected attributes
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_delete_request_structure(self):
+        """Test delete request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": None,
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_session.delete.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["id"] = "test_value"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.posts_client, "delete")
+                result = method(**kwargs)
+                # Check if this is a streaming operation (returns Generator)
+                import types
+                is_streaming = isinstance(result, types.GeneratorType)
+                if is_streaming:
+                    # For streaming operations, we need to set up the mock to handle streaming
+                    # Mock the streaming response
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Mock iter_content to yield some test data
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content.return_value = [test_data]
+                    # Update the session mock to return our streaming response
+                    mock_session.delete.return_value = mock_streaming_response
+                    # Consume the generator to trigger the HTTP request
+                    try:
+                        next(result)
+                    except StopIteration:
+                        pass  # Expected when stream ends
+                    except Exception:
+                        pass  # Ignore other exceptions in test data processing
+                # Verify the request was made
+                mock_session.delete.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.delete.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/tweets/{id}"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                pytest.fail(f"Contract test failed for delete: {e}")
+
+
+    def test_delete_required_parameters(self):
+        """Test that delete handles parameters correctly."""
+        method = getattr(self.posts_client, "delete")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.delete.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            with pytest.raises((TypeError, ValueError, Exception)):
+                method()
+
+
+    def test_delete_response_structure(self):
+        """Test delete response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response with expected structure
+            mock_response_data = {
+                "data": None,
+            }
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.raise_for_status.return_value = None
+            mock_session.delete.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["id"] = "test"
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.posts_client, "delete")
+            result = method(**kwargs)
+            # Verify response object has expected attributes
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_insights28hr_request_structure(self):
+        """Test get_insights28hr request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": None,
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["tweet_ids"] = ["test_item"]
+            kwargs["granularity"] = "test_granularity"
+            kwargs["requested_metrics"] = ["test_item"]
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.posts_client, "get_insights28hr")
+                result = method(**kwargs)
+                # Check if this is a streaming operation (returns Generator)
+                import types
+                is_streaming = isinstance(result, types.GeneratorType)
+                if is_streaming:
+                    # For streaming operations, we need to set up the mock to handle streaming
+                    # Mock the streaming response
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Mock iter_content to yield some test data
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content.return_value = [test_data]
+                    # Update the session mock to return our streaming response
+                    mock_session.get.return_value = mock_streaming_response
+                    # Consume the generator to trigger the HTTP request
+                    try:
+                        next(result)
+                    except StopIteration:
+                        pass  # Expected when stream ends
+                    except Exception:
+                        pass  # Ignore other exceptions in test data processing
+                # Verify the request was made
+                mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/insights/28hr"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                pytest.fail(f"Contract test failed for get_insights28hr: {e}")
+
+
+    def test_get_insights28hr_required_parameters(self):
+        """Test that get_insights28hr handles parameters correctly."""
+        method = getattr(self.posts_client, "get_insights28hr")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.get.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            with pytest.raises((TypeError, ValueError, Exception)):
+                method()
+
+
+    def test_get_insights28hr_response_structure(self):
+        """Test get_insights28hr response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response with expected structure
+            mock_response_data = {
+                "data": None,
+            }
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.raise_for_status.return_value = None
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["tweet_ids"] = ["test"]
+            kwargs["granularity"] = "test_value"
+            kwargs["requested_metrics"] = ["test"]
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.posts_client, "get_insights28hr")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed
@@ -1696,7 +1454,7 @@ class TestPostsContracts:
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
-            mock_response.status_code = 200
+            mock_response.status_code = 201
             mock_response.json.return_value = {
                 "data": None,
             }
@@ -1721,7 +1479,7 @@ class TestPostsContracts:
                     # For streaming operations, we need to set up the mock to handle streaming
                     # Mock the streaming response
                     mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.status_code = 201
                     mock_streaming_response.raise_for_status.return_value = None
                     mock_streaming_response.__enter__ = Mock(
                         return_value=mock_streaming_response
@@ -1790,7 +1548,7 @@ class TestPostsContracts:
                 "data": None,
             }
             mock_response = Mock()
-            mock_response.status_code = 200
+            mock_response.status_code = 201
             mock_response.json.return_value = mock_response_data
             mock_response.raise_for_status.return_value = None
             mock_session.post.return_value = mock_response
@@ -1814,8 +1572,8 @@ class TestPostsContracts:
                 )
 
 
-    def test_get_counts_all_request_structure(self):
-        """Test get_counts_all request structure."""
+    def test_get_reposted_by_request_structure(self):
+        """Test get_reposted_by request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -1828,11 +1586,11 @@ class TestPostsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["query"] = "test_query"
+            kwargs["id"] = "test_value"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.posts_client, "get_counts_all")
+                method = getattr(self.posts_client, "get_reposted_by")
                 result = method(**kwargs)
                 # Check if this is a streaming operation (returns Generator)
                 import types
@@ -1867,7 +1625,7 @@ class TestPostsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/tweets/counts/all"
+                expected_path = "/2/tweets/{id}/retweeted_by"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -1883,12 +1641,12 @@ class TestPostsContracts:
                     # For regular operations, verify we got a result
                     assert result is not None, "Method should return a result"
             except Exception as e:
-                pytest.fail(f"Contract test failed for get_counts_all: {e}")
+                pytest.fail(f"Contract test failed for get_reposted_by: {e}")
 
 
-    def test_get_counts_all_required_parameters(self):
-        """Test that get_counts_all handles parameters correctly."""
-        method = getattr(self.posts_client, "get_counts_all")
+    def test_get_reposted_by_required_parameters(self):
+        """Test that get_reposted_by handles parameters correctly."""
+        method = getattr(self.posts_client, "get_reposted_by")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -1902,8 +1660,125 @@ class TestPostsContracts:
                 method()
 
 
-    def test_get_counts_all_response_structure(self):
-        """Test get_counts_all response structure validation."""
+    def test_get_reposted_by_response_structure(self):
+        """Test get_reposted_by response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response with expected structure
+            mock_response_data = {
+                "data": None,
+            }
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.raise_for_status.return_value = None
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["id"] = "test"
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.posts_client, "get_reposted_by")
+            result = method(**kwargs)
+            # Verify response object has expected attributes
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_search_recent_request_structure(self):
+        """Test search_recent request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": None,
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["query"] = "test_query"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.posts_client, "search_recent")
+                result = method(**kwargs)
+                # Check if this is a streaming operation (returns Generator)
+                import types
+                is_streaming = isinstance(result, types.GeneratorType)
+                if is_streaming:
+                    # For streaming operations, we need to set up the mock to handle streaming
+                    # Mock the streaming response
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Mock iter_content to yield some test data
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content.return_value = [test_data]
+                    # Update the session mock to return our streaming response
+                    mock_session.get.return_value = mock_streaming_response
+                    # Consume the generator to trigger the HTTP request
+                    try:
+                        next(result)
+                    except StopIteration:
+                        pass  # Expected when stream ends
+                    except Exception:
+                        pass  # Ignore other exceptions in test data processing
+                # Verify the request was made
+                mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/tweets/search/recent"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                pytest.fail(f"Contract test failed for search_recent: {e}")
+
+
+    def test_search_recent_required_parameters(self):
+        """Test that search_recent handles parameters correctly."""
+        method = getattr(self.posts_client, "search_recent")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.get.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            with pytest.raises((TypeError, ValueError, Exception)):
+                method()
+
+
+    def test_search_recent_response_structure(self):
+        """Test search_recent response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {
@@ -1919,7 +1794,132 @@ class TestPostsContracts:
             kwargs["query"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.posts_client, "get_counts_all")
+            method = getattr(self.posts_client, "search_recent")
+            result = method(**kwargs)
+            # Verify response object has expected attributes
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_insights_historical_request_structure(self):
+        """Test get_insights_historical request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": None,
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["tweet_ids"] = ["test_item"]
+            kwargs["end_time"] = "test_end_time"
+            kwargs["start_time"] = "test_start_time"
+            kwargs["granularity"] = "test_granularity"
+            kwargs["requested_metrics"] = ["test_item"]
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.posts_client, "get_insights_historical")
+                result = method(**kwargs)
+                # Check if this is a streaming operation (returns Generator)
+                import types
+                is_streaming = isinstance(result, types.GeneratorType)
+                if is_streaming:
+                    # For streaming operations, we need to set up the mock to handle streaming
+                    # Mock the streaming response
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Mock iter_content to yield some test data
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content.return_value = [test_data]
+                    # Update the session mock to return our streaming response
+                    mock_session.get.return_value = mock_streaming_response
+                    # Consume the generator to trigger the HTTP request
+                    try:
+                        next(result)
+                    except StopIteration:
+                        pass  # Expected when stream ends
+                    except Exception:
+                        pass  # Ignore other exceptions in test data processing
+                # Verify the request was made
+                mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/insights/historical"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                pytest.fail(f"Contract test failed for get_insights_historical: {e}")
+
+
+    def test_get_insights_historical_required_parameters(self):
+        """Test that get_insights_historical handles parameters correctly."""
+        method = getattr(self.posts_client, "get_insights_historical")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.get.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            with pytest.raises((TypeError, ValueError, Exception)):
+                method()
+
+
+    def test_get_insights_historical_response_structure(self):
+        """Test get_insights_historical response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response with expected structure
+            mock_response_data = {
+                "data": None,
+            }
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.raise_for_status.return_value = None
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["tweet_ids"] = ["test"]
+            kwargs["end_time"] = "test_value"
+            kwargs["start_time"] = "test_value"
+            kwargs["granularity"] = "test_value"
+            kwargs["requested_metrics"] = ["test"]
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.posts_client, "get_insights_historical")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed

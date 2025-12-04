@@ -21,16 +21,16 @@ import time
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    ValidateResponse,
-    DeleteResponse,
-    GetStreamLinksResponse,
-    CreateStreamLinkResponse,
-    DeleteStreamLinkResponse,
-    CreateWebhookReplayJobRequest,
-    CreateWebhookReplayJobResponse,
     GetResponse,
     CreateRequest,
     CreateResponse,
+    CreateWebhookReplayJobRequest,
+    CreateWebhookReplayJobResponse,
+    CreateStreamLinkResponse,
+    DeleteStreamLinkResponse,
+    GetStreamLinksResponse,
+    ValidateResponse,
+    DeleteResponse,
 )
 
 
@@ -42,17 +42,16 @@ class WebhooksClient:
         self.client = client
 
 
-    def validate(self, webhook_id: Any) -> ValidateResponse:
+    def get(self, webhook_config_fields: List = None) -> GetResponse:
         """
-        Validate webhook
-        Triggers a CRC check for a given webhook.
+        Get webhook
+        Get a list of webhook configs associated with a client app.
         Args:
-            webhook_id: The ID of the webhook to check.
+            webhook_config_fields: A comma separated list of WebhookConfig fields to display.
             Returns:
-            ValidateResponse: Response data
+            GetResponse: Response data
         """
-        url = self.client.base_url + "/2/webhooks/{webhook_id}"
-        url = url.replace("{webhook_id}", str(webhook_id))
+        url = self.client.base_url + "/2/webhooks"
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -62,79 +61,10 @@ class WebhooksClient:
                 f"Bearer {self.client.access_token}"
             )
         params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.put(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return ValidateResponse.model_validate(response_data)
-
-
-    def delete(self, webhook_id: Any) -> DeleteResponse:
-        """
-        Delete webhook
-        Deletes an existing webhook configuration.
-        Args:
-            webhook_id: The ID of the webhook to delete.
-            Returns:
-            DeleteResponse: Response data
-        """
-        url = self.client.base_url + "/2/webhooks/{webhook_id}"
-        url = url.replace("{webhook_id}", str(webhook_id))
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
+        if webhook_config_fields is not None:
+            params["webhook_config.fields"] = ",".join(
+                str(item) for item in webhook_config_fields
             )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteResponse.model_validate(response_data)
-
-
-    def get_stream_links(
-        self,
-    ) -> GetStreamLinksResponse:
-        """
-        Get stream links
-        Get a list of webhook links associated with a filtered stream ruleset.
-        Returns:
-            GetStreamLinksResponse: Response data
-        """
-        url = self.client.base_url + "/2/tweets/search/webhooks"
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
@@ -149,7 +79,95 @@ class WebhooksClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return GetStreamLinksResponse.model_validate(response_data)
+        return GetResponse.model_validate(response_data)
+
+
+    def create(self, body: Optional[CreateRequest] = None) -> CreateResponse:
+        """
+        Create webhook
+        Creates a new webhook configuration.
+        body: Request body
+        Returns:
+            CreateResponse: Response data
+        """
+        url = self.client.base_url + "/2/webhooks"
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Make the request
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return CreateResponse.model_validate(response_data)
+
+
+    def create_webhook_replay_job(
+        self, body: Optional[CreateWebhookReplayJobRequest] = None
+    ) -> CreateWebhookReplayJobResponse:
+        """
+        Create replay job for webhook
+        Creates a replay job to retrieve events from up to the past 24 hours for all events delivered or attempted to be delivered to the webhook.
+        body: Request body
+        Returns:
+            CreateWebhookReplayJobResponse: Response data
+        """
+        url = self.client.base_url + "/2/webhooks/replay"
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Make the request
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return CreateWebhookReplayJobResponse.model_validate(response_data)
 
 
     def create_stream_link(
@@ -253,17 +271,16 @@ class WebhooksClient:
         return DeleteStreamLinkResponse.model_validate(response_data)
 
 
-    def create_webhook_replay_job(
-        self, body: Optional[CreateWebhookReplayJobRequest] = None
-    ) -> CreateWebhookReplayJobResponse:
+    def get_stream_links(
+        self,
+    ) -> GetStreamLinksResponse:
         """
-        Create replay job for webhook
-        Creates a replay job to retrieve events from up to the past 24 hours for all events delivered or attempted to be delivered to the webhook.
-        body: Request body
+        Get stream links
+        Get a list of webhook links associated with a filtered stream ruleset.
         Returns:
-            CreateWebhookReplayJobResponse: Response data
+            GetStreamLinksResponse: Response data
         """
-        url = self.client.base_url + "/2/webhooks/replay"
+        url = self.client.base_url + "/2/tweets/search/webhooks"
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -273,54 +290,6 @@ class WebhooksClient:
                 f"Bearer {self.client.access_token}"
             )
         params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Make the request
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateWebhookReplayJobResponse.model_validate(response_data)
-
-
-    def get(self, webhook_config_fields: List = None) -> GetResponse:
-        """
-        Get webhook
-        Get a list of webhook configs associated with a client app.
-        Args:
-            webhook_config_fields: A comma separated list of WebhookConfig fields to display.
-            Returns:
-            GetResponse: Response data
-        """
-        url = self.client.base_url + "/2/webhooks"
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if webhook_config_fields is not None:
-            params["webhook_config.fields"] = ",".join(
-                str(item) for item in webhook_config_fields
-            )
         headers = {}
         # Prepare request data
         json_data = None
@@ -335,18 +304,20 @@ class WebhooksClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return GetResponse.model_validate(response_data)
+        return GetStreamLinksResponse.model_validate(response_data)
 
 
-    def create(self, body: Optional[CreateRequest] = None) -> CreateResponse:
+    def validate(self, webhook_id: Any) -> ValidateResponse:
         """
-        Create webhook
-        Creates a new webhook configuration.
-        body: Request body
-        Returns:
-            CreateResponse: Response data
+        Validate webhook
+        Triggers a CRC check for a given webhook.
+        Args:
+            webhook_id: The ID of the webhook to check.
+            Returns:
+            ValidateResponse: Response data
         """
-        url = self.client.base_url + "/2/webhooks"
+        url = self.client.base_url + "/2/webhooks/{webhook_id}"
+        url = url.replace("{webhook_id}", str(webhook_id))
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.bearer_token}"
@@ -357,25 +328,54 @@ class WebhooksClient:
             )
         params = {}
         headers = {}
-        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
         # Make the request
-        response = self.client.session.post(
+        response = self.client.session.put(
             url,
             params=params,
             headers=headers,
-            json=json_data,
         )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return CreateResponse.model_validate(response_data)
+        return ValidateResponse.model_validate(response_data)
+
+
+    def delete(self, webhook_id: Any) -> DeleteResponse:
+        """
+        Delete webhook
+        Deletes an existing webhook configuration.
+        Args:
+            webhook_id: The ID of the webhook to delete.
+            Returns:
+            DeleteResponse: Response data
+        """
+        url = self.client.base_url + "/2/webhooks/{webhook_id}"
+        url = url.replace("{webhook_id}", str(webhook_id))
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Make the request
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteResponse.model_validate(response_data)
