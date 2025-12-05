@@ -21,8 +21,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 project = "X API SDK"
 copyright = "2024, X Developer Platform"
 author = "X Developer Platform"
-release = "0.4.3"
-version = "0.4.3"
+release = "0.4.4"
+version = "0.4.4"
 
 # -- General configuration ----------------------------------------------------
 

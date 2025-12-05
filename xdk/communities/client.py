@@ -13,7 +13,7 @@ Generated automatically - do not edit manually.
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING, Iterator
 import requests
 import time
 
@@ -41,7 +41,7 @@ class CommunitiesClient:
         next_token: Any = None,
         pagination_token: Any = None,
         community_fields: List = None,
-    ) -> SearchResponse:
+    ) -> Iterator[SearchResponse]:
         """
         Search Communities
         Retrieves a list of Communities matching the specified search query.
@@ -51,8 +51,11 @@ class CommunitiesClient:
             next_token: This parameter is used to get the next 'page' of results. The value used with the parameter is pulled directly from the response provided by the API, and should not be modified.
             pagination_token: This parameter is used to get the next 'page' of results. The value used with the parameter is pulled directly from the response provided by the API, and should not be modified.
             community_fields: A comma separated list of Community fields to display.
-            Returns:
-            SearchResponse: Response data
+            Yields:
+            SearchResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/communities/search"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
@@ -76,37 +79,80 @@ class CommunitiesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if query is not None:
-            params["query"] = query
-        if max_results is not None:
-            params["max_results"] = max_results
-        if next_token is not None:
-            params["next_token"] = next_token
-        if pagination_token is not None:
-            params["pagination_token"] = pagination_token
-        if community_fields is not None:
-            params["community.fields"] = ",".join(
-                str(item) for item in community_fields
-            )
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return SearchResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if query is not None:
+                page_params["query"] = query
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if community_fields is not None:
+                page_params["community.fields"] = ",".join(
+                    str(item) for item in community_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = SearchResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def get_by_id(self, id: Any, community_fields: List = None) -> GetByIdResponse:
@@ -151,23 +197,72 @@ class CommunitiesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if community_fields is not None:
-            params["community.fields"] = ",".join(
-                str(item) for item in community_fields
-            )
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByIdResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if community_fields is not None:
+                page_params["community.fields"] = ",".join(
+                    str(item) for item in community_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetByIdResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits

@@ -13,7 +13,7 @@ Generated automatically - do not edit manually.
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING, Iterator
 import requests
 import time
 
@@ -52,19 +52,68 @@ class ConnectionsClient:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
             )
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteAllResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.delete(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = DeleteAllResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits

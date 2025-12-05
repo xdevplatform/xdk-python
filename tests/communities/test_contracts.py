@@ -12,6 +12,7 @@ Generated automatically - do not edit manually.
 
 import pytest
 import json
+import requests
 from unittest.mock import Mock, patch
 from xdk.communities.client import CommunitiesClient
 from xdk import Client
@@ -46,33 +47,61 @@ class TestCommunitiesContracts:
             # Call the method
             try:
                 method = getattr(self.communities_client, "search")
-                result = method(**kwargs)
-                # Check if this is a streaming operation (returns Generator)
+                # Check if this might be a streaming operation by inspecting return type
                 import types
-                is_streaming = isinstance(result, types.GeneratorType)
-                if is_streaming:
-                    # For streaming operations, we need to set up the mock to handle streaming
-                    # Mock the streaming response
+                import inspect
+                sig = inspect.signature(method)
+                return_annotation = str(sig.return_annotation)
+                might_be_streaming = (
+                    "Generator" in return_annotation or "Iterator" in return_annotation
+                )
+                # Set up streaming mock if it might be streaming (before calling method)
+                if might_be_streaming:
                     mock_streaming_response = Mock()
                     mock_streaming_response.status_code = 200
                     mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
                     mock_streaming_response.__enter__ = Mock(
                         return_value=mock_streaming_response
                     )
                     mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Mock iter_content to yield some test data
+                    # Set up iter_content to return an iterator that yields test data
+                    # iter_content with decode_unicode=True returns strings, not bytes
                     test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content.return_value = [test_data]
-                    # Update the session mock to return our streaming response
+                    # iter_content is called as a method, so we need to make it return an iterator
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kwargs: iter([test_data])
+                    )
+                    # Make session.get return the context manager
                     mock_session.get.return_value = mock_streaming_response
+                result = method(**kwargs)
+                # Check if this is actually a streaming operation (returns Generator)
+                is_streaming = isinstance(result, types.GeneratorType)
+                if is_streaming:
                     # Consume the generator to trigger the HTTP request
+                    # The HTTP request happens when entering the 'with' block inside the generator
+                    # We need to actually iterate to trigger the request
                     try:
+                        # Try to get first item - this will trigger the HTTP request
+                        # The 'with' statement inside the generator will call session.get()
                         next(result)
                     except StopIteration:
-                        pass  # Expected when stream ends
-                    except Exception:
-                        pass  # Ignore other exceptions in test data processing
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming (request errors, JSON parsing, etc.)
+                        # The request should still have been attempted
+                        pass
+                    # Don't catch other exceptions - if there's an error during setup (before the request),
+                    # we want to know about it, and the request verification below will fail appropriately
                 # Verify the request was made
+                # For streaming operations, the request happens when entering the 'with' block
+                # which occurs when we call next() on the generator
                 mock_session.get.assert_called_once()
                 # Verify request structure
                 call_args = mock_session.get.call_args
@@ -111,8 +140,14 @@ class TestCommunitiesContracts:
             mock_response.raise_for_status.side_effect = Exception("Bad Request")
             mock_session.get.return_value = mock_response
             # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
             with pytest.raises((TypeError, ValueError, Exception)):
-                method()
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
 
 
     def test_search_response_structure(self):
@@ -163,33 +198,61 @@ class TestCommunitiesContracts:
             # Call the method
             try:
                 method = getattr(self.communities_client, "get_by_id")
-                result = method(**kwargs)
-                # Check if this is a streaming operation (returns Generator)
+                # Check if this might be a streaming operation by inspecting return type
                 import types
-                is_streaming = isinstance(result, types.GeneratorType)
-                if is_streaming:
-                    # For streaming operations, we need to set up the mock to handle streaming
-                    # Mock the streaming response
+                import inspect
+                sig = inspect.signature(method)
+                return_annotation = str(sig.return_annotation)
+                might_be_streaming = (
+                    "Generator" in return_annotation or "Iterator" in return_annotation
+                )
+                # Set up streaming mock if it might be streaming (before calling method)
+                if might_be_streaming:
                     mock_streaming_response = Mock()
                     mock_streaming_response.status_code = 200
                     mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
                     mock_streaming_response.__enter__ = Mock(
                         return_value=mock_streaming_response
                     )
                     mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Mock iter_content to yield some test data
+                    # Set up iter_content to return an iterator that yields test data
+                    # iter_content with decode_unicode=True returns strings, not bytes
                     test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content.return_value = [test_data]
-                    # Update the session mock to return our streaming response
+                    # iter_content is called as a method, so we need to make it return an iterator
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kwargs: iter([test_data])
+                    )
+                    # Make session.get return the context manager
                     mock_session.get.return_value = mock_streaming_response
+                result = method(**kwargs)
+                # Check if this is actually a streaming operation (returns Generator)
+                is_streaming = isinstance(result, types.GeneratorType)
+                if is_streaming:
                     # Consume the generator to trigger the HTTP request
+                    # The HTTP request happens when entering the 'with' block inside the generator
+                    # We need to actually iterate to trigger the request
                     try:
+                        # Try to get first item - this will trigger the HTTP request
+                        # The 'with' statement inside the generator will call session.get()
                         next(result)
                     except StopIteration:
-                        pass  # Expected when stream ends
-                    except Exception:
-                        pass  # Ignore other exceptions in test data processing
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming (request errors, JSON parsing, etc.)
+                        # The request should still have been attempted
+                        pass
+                    # Don't catch other exceptions - if there's an error during setup (before the request),
+                    # we want to know about it, and the request verification below will fail appropriately
                 # Verify the request was made
+                # For streaming operations, the request happens when entering the 'with' block
+                # which occurs when we call next() on the generator
                 mock_session.get.assert_called_once()
                 # Verify request structure
                 call_args = mock_session.get.call_args
@@ -228,8 +291,14 @@ class TestCommunitiesContracts:
             mock_response.raise_for_status.side_effect = Exception("Bad Request")
             mock_session.get.return_value = mock_response
             # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
             with pytest.raises((TypeError, ValueError, Exception)):
-                method()
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
 
 
     def test_get_by_id_response_structure(self):

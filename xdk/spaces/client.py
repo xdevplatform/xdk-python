@@ -13,7 +13,7 @@ Generated automatically - do not edit manually.
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING, Iterator
 import requests
 import time
 
@@ -21,12 +21,12 @@ import time
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    SearchResponse,
-    GetByCreatorIdsResponse,
+    GetByIdResponse,
     GetBuyersResponse,
     GetByIdsResponse,
     GetPostsResponse,
-    GetByIdResponse,
+    GetByCreatorIdsResponse,
+    SearchResponse,
 )
 
 
@@ -38,31 +38,28 @@ class SpacesClient:
         self.client = client
 
 
-    def search(
+    def get_by_id(
         self,
-        query: str,
-        state: str = None,
-        max_results: int = None,
+        id: str,
         space_fields: List = None,
         expansions: List = None,
         user_fields: List = None,
         topic_fields: List = None,
-    ) -> SearchResponse:
+    ) -> GetByIdResponse:
         """
-        Search Spaces
-        Retrieves a list of Spaces matching the specified search query.
+        Get space by ID
+        Retrieves details of a specific space by its ID.
         Args:
-            query: The search query.
-            state: The state of Spaces to search for.
-            max_results: The number of results to return.
+            id: The ID of the Space to be retrieved.
             space_fields: A comma separated list of Space fields to display.
             expansions: A comma separated list of fields to expand.
             user_fields: A comma separated list of User fields to display.
             topic_fields: A comma separated list of Topic fields to display.
             Returns:
-            SearchResponse: Response data
+            GetByIdResponse: Response data
         """
-        url = self.client.base_url + "/2/spaces/search"
+        url = self.client.base_url + "/2/spaces/{id}"
+        url = url.replace("{id}", str(id))
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -93,115 +90,83 @@ class SpacesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if query is not None:
-            params["query"] = query
-        if state is not None:
-            params["state"] = state
-        if max_results is not None:
-            params["max_results"] = max_results
-        if space_fields is not None:
-            params["space.fields"] = ",".join(str(item) for item in space_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if topic_fields is not None:
-            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return SearchResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if space_fields is not None:
+                page_params["space.fields"] = ",".join(
+                    str(item) for item in space_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if topic_fields is not None:
+                page_params["topic.fields"] = ",".join(
+                    str(item) for item in topic_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetByIdResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
 
-
-    def get_by_creator_ids(
-        self,
-        user_ids: List,
-        space_fields: List = None,
-        expansions: List = None,
-        user_fields: List = None,
-        topic_fields: List = None,
-    ) -> GetByCreatorIdsResponse:
-        """
-        Get Spaces by creator IDs
-        Retrieves details of Spaces created by specified User IDs.
-        Args:
-            user_ids: The IDs of Users to search through.
-            space_fields: A comma separated list of Space fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            topic_fields: A comma separated list of Topic fields to display.
-            Returns:
-            GetByCreatorIdsResponse: Response data
-        """
-        url = self.client.base_url + "/2/spaces/by/creator_ids"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        if user_ids is not None:
-            params["user_ids"] = ",".join(str(item) for item in user_ids)
-        if space_fields is not None:
-            params["space.fields"] = ",".join(str(item) for item in space_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if topic_fields is not None:
-            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByCreatorIdsResponse.model_validate(response_data)
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def get_buyers(
@@ -212,7 +177,7 @@ class SpacesClient:
         user_fields: List = None,
         expansions: List = None,
         tweet_fields: List = None,
-    ) -> GetBuyersResponse:
+    ) -> Iterator[GetBuyersResponse]:
         """
         Get Space ticket buyers
         Retrieves a list of Users who purchased tickets to a specific Space by its ID.
@@ -223,8 +188,11 @@ class SpacesClient:
             user_fields: A comma separated list of User fields to display.
             expansions: A comma separated list of fields to expand.
             tweet_fields: A comma separated list of Tweet fields to display.
-            Returns:
-            GetBuyersResponse: Response data
+            Yields:
+            GetBuyersResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/spaces/{id}/buyers"
         url = url.replace("{id}", str(id))
@@ -249,35 +217,82 @@ class SpacesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if pagination_token is not None:
-            params["pagination_token"] = pagination_token
-        if max_results is not None:
-            params["max_results"] = max_results
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetBuyersResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if tweet_fields is not None:
+                page_params["tweet.fields"] = ",".join(
+                    str(item) for item in tweet_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetBuyersResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def get_by_ids(
@@ -331,32 +346,85 @@ class SpacesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if ids is not None:
-            params["ids"] = ",".join(str(item) for item in ids)
-        if space_fields is not None:
-            params["space.fields"] = ",".join(str(item) for item in space_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if topic_fields is not None:
-            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByIdsResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if ids is not None:
+                page_params["ids"] = ",".join(str(item) for item in ids)
+            if space_fields is not None:
+                page_params["space.fields"] = ",".join(
+                    str(item) for item in space_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if topic_fields is not None:
+                page_params["topic.fields"] = ",".join(
+                    str(item) for item in topic_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetByIdsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def get_posts(
@@ -417,60 +485,114 @@ class SpacesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if max_results is not None:
-            params["max_results"] = max_results
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetPostsResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if tweet_fields is not None:
+                page_params["tweet.fields"] = ",".join(
+                    str(item) for item in tweet_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            if poll_fields is not None:
+                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if place_fields is not None:
+                page_params["place.fields"] = ",".join(
+                    str(item) for item in place_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetPostsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def get_by_id(
+    def get_by_creator_ids(
         self,
-        id: str,
+        user_ids: List,
         space_fields: List = None,
         expansions: List = None,
         user_fields: List = None,
         topic_fields: List = None,
-    ) -> GetByIdResponse:
+    ) -> GetByCreatorIdsResponse:
         """
-        Get space by ID
-        Retrieves details of a specific space by its ID.
+        Get Spaces by creator IDs
+        Retrieves details of Spaces created by specified User IDs.
         Args:
-            id: The ID of the Space to be retrieved.
+            user_ids: The IDs of Users to search through.
             space_fields: A comma separated list of Space fields to display.
             expansions: A comma separated list of fields to expand.
             user_fields: A comma separated list of User fields to display.
             topic_fields: A comma separated list of Topic fields to display.
             Returns:
-            GetByIdResponse: Response data
+            GetByCreatorIdsResponse: Response data
         """
-        url = self.client.base_url + "/2/spaces/{id}"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/spaces/by/creator_ids"
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -501,27 +623,222 @@ class SpacesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if space_fields is not None:
-            params["space.fields"] = ",".join(str(item) for item in space_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if topic_fields is not None:
-            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByIdResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if user_ids is not None:
+                page_params["user_ids"] = ",".join(str(item) for item in user_ids)
+            if space_fields is not None:
+                page_params["space.fields"] = ",".join(
+                    str(item) for item in space_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if topic_fields is not None:
+                page_params["topic.fields"] = ",".join(
+                    str(item) for item in topic_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetByCreatorIdsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def search(
+        self,
+        query: str,
+        state: str = None,
+        max_results: int = None,
+        space_fields: List = None,
+        expansions: List = None,
+        user_fields: List = None,
+        topic_fields: List = None,
+    ) -> SearchResponse:
+        """
+        Search Spaces
+        Retrieves a list of Spaces matching the specified search query.
+        Args:
+            query: The search query.
+            state: The state of Spaces to search for.
+            max_results: The number of results to return.
+            space_fields: A comma separated list of Space fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            topic_fields: A comma separated list of Topic fields to display.
+            Returns:
+            SearchResponse: Response data
+        """
+        url = self.client.base_url + "/2/spaces/search"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if query is not None:
+                page_params["query"] = query
+            if state is not None:
+                page_params["state"] = state
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if space_fields is not None:
+                page_params["space.fields"] = ",".join(
+                    str(item) for item in space_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if topic_fields is not None:
+                page_params["topic.fields"] = ",".join(
+                    str(item) for item in topic_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = SearchResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits

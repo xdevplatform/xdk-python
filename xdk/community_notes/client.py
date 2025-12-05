@@ -13,7 +13,7 @@ Generated automatically - do not edit manually.
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING, Iterator
 import requests
 import time
 
@@ -51,7 +51,7 @@ class CommunityNotesClient:
         poll_fields: List = None,
         user_fields: List = None,
         place_fields: List = None,
-    ) -> SearchEligiblePostsResponse:
+    ) -> Iterator[SearchEligiblePostsResponse]:
         """
         Search for Posts Eligible for Community Notes
         Returns all the posts that are eligible for community notes.
@@ -66,8 +66,11 @@ class CommunityNotesClient:
             poll_fields: A comma separated list of Poll fields to display.
             user_fields: A comma separated list of User fields to display.
             place_fields: A comma separated list of Place fields to display.
-            Returns:
-            SearchEligiblePostsResponse: Response data
+            Yields:
+            SearchEligiblePostsResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/notes/search/posts_eligible_for_notes"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
@@ -91,45 +94,96 @@ class CommunityNotesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if test_mode is not None:
-            params["test_mode"] = test_mode
-        if pagination_token is not None:
-            params["pagination_token"] = pagination_token
-        if max_results is not None:
-            params["max_results"] = max_results
-        if post_selection is not None:
-            params["post_selection"] = post_selection
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return SearchEligiblePostsResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if test_mode is not None:
+                page_params["test_mode"] = test_mode
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if post_selection is not None:
+                page_params["post_selection"] = post_selection
+            if tweet_fields is not None:
+                page_params["tweet.fields"] = ",".join(
+                    str(item) for item in tweet_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            if poll_fields is not None:
+                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if place_fields is not None:
+                page_params["place.fields"] = ",".join(
+                    str(item) for item in place_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = SearchEligiblePostsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def evaluate(self, body: Optional[EvaluateRequest] = None) -> EvaluateResponse:
@@ -162,7 +216,6 @@ class CommunityNotesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
         headers = {}
         headers["Content-Type"] = "application/json"
         # Prepare request data
@@ -173,22 +226,70 @@ class CommunityNotesClient:
                 if hasattr(body, "model_dump")
                 else body
             )
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return EvaluateResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.post(
+                url,
+                params=page_params,
+                headers=headers,
+                json=json_data,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = EvaluateResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def delete(self, id: Any) -> DeleteResponse:
@@ -223,25 +324,72 @@ class CommunityNotesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.delete(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = DeleteResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def create(self, body: Optional[CreateRequest] = None) -> CreateResponse:
@@ -274,7 +422,6 @@ class CommunityNotesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
         headers = {}
         headers["Content-Type"] = "application/json"
         # Prepare request data
@@ -285,22 +432,70 @@ class CommunityNotesClient:
                 if hasattr(body, "model_dump")
                 else body
             )
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.post(
+                url,
+                params=page_params,
+                headers=headers,
+                json=json_data,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = CreateResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def search_written(
@@ -309,7 +504,7 @@ class CommunityNotesClient:
         pagination_token: str = None,
         max_results: int = None,
         note_fields: List = None,
-    ) -> SearchWrittenResponse:
+    ) -> Iterator[SearchWrittenResponse]:
         """
         Search for Community Notes Written
         Returns all the community notes written by the user.
@@ -318,8 +513,11 @@ class CommunityNotesClient:
             pagination_token: Pagination token to get next set of posts eligible for notes.
             max_results: Max results to return.
             note_fields: A comma separated list of Note fields to display.
-            Returns:
-            SearchWrittenResponse: Response data
+            Yields:
+            SearchWrittenResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/notes/search/notes_written"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
@@ -343,30 +541,75 @@ class CommunityNotesClient:
             # Check if token needs refresh
             if self.client.is_token_expired():
                 self.client.refresh_token()
-        params = {}
-        if test_mode is not None:
-            params["test_mode"] = test_mode
-        if pagination_token is not None:
-            params["pagination_token"] = pagination_token
-        if max_results is not None:
-            params["max_results"] = max_results
-        if note_fields is not None:
-            params["note.fields"] = ",".join(str(item) for item in note_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # The setup_authentication macro already sets the Authorization header
-        # Use regular session since we're using bearer token authentication
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return SearchWrittenResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if test_mode is not None:
+                page_params["test_mode"] = test_mode
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if note_fields is not None:
+                page_params["note.fields"] = ",".join(str(item) for item in note_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = SearchWrittenResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits

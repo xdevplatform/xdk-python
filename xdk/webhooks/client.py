@@ -13,7 +13,7 @@ Generated automatically - do not edit manually.
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING, Iterator
 import requests
 import time
 
@@ -21,16 +21,16 @@ import time
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    GetResponse,
-    CreateRequest,
-    CreateResponse,
     ValidateResponse,
     DeleteResponse,
-    CreateWebhookReplayJobRequest,
-    CreateWebhookReplayJobResponse,
     CreateStreamLinkResponse,
     DeleteStreamLinkResponse,
     GetStreamLinksResponse,
+    CreateWebhookReplayJobRequest,
+    CreateWebhookReplayJobResponse,
+    GetResponse,
+    CreateRequest,
+    CreateResponse,
 )
 
 
@@ -40,91 +40,6 @@ class WebhooksClient:
 
     def __init__(self, client: Client):
         self.client = client
-
-
-    def get(self, webhook_config_fields: List = None) -> GetResponse:
-        """
-        Get webhook
-        Get a list of webhook configs associated with a client app.
-        Args:
-            webhook_config_fields: A comma separated list of WebhookConfig fields to display.
-            Returns:
-            GetResponse: Response data
-        """
-        url = self.client.base_url + "/2/webhooks"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if webhook_config_fields is not None:
-            params["webhook_config.fields"] = ",".join(
-                str(item) for item in webhook_config_fields
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetResponse.model_validate(response_data)
-
-
-    def create(self, body: Optional[CreateRequest] = None) -> CreateResponse:
-        """
-        Create webhook
-        Creates a new webhook configuration.
-        body: Request body
-        Returns:
-            CreateResponse: Response data
-        """
-        url = self.client.base_url + "/2/webhooks"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Make the request
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateResponse.model_validate(response_data)
 
 
     def validate(self, webhook_id: Any) -> ValidateResponse:
@@ -147,22 +62,71 @@ class WebhooksClient:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
             )
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.put(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return ValidateResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.put(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = ValidateResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def delete(self, webhook_id: Any) -> DeleteResponse:
@@ -185,68 +149,71 @@ class WebhooksClient:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
             )
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.delete(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = DeleteResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
 
-
-    def create_webhook_replay_job(
-        self, body: Optional[CreateWebhookReplayJobRequest] = None
-    ) -> CreateWebhookReplayJobResponse:
-        """
-        Create replay job for webhook
-        Creates a replay job to retrieve events from up to the past 24 hours for all events delivered or attempted to be delivered to the webhook.
-        body: Request body
-        Returns:
-            CreateWebhookReplayJobResponse: Response data
-        """
-        url = self.client.base_url + "/2/webhooks/replay"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Make the request
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateWebhookReplayJobResponse.model_validate(response_data)
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def create_stream_link(
@@ -284,34 +251,83 @@ class WebhooksClient:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
             )
-        params = {}
-        if tweet_fields is not None:
-            params["tweet.fields"] = tweet_fields
-        if expansions is not None:
-            params["expansions"] = expansions
-        if media_fields is not None:
-            params["media.fields"] = media_fields
-        if poll_fields is not None:
-            params["poll.fields"] = poll_fields
-        if user_fields is not None:
-            params["user.fields"] = user_fields
-        if place_fields is not None:
-            params["place.fields"] = place_fields
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateStreamLinkResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if tweet_fields is not None:
+                page_params["tweet.fields"] = tweet_fields
+            if expansions is not None:
+                page_params["expansions"] = expansions
+            if media_fields is not None:
+                page_params["media.fields"] = media_fields
+            if poll_fields is not None:
+                page_params["poll.fields"] = poll_fields
+            if user_fields is not None:
+                page_params["user.fields"] = user_fields
+            if place_fields is not None:
+                page_params["place.fields"] = place_fields
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.post(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = CreateStreamLinkResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def delete_stream_link(self, webhook_id: Any) -> DeleteStreamLinkResponse:
@@ -334,22 +350,71 @@ class WebhooksClient:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
             )
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteStreamLinkResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.delete(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = DeleteStreamLinkResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
     def get_stream_links(
@@ -371,19 +436,346 @@ class WebhooksClient:
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
             )
-        params = {}
         headers = {}
         # Prepare request data
         json_data = None
-        # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetStreamLinksResponse.model_validate(response_data)
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetStreamLinksResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def create_webhook_replay_job(
+        self, body: Optional[CreateWebhookReplayJobRequest] = None
+    ) -> CreateWebhookReplayJobResponse:
+        """
+        Create replay job for webhook
+        Creates a replay job to retrieve events from up to the past 24 hours for all events delivered or attempted to be delivered to the webhook.
+        body: Request body
+        Returns:
+            CreateWebhookReplayJobResponse: Response data
+        """
+        url = self.client.base_url + "/2/webhooks/replay"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.post(
+                url,
+                params=page_params,
+                headers=headers,
+                json=json_data,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = CreateWebhookReplayJobResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get(self, webhook_config_fields: List = None) -> GetResponse:
+        """
+        Get webhook
+        Get a list of webhook configs associated with a client app.
+        Args:
+            webhook_config_fields: A comma separated list of WebhookConfig fields to display.
+            Returns:
+            GetResponse: Response data
+        """
+        url = self.client.base_url + "/2/webhooks"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if webhook_config_fields is not None:
+                page_params["webhook_config.fields"] = ",".join(
+                    str(item) for item in webhook_config_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def create(self, body: Optional[CreateRequest] = None) -> CreateResponse:
+        """
+        Create webhook
+        Creates a new webhook configuration.
+        body: Request body
+        Returns:
+            CreateResponse: Response data
+        """
+        url = self.client.base_url + "/2/webhooks"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"  # Default fallback
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = None
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Make the request
+            response = self.client.session.post(
+                url,
+                params=page_params,
+                headers=headers,
+                json=json_data,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = CreateResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token (most common pattern)
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token")
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
