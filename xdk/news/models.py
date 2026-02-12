@@ -15,14 +15,41 @@ from typing import Dict, List, Optional, Any, Union, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
-
-# Models for get
-
-
-class GetResponse(BaseModel):
-    """Response model for get"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Type aliases for referenced schemas (defined as Any for flexibility)
+# These allow models to reference types without requiring full schema definitions
+Expansions = Any
+Tweet = Any
+User = Any
+Space = Any
+Community = Any
+Media = Any
+Poll = Any
+Place = Any
+XList = Any  # Avoid conflict with typing.List
+DmEvent = Any
+News = Any
+Usage = Any
+ComplianceJob = Any
+ComplianceJobName = Any
+RulesCount = Any
+RulesResponseMetadata = Any
+Rule = Any
+MediaId = Any
+MediaCategory = Any
+MediaCategorySubtitles = Any
+TweetId = Any
+UserId = Any
+CommunityId = Any
+ListId = Any
+SpaceId = Any
+WebhookConfigId = Any
+PublicKey = Any
+FilteredStreamingTweetResponse = Any
+TweetText = Any
+TweetReplySettings = Any
+SubtitleLanguage = Any
+Subtitles = Any
+SubtitleLanguageCode = Any
 
 
 # Models for search
@@ -31,4 +58,86 @@ class GetResponse(BaseModel):
 class SearchResponse(BaseModel):
     """Response model for search"""
 
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    meta: Optional["SearchResponseMeta"] = None
+
     model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchResponseMeta(BaseModel):
+    """Nested model for SearchResponseMeta"""
+
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get
+
+
+class GetResponse(BaseModel):
+    """Response model for get"""
+
+    data: "News" = Field(
+        description="An AI generated news story.", default_factory=dict
+    )
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetResponseData(BaseModel):
+    """Nested model for GetResponseData"""
+
+    category: Optional[str] = None
+    cluster_posts_results: Optional[List] = None
+    contexts: Optional["GetResponseDataContexts"] = None
+    disclaimer: Optional[str] = None
+    hook: Optional[str] = None
+    keywords: Optional[List] = None
+    last_updated_at_ms: Optional[str] = None
+    name: Optional[str] = None
+    rest_id: Optional[str] = None
+    summary: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetResponseDataContexts(BaseModel):
+    """Nested model for GetResponseDataContexts"""
+
+    entities: Optional["GetResponseDataContextsEntities"] = None
+    finance: Optional["GetResponseDataContextsFinance"] = None
+    sports: Optional["GetResponseDataContextsSports"] = None
+    topics: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetResponseDataContextsEntities(BaseModel):
+    """Nested model for GetResponseDataContextsEntities"""
+
+    events: Optional[List] = None
+    organizations: Optional[List] = None
+    people: Optional[List] = None
+    places: Optional[List] = None
+    products: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetResponseDataContextsFinance(BaseModel):
+    """Nested model for GetResponseDataContextsFinance"""
+
+    tickers: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetResponseDataContextsSports(BaseModel):
+    """Nested model for GetResponseDataContextsSports"""
+
+    teams: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)

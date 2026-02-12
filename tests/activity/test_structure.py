@@ -43,96 +43,6 @@ class TestActivityStructure:
         self.activity_client = getattr(self.client, "activity")
 
 
-    def test_get_subscriptions_exists(self):
-        """Test that get_subscriptions method exists with correct signature."""
-        # Check method exists
-        method = getattr(ActivityClient, "get_subscriptions", None)
-        assert (
-            method is not None
-        ), f"Method get_subscriptions does not exist on ActivityClient"
-        # Check method is callable
-        assert callable(method), f"get_subscriptions is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"get_subscriptions should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_subscriptions"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_subscriptions_return_annotation(self):
-        """Test that get_subscriptions has proper return type annotation."""
-        method = getattr(ActivityClient, "get_subscriptions")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_subscriptions should have return type annotation"
-
-
-    def test_create_subscription_exists(self):
-        """Test that create_subscription method exists with correct signature."""
-        # Check method exists
-        method = getattr(ActivityClient, "create_subscription", None)
-        assert (
-            method is not None
-        ), f"Method create_subscription does not exist on ActivityClient"
-        # Check method is callable
-        assert callable(method), f"create_subscription is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"create_subscription should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_subscription"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_subscription_return_annotation(self):
-        """Test that create_subscription has proper return type annotation."""
-        method = getattr(ActivityClient, "create_subscription")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_subscription should have return type annotation"
-
-
     def test_update_subscription_exists(self):
         """Test that update_subscription method exists with correct signature."""
         # Check method exists
@@ -272,14 +182,126 @@ class TestActivityStructure:
         ), f"Method stream should have return type annotation"
 
 
+    def test_get_subscriptions_exists(self):
+        """Test that get_subscriptions method exists with correct signature."""
+        # Check method exists
+        method = getattr(ActivityClient, "get_subscriptions", None)
+        assert (
+            method is not None
+        ), f"Method get_subscriptions does not exist on ActivityClient"
+        # Check method is callable
+        assert callable(method), f"get_subscriptions is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_subscriptions should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_subscriptions"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "max_results",
+            "pagination_token",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_subscriptions_return_annotation(self):
+        """Test that get_subscriptions has proper return type annotation."""
+        method = getattr(ActivityClient, "get_subscriptions")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_subscriptions should have return type annotation"
+
+
+    def test_get_subscriptions_pagination_params(self):
+        """Test that get_subscriptions has pagination parameters."""
+        method = getattr(ActivityClient, "get_subscriptions")
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have pagination-related parameters
+        pagination_params = [
+            "pagination_token",
+            "max_results",
+            "next_token",
+            "cursor",
+            "limit",
+        ]
+        has_pagination_param = any(param in params for param in pagination_params)
+        assert (
+            has_pagination_param
+        ), f"Paginated method get_subscriptions should have pagination parameters"
+
+
+    def test_create_subscription_exists(self):
+        """Test that create_subscription method exists with correct signature."""
+        # Check method exists
+        method = getattr(ActivityClient, "create_subscription", None)
+        assert (
+            method is not None
+        ), f"Method create_subscription does not exist on ActivityClient"
+        # Check method is callable
+        assert callable(method), f"create_subscription is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"create_subscription should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_subscription"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_subscription_return_annotation(self):
+        """Test that create_subscription has proper return type annotation."""
+        method = getattr(ActivityClient, "create_subscription")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_subscription should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "get_subscriptions",
-            "create_subscription",
             "update_subscription",
             "delete_subscription",
             "stream",
+            "get_subscriptions",
+            "create_subscription",
         ]
         for expected_method in expected_methods:
             assert hasattr(

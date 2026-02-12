@@ -15,6 +15,42 @@ from typing import Dict, List, Optional, Any, Union, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
+# Type aliases for referenced schemas (defined as Any for flexibility)
+# These allow models to reference types without requiring full schema definitions
+Expansions = Any
+Tweet = Any
+User = Any
+Space = Any
+Community = Any
+Media = Any
+Poll = Any
+Place = Any
+XList = Any  # Avoid conflict with typing.List
+DmEvent = Any
+News = Any
+Usage = Any
+ComplianceJob = Any
+ComplianceJobName = Any
+RulesCount = Any
+RulesResponseMetadata = Any
+Rule = Any
+MediaId = Any
+MediaCategory = Any
+MediaCategorySubtitles = Any
+TweetId = Any
+UserId = Any
+CommunityId = Any
+ListId = Any
+SpaceId = Any
+WebhookConfigId = Any
+PublicKey = Any
+FilteredStreamingTweetResponse = Any
+TweetText = Any
+TweetReplySettings = Any
+SubtitleLanguage = Any
+Subtitles = Any
+SubtitleLanguageCode = Any
+
 
 # Models for delete_all
 
@@ -22,4 +58,91 @@ from datetime import datetime
 class DeleteAllResponse(BaseModel):
     """Response model for delete_all"""
 
+    data: Optional["DeleteAllResponseData"] = None
+    errors: Optional[List] = None
+
     model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteAllResponseData(BaseModel):
+    """Nested model for DeleteAllResponseData"""
+
+    failed_kills: Optional[int] = None
+    results: Optional[List] = None
+    successful_kills: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_connection_history
+
+
+class GetConnectionHistoryResponse(BaseModel):
+    """Response model for get_connection_history"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    meta: Optional["GetConnectionHistoryResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetConnectionHistoryResponseMeta(BaseModel):
+    """Nested model for GetConnectionHistoryResponseMeta"""
+
+    next_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for delete_by_uuids
+
+
+class DeleteByUuidsRequest(BaseModel):
+    """Request model for delete_by_uuids"""
+
+    uuids: str = Field(..., description="Array of connection UUIDs to terminate")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class DeleteByUuidsResponse(BaseModel):
+    """Response model for delete_by_uuids"""
+
+    data: Optional["DeleteByUuidsResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteByUuidsResponseData(BaseModel):
+    """Nested model for DeleteByUuidsResponseData"""
+
+    failed_kills: Optional[int] = None
+    results: Optional[List] = None
+    successful_kills: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for delete_by_endpoint
+
+
+class DeleteByEndpointResponse(BaseModel):
+    """Response model for delete_by_endpoint"""
+
+    data: Optional["DeleteByEndpointResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteByEndpointResponseData(BaseModel):
+    """Nested model for DeleteByEndpointResponseData"""
+
+    failed_kills: Optional[int] = None
+    results: Optional[List] = None
+    successful_kills: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)

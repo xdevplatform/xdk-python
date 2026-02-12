@@ -18,7 +18,6 @@ import requests
 import time
 import urllib.parse
 
-
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (

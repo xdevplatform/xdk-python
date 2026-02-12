@@ -86,10 +86,175 @@ class TestConnectionsStructure:
         ), f"Method delete_all should have return type annotation"
 
 
+    def test_get_connection_history_exists(self):
+        """Test that get_connection_history method exists with correct signature."""
+        # Check method exists
+        method = getattr(ConnectionsClient, "get_connection_history", None)
+        assert (
+            method is not None
+        ), f"Method get_connection_history does not exist on ConnectionsClient"
+        # Check method is callable
+        assert callable(method), f"get_connection_history is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_connection_history should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_connection_history"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "status",
+            "endpoints",
+            "max_results",
+            "pagination_token",
+            "connection.fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_connection_history_return_annotation(self):
+        """Test that get_connection_history has proper return type annotation."""
+        method = getattr(ConnectionsClient, "get_connection_history")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_connection_history should have return type annotation"
+
+
+    def test_get_connection_history_pagination_params(self):
+        """Test that get_connection_history has pagination parameters."""
+        method = getattr(ConnectionsClient, "get_connection_history")
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have pagination-related parameters
+        pagination_params = [
+            "pagination_token",
+            "max_results",
+            "next_token",
+            "cursor",
+            "limit",
+        ]
+        has_pagination_param = any(param in params for param in pagination_params)
+        assert (
+            has_pagination_param
+        ), f"Paginated method get_connection_history should have pagination parameters"
+
+
+    def test_delete_by_uuids_exists(self):
+        """Test that delete_by_uuids method exists with correct signature."""
+        # Check method exists
+        method = getattr(ConnectionsClient, "delete_by_uuids", None)
+        assert (
+            method is not None
+        ), f"Method delete_by_uuids does not exist on ConnectionsClient"
+        # Check method is callable
+        assert callable(method), f"delete_by_uuids is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"delete_by_uuids should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from delete_by_uuids"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_delete_by_uuids_return_annotation(self):
+        """Test that delete_by_uuids has proper return type annotation."""
+        method = getattr(ConnectionsClient, "delete_by_uuids")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method delete_by_uuids should have return type annotation"
+
+
+    def test_delete_by_endpoint_exists(self):
+        """Test that delete_by_endpoint method exists with correct signature."""
+        # Check method exists
+        method = getattr(ConnectionsClient, "delete_by_endpoint", None)
+        assert (
+            method is not None
+        ), f"Method delete_by_endpoint does not exist on ConnectionsClient"
+        # Check method is callable
+        assert callable(method), f"delete_by_endpoint is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"delete_by_endpoint should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "endpoint_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from delete_by_endpoint"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_delete_by_endpoint_return_annotation(self):
+        """Test that delete_by_endpoint has proper return type annotation."""
+        method = getattr(ConnectionsClient, "delete_by_endpoint")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method delete_by_endpoint should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
             "delete_all",
+            "get_connection_history",
+            "delete_by_uuids",
+            "delete_by_endpoint",
         ]
         for expected_method in expected_methods:
             assert hasattr(

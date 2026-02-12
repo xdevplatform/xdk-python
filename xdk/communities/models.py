@@ -15,6 +15,42 @@ from typing import Dict, List, Optional, Any, Union, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
+# Type aliases for referenced schemas (defined as Any for flexibility)
+# These allow models to reference types without requiring full schema definitions
+Expansions = Any
+Tweet = Any
+User = Any
+Space = Any
+Community = Any
+Media = Any
+Poll = Any
+Place = Any
+XList = Any  # Avoid conflict with typing.List
+DmEvent = Any
+News = Any
+Usage = Any
+ComplianceJob = Any
+ComplianceJobName = Any
+RulesCount = Any
+RulesResponseMetadata = Any
+Rule = Any
+MediaId = Any
+MediaCategory = Any
+MediaCategorySubtitles = Any
+TweetId = Any
+UserId = Any
+CommunityId = Any
+ListId = Any
+SpaceId = Any
+WebhookConfigId = Any
+PublicKey = Any
+FilteredStreamingTweetResponse = Any
+TweetText = Any
+TweetReplySettings = Any
+SubtitleLanguage = Any
+Subtitles = Any
+SubtitleLanguageCode = Any
+
 
 # Models for get_by_id
 
@@ -22,7 +58,22 @@ from datetime import datetime
 class GetByIdResponse(BaseModel):
     """Response model for get_by_id"""
 
+    data: "Community" = Field(
+        description="A X Community is a curated group of Posts.", default_factory=dict
+    )
+    errors: Optional[List] = None
+
     model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetByIdResponseData(BaseModel):
+    """Nested model for GetByIdResponseData"""
+
+    created_at: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # Models for search
@@ -31,4 +82,16 @@ class GetByIdResponse(BaseModel):
 class SearchResponse(BaseModel):
     """Response model for search"""
 
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    meta: Optional["SearchResponseMeta"] = None
+
     model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchResponseMeta(BaseModel):
+    """Nested model for SearchResponseMeta"""
+
+    next_token: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)

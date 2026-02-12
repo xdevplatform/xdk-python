@@ -15,44 +15,41 @@ from typing import Dict, List, Optional, Any, Union, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
-
-# Models for create
-
-
-class CreateRequest(BaseModel):
-    """Request model for create"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateResponse(BaseModel):
-    """Response model for create"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for delete
-
-
-class DeleteResponse(BaseModel):
-    """Response model for delete"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for evaluate
-
-
-class EvaluateRequest(BaseModel):
-    """Request model for evaluate"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class EvaluateResponse(BaseModel):
-    """Response model for evaluate"""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Type aliases for referenced schemas (defined as Any for flexibility)
+# These allow models to reference types without requiring full schema definitions
+Expansions = Any
+Tweet = Any
+User = Any
+Space = Any
+Community = Any
+Media = Any
+Poll = Any
+Place = Any
+XList = Any  # Avoid conflict with typing.List
+DmEvent = Any
+News = Any
+Usage = Any
+ComplianceJob = Any
+ComplianceJobName = Any
+RulesCount = Any
+RulesResponseMetadata = Any
+Rule = Any
+MediaId = Any
+MediaCategory = Any
+MediaCategorySubtitles = Any
+TweetId = Any
+UserId = Any
+CommunityId = Any
+ListId = Any
+SpaceId = Any
+WebhookConfigId = Any
+PublicKey = Any
+FilteredStreamingTweetResponse = Any
+TweetText = Any
+TweetReplySettings = Any
+SubtitleLanguage = Any
+Subtitles = Any
+SubtitleLanguageCode = Any
 
 
 # Models for search_written
@@ -61,7 +58,99 @@ class EvaluateResponse(BaseModel):
 class SearchWrittenResponse(BaseModel):
     """Response model for search_written"""
 
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    meta: Optional["SearchWrittenResponseMeta"] = None
+
     model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchWrittenResponseMeta(BaseModel):
+    """Nested model for SearchWrittenResponseMeta"""
+
+    next_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for create
+
+
+class CreateRequest(BaseModel):
+    """Request model for create"""
+
+    info: str = Field(..., description="A X Community Note is a note on a Post.")
+    post_id: str = Field(
+        ...,
+        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+    )
+    test_mode: str = Field(
+        ...,
+        description="If true, the note being submitted is only for testing the capability of the bot, and won't be publicly visible. If false, the note being submitted will be a new proposed note on the product.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateResponse(BaseModel):
+    """Response model for create"""
+
+    data: Optional["CreateResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateRequestInfo(BaseModel):
+    """Nested model for CreateRequestInfo"""
+
+    classification: Optional[str] = None
+    misleading_tags: Optional[List] = None
+    text: Optional[str] = None
+    trustworthy_sources: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateResponseData(BaseModel):
+    """Nested model for CreateResponseData"""
+
+    id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for evaluate
+
+
+class EvaluateRequest(BaseModel):
+    """Request model for evaluate"""
+
+    note_text: str = Field(..., description="Text for the community note.")
+    post_id: str = Field(
+        ...,
+        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class EvaluateResponse(BaseModel):
+    """Response model for evaluate"""
+
+    data: Optional["EvaluateResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EvaluateResponseData(BaseModel):
+    """Nested model for EvaluateResponseData"""
+
+    claim_opinion_score: Optional[float] = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # Models for search_eligible_posts
@@ -70,4 +159,51 @@ class SearchWrittenResponse(BaseModel):
 class SearchEligiblePostsResponse(BaseModel):
     """Response model for search_eligible_posts"""
 
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+    meta: Optional["SearchEligiblePostsResponseMeta"] = None
+
     model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchEligiblePostsResponseIncludes(BaseModel):
+    """Nested model for SearchEligiblePostsResponseIncludes"""
+
+    media: Optional[List] = None
+    places: Optional[List] = None
+    polls: Optional[List] = None
+    topics: Optional[List] = None
+    tweets: Optional[List] = None
+    users: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class SearchEligiblePostsResponseMeta(BaseModel):
+    """Nested model for SearchEligiblePostsResponseMeta"""
+
+    next_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for delete
+
+
+class DeleteResponse(BaseModel):
+    """Response model for delete"""
+
+    data: Optional["DeleteResponseData"] = Field(default_factory=dict)
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteResponseData(BaseModel):
+    """Nested model for DeleteResponseData"""
+
+    deleted: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)

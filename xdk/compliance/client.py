@@ -18,7 +18,6 @@ import requests
 import time
 import urllib.parse
 
-
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
@@ -323,7 +322,7 @@ class ComplianceClient:
         """
         Create Compliance Job
         Creates a new Compliance Job for the specified job type.
-        body: Request body
+        body: A request to create a new batch compliance job.
         Returns:
             CreateJobsResponse: Response data
         """
