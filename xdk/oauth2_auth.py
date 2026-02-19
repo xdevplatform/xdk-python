@@ -224,7 +224,7 @@ class OAuth2PKCEAuth:
             raise ValueError("No token to refresh")
         refresh_url = f"{self.base_url}/2/oauth2/token"
         self.token = self.oauth2_session.refresh_token(
-            refresh_url, client_id=self.client_id, client_secret=self.client_secret
+            refresh_url, auth=HTTPBasicAuth(self.client_id, self.client_secret)
         )
         return self.token
 
