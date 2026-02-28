@@ -43,6 +43,51 @@ class TestActivityStructure:
         self.activity_client = getattr(self.client, "activity")
 
 
+    def test_stream_exists(self):
+        """Test that stream method exists with correct signature."""
+        # Check method exists
+        method = getattr(ActivityClient, "stream", None)
+        assert method is not None, f"Method stream does not exist on ActivityClient"
+        # Check method is callable
+        assert callable(method), f"stream is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"stream should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from stream"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_stream_return_annotation(self):
+        """Test that stream has proper return type annotation."""
+        method = getattr(ActivityClient, "stream")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method stream should have return type annotation"
+
+
     def test_update_subscription_exists(self):
         """Test that update_subscription method exists with correct signature."""
         # Check method exists
@@ -135,51 +180,6 @@ class TestActivityStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method delete_subscription should have return type annotation"
-
-
-    def test_stream_exists(self):
-        """Test that stream method exists with correct signature."""
-        # Check method exists
-        method = getattr(ActivityClient, "stream", None)
-        assert method is not None, f"Method stream does not exist on ActivityClient"
-        # Check method is callable
-        assert callable(method), f"stream is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"stream should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from stream"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "start_time",
-            "end_time",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_stream_return_annotation(self):
-        """Test that stream has proper return type annotation."""
-        method = getattr(ActivityClient, "stream")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method stream should have return type annotation"
 
 
     def test_get_subscriptions_exists(self):
@@ -297,9 +297,9 @@ class TestActivityStructure:
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
+            "stream",
             "update_subscription",
             "delete_subscription",
-            "stream",
             "get_subscriptions",
             "create_subscription",
         ]

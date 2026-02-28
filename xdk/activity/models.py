@@ -52,6 +52,39 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
+# Models for stream
+
+
+class StreamResponse(BaseModel):
+    """Response model for stream"""
+
+    data: Optional["StreamResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class StreamResponseData(BaseModel):
+    """Nested model for StreamResponseData"""
+
+    event_type: Optional[str] = None
+    event_uuid: Optional[str] = None
+    filter: Optional["StreamResponseDataFilter"] = None
+    payload: Any = None
+    tag: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class StreamResponseDataFilter(BaseModel):
+    """Nested model for StreamResponseDataFilter"""
+
+    keyword: Optional[str] = None
+    user_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # Models for update_subscription
 
 
@@ -129,39 +162,6 @@ class DeleteSubscriptionResponseMeta(BaseModel):
     """Nested model for DeleteSubscriptionResponseMeta"""
 
     total_subscriptions: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for stream
-
-
-class StreamResponse(BaseModel):
-    """Response model for stream"""
-
-    data: Optional["StreamResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class StreamResponseData(BaseModel):
-    """Nested model for StreamResponseData"""
-
-    event_type: Optional[str] = None
-    event_uuid: Optional[str] = None
-    filter: Optional["StreamResponseDataFilter"] = None
-    payload: Any = None
-    tag: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class StreamResponseDataFilter(BaseModel):
-    """Nested model for StreamResponseDataFilter"""
-
-    keyword: Optional[str] = None
-    user_id: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 

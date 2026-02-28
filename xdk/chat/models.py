@@ -52,6 +52,136 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
+# Models for media_upload_finalize
+
+
+class MediaUploadFinalizeRequest(BaseModel):
+    """Request model for media_upload_finalize"""
+
+    conversation_id: Optional[str] = None
+    media_hash_key: Optional[str] = None
+    message_id: Optional[str] = None
+    num_parts: Optional[str] = None
+    ttl_msec: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class MediaUploadFinalizeResponse(BaseModel):
+    """Response model for media_upload_finalize"""
+
+    data: Optional["MediaUploadFinalizeResponseData"] = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaUploadFinalizeResponseData(BaseModel):
+    """Nested model for MediaUploadFinalizeResponseData"""
+
+    success: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for send_typing_indicator
+
+
+class SendTypingIndicatorResponse(BaseModel):
+    """Response model for send_typing_indicator"""
+
+    data: Optional["SendTypingIndicatorResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendTypingIndicatorResponseData(BaseModel):
+    """Nested model for SendTypingIndicatorResponseData"""
+
+    success: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_conversation
+
+
+class GetConversationResponse(BaseModel):
+    """Response model for get_conversation"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    meta: Optional["GetConversationResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetConversationResponseMeta(BaseModel):
+    """Nested model for GetConversationResponseMeta"""
+
+    has_more: Optional[bool] = None
+    missing_conversation_key_change_events: Optional[List] = None
+    next_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for media_download
+
+
+class MediaDownloadResponse(BaseModel):
+    """Response model for media_download"""
+
+    data: Optional[str] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Models for media_upload_append
+
+
+class MediaUploadAppendRequest(BaseModel):
+    """Request model for media_upload_append"""
+
+    conversation_id: Optional[str] = Field(
+        default=None, description="XChat conversation identifier for the upload."
+    )
+    media: Optional[str] = Field(default=None, description="The file to upload.")
+    media_hash_key: Optional[str] = Field(
+        default=None, description="Media hash key returned from initialize."
+    )
+    segment_index: Optional[Any] = Field(default=None)
+    conversation_id: Optional[str] = Field(
+        default=None, description="XChat conversation identifier for the upload."
+    )
+    media: Optional[str] = Field(default=None, description="The file to upload.")
+    media_hash_key: Optional[str] = Field(
+        default=None, description="Media hash key returned from initialize."
+    )
+    segment_index: Optional[Any] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class MediaUploadAppendResponse(BaseModel):
+    """Response model for media_upload_append"""
+
+    data: Optional["MediaUploadAppendResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaUploadAppendResponseData(BaseModel):
+    """Nested model for MediaUploadAppendResponseData"""
+
+    expires_at: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # Models for send_message
 
 
@@ -87,26 +217,94 @@ class SendMessageResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-# Models for get_conversation
+# Models for mark_conversation_read
 
 
-class GetConversationResponse(BaseModel):
-    """Response model for get_conversation"""
+class MarkConversationReadRequest(BaseModel):
+    """Request model for mark_conversation_read"""
 
-    data: Optional[List] = None
+    seen_until_sequence_id: str = Field(
+        ..., description="The sequence ID of the last message to mark as read up to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class MarkConversationReadResponse(BaseModel):
+    """Response model for mark_conversation_read"""
+
+    data: Optional["MarkConversationReadResponseData"] = None
     errors: Optional[List] = None
-    meta: Optional["GetConversationResponseMeta"] = None
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class GetConversationResponseMeta(BaseModel):
-    """Nested model for GetConversationResponseMeta"""
+class MarkConversationReadResponseData(BaseModel):
+    """Nested model for MarkConversationReadResponseData"""
 
-    has_more: Optional[bool] = None
-    missing_conversation_key_change_events: Optional[List] = None
+    success: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_conversations
+
+
+class GetConversationsResponse(BaseModel):
+    """Response model for get_conversations"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["GetConversationsResponseIncludes"] = None
+    meta: Optional["GetConversationsResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetConversationsResponseIncludes(BaseModel):
+    """Nested model for GetConversationsResponseIncludes"""
+
+    users: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetConversationsResponseMeta(BaseModel):
+    """Nested model for GetConversationsResponseMeta"""
+
+    has_message_requests: Optional[bool] = None
     next_token: Optional[str] = None
     result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for media_upload_initialize
+
+
+class MediaUploadInitializeRequest(BaseModel):
+    """Request model for media_upload_initialize"""
+
+    conversation_id: Optional[str] = None
+    total_bytes: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class MediaUploadInitializeResponse(BaseModel):
+    """Response model for media_upload_initialize"""
+
+    data: Optional["MediaUploadInitializeResponseData"] = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaUploadInitializeResponseData(BaseModel):
+    """Nested model for MediaUploadInitializeResponseData"""
+
+    conversation_id: Optional[str] = None
+    media_hash_key: Optional[str] = None
+    session_id: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -178,37 +376,5 @@ class AddUserPublicKeyResponseDataTokenMap(BaseModel):
     recover_threshold: Optional[int] = None
     register_threshold: Optional[int] = None
     token_map: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_conversations
-
-
-class GetConversationsResponse(BaseModel):
-    """Response model for get_conversations"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["GetConversationsResponseIncludes"] = None
-    meta: Optional["GetConversationsResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetConversationsResponseIncludes(BaseModel):
-    """Nested model for GetConversationsResponseIncludes"""
-
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class GetConversationsResponseMeta(BaseModel):
-    """Nested model for GetConversationsResponseMeta"""
-
-    has_message_requests: Optional[bool] = None
-    next_token: Optional[str] = None
-    result_count: Optional[int] = None
 
     model_config = ConfigDict(populate_by_name=True)

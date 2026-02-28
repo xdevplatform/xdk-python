@@ -21,11 +21,11 @@ import urllib.parse
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    DeleteAllResponse,
+    DeleteByEndpointResponse,
     GetConnectionHistoryResponse,
     DeleteByUuidsRequest,
     DeleteByUuidsResponse,
-    DeleteByEndpointResponse,
+    DeleteAllResponse,
 )
 
 
@@ -37,16 +37,17 @@ class ConnectionsClient:
         self.client = client
 
 
-    def delete_all(
-        self,
-    ) -> DeleteAllResponse:
+    def delete_by_endpoint(self, endpoint_id: str) -> DeleteByEndpointResponse:
         """
-        Terminate all connections
-        Terminates all active streaming connections for the authenticated application.
-        Returns:
-            DeleteAllResponse: Response data
+        Terminate connections by endpoint
+        Terminates all streaming connections for a specific endpoint ID for the authenticated application.
+        Args:
+            endpoint_id: The endpoint ID to terminate connections for.
+            Returns:
+            DeleteByEndpointResponse: Response data
         """
-        url = self.client.base_url + "/2/connections/all"
+        url = self.client.base_url + "/2/connections/{endpoint_id}"
+        url = url.replace("{endpoint_id}", str(endpoint_id))
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -165,7 +166,7 @@ class ConnectionsClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteAllResponse.model_validate(response_data)
+        return DeleteByEndpointResponse.model_validate(response_data)
 
 
     def get_connection_history(
@@ -533,17 +534,16 @@ class ConnectionsClient:
         return DeleteByUuidsResponse.model_validate(response_data)
 
 
-    def delete_by_endpoint(self, endpoint_id: str) -> DeleteByEndpointResponse:
+    def delete_all(
+        self,
+    ) -> DeleteAllResponse:
         """
-        Terminate connections by endpoint
-        Terminates all streaming connections for a specific endpoint ID for the authenticated application.
-        Args:
-            endpoint_id: The endpoint ID to terminate connections for.
-            Returns:
-            DeleteByEndpointResponse: Response data
+        Terminate all connections
+        Terminates all active streaming connections for the authenticated application.
+        Returns:
+            DeleteAllResponse: Response data
         """
-        url = self.client.base_url + "/2/connections/{endpoint_id}"
-        url = url.replace("{endpoint_id}", str(endpoint_id))
+        url = self.client.base_url + "/2/connections/all"
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -662,4 +662,4 @@ class ConnectionsClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteByEndpointResponse.model_validate(response_data)
+        return DeleteAllResponse.model_validate(response_data)

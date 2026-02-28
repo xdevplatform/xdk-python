@@ -52,56 +52,6 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
-# Models for get_by_id
-
-
-class GetByIdResponse(BaseModel):
-    """Response model for get_by_id"""
-
-    data: "Space" = Field(default_factory=dict)
-    errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetByIdResponseData(BaseModel):
-    """Nested model for GetByIdResponseData"""
-
-    created_at: Optional[str] = None
-    creator_id: Optional[str] = None
-    ended_at: Optional[str] = None
-    host_ids: Optional[List] = None
-    id: Optional[str] = None
-    invited_user_ids: Optional[List] = None
-    is_ticketed: Optional[bool] = None
-    lang: Optional[str] = None
-    participant_count: Optional[int] = None
-    scheduled_start: Optional[str] = None
-    speaker_ids: Optional[List] = None
-    started_at: Optional[str] = None
-    state: Optional[str] = None
-    subscriber_count: Optional[int] = None
-    title: Optional[str] = None
-    topics: Optional[List] = None
-    updated_at: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class GetByIdResponseIncludes(BaseModel):
-    """Nested model for GetByIdResponseIncludes"""
-
-    media: Optional[List] = None
-    places: Optional[List] = None
-    polls: Optional[List] = None
-    topics: Optional[List] = None
-    tweets: Optional[List] = None
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
 # Models for get_by_creator_ids
 
 
@@ -174,32 +124,6 @@ class GetBuyersResponseMeta(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-# Models for get_by_ids
-
-
-class GetByIdsResponse(BaseModel):
-    """Response model for get_by_ids"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetByIdsResponseIncludes(BaseModel):
-    """Nested model for GetByIdsResponseIncludes"""
-
-    media: Optional[List] = None
-    places: Optional[List] = None
-    polls: Optional[List] = None
-    topics: Optional[List] = None
-    tweets: Optional[List] = None
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
 # Models for search
 
 
@@ -231,6 +155,82 @@ class SearchResponseMeta(BaseModel):
     """Nested model for SearchResponseMeta"""
 
     result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_by_id
+
+
+class GetByIdResponse(BaseModel):
+    """Response model for get_by_id"""
+
+    data: "Space" = Field(default_factory=dict)
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetByIdResponseData(BaseModel):
+    """Nested model for GetByIdResponseData"""
+
+    created_at: Optional[str] = None
+    creator_id: Optional[str] = None
+    ended_at: Optional[str] = None
+    host_ids: Optional[List] = None
+    id: Optional[str] = None
+    invited_user_ids: Optional[List] = None
+    is_ticketed: Optional[bool] = None
+    lang: Optional[str] = None
+    participant_count: Optional[int] = None
+    scheduled_start: Optional[str] = None
+    speaker_ids: Optional[List] = None
+    started_at: Optional[str] = None
+    state: Optional[str] = None
+    subscriber_count: Optional[int] = None
+    title: Optional[str] = None
+    topics: Optional[List] = None
+    updated_at: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetByIdResponseIncludes(BaseModel):
+    """Nested model for GetByIdResponseIncludes"""
+
+    media: Optional[List] = None
+    places: Optional[List] = None
+    polls: Optional[List] = None
+    topics: Optional[List] = None
+    tweets: Optional[List] = None
+    users: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_by_ids
+
+
+class GetByIdsResponse(BaseModel):
+    """Response model for get_by_ids"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetByIdsResponseIncludes(BaseModel):
+    """Nested model for GetByIdsResponseIncludes"""
+
+    media: Optional[List] = None
+    places: Optional[List] = None
+    polls: Optional[List] = None
+    topics: Optional[List] = None
+    tweets: Optional[List] = None
+    users: Optional[List] = None
 
     model_config = ConfigDict(populate_by_name=True)
 

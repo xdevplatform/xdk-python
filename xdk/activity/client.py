@@ -34,10 +34,10 @@ from ..streaming import StreamConfig, StreamError, stream_with_retry
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
+    StreamResponse,
     UpdateSubscriptionRequest,
     UpdateSubscriptionResponse,
     DeleteSubscriptionResponse,
-    StreamResponse,
     GetSubscriptionsResponse,
     CreateSubscriptionRequest,
     CreateSubscriptionResponse,
@@ -50,6 +50,71 @@ class ActivityClient:
 
     def __init__(self, client: Client):
         self.client = client
+
+
+    def stream(
+        self,
+        backfill_minutes: int = None,
+        start_time: str = None,
+        end_time: str = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[StreamResponse, None, None]:
+        """
+        Activity Stream (Streaming)
+        Stream of X Activities
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Post labels will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Post labels will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            StreamResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/activity/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=StreamResponse,
+        )
 
 
     def update_subscription(
@@ -329,71 +394,6 @@ class ActivityClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return DeleteSubscriptionResponse.model_validate(response_data)
-
-
-    def stream(
-        self,
-        backfill_minutes: int = None,
-        start_time: str = None,
-        end_time: str = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[StreamResponse, None, None]:
-        """
-        Activity Stream (Streaming)
-        Stream of X Activities
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Post labels will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Post labels will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            StreamResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/activity/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=StreamResponse,
-        )
 
 
     def get_subscriptions(

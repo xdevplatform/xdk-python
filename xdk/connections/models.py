@@ -52,20 +52,20 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
-# Models for delete_all
+# Models for delete_by_endpoint
 
 
-class DeleteAllResponse(BaseModel):
-    """Response model for delete_all"""
+class DeleteByEndpointResponse(BaseModel):
+    """Response model for delete_by_endpoint"""
 
-    data: Optional["DeleteAllResponseData"] = None
+    data: Optional["DeleteByEndpointResponseData"] = None
     errors: Optional[List] = None
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteAllResponseData(BaseModel):
-    """Nested model for DeleteAllResponseData"""
+class DeleteByEndpointResponseData(BaseModel):
+    """Nested model for DeleteByEndpointResponseData"""
 
     failed_kills: Optional[int] = None
     results: Optional[List] = None
@@ -126,20 +126,20 @@ class DeleteByUuidsResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-# Models for delete_by_endpoint
+# Models for delete_all
 
 
-class DeleteByEndpointResponse(BaseModel):
-    """Response model for delete_by_endpoint"""
+class DeleteAllResponse(BaseModel):
+    """Response model for delete_all"""
 
-    data: Optional["DeleteByEndpointResponseData"] = None
+    data: Optional["DeleteAllResponseData"] = None
     errors: Optional[List] = None
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteByEndpointResponseData(BaseModel):
-    """Nested model for DeleteByEndpointResponseData"""
+class DeleteAllResponseData(BaseModel):
+    """Nested model for DeleteAllResponseData"""
 
     failed_kills: Optional[int] = None
     results: Optional[List] = None

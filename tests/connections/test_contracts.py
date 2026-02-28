@@ -43,8 +43,8 @@ class TestConnectionsContracts:
         self.connections_client = getattr(self.client, "connections")
 
 
-    def test_delete_all_request_structure(self):
-        """Test delete_all request structure."""
+    def test_delete_by_endpoint_request_structure(self):
+        """Test delete_by_endpoint request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -55,10 +55,11 @@ class TestConnectionsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
+            kwargs["endpoint_id"] = "test_endpoint_id"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.connections_client, "delete_all")
+                method = getattr(self.connections_client, "delete_by_endpoint")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -139,7 +140,7 @@ class TestConnectionsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/connections/all"
+                expected_path = "/2/connections/{endpoint_id}"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -167,27 +168,33 @@ class TestConnectionsContracts:
                     # Validation error is acceptable - request was made, just response parsing failed
                     mock_session.delete.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for delete_all: {e}")
+                    pytest.fail(f"Contract test failed for delete_by_endpoint: {e}")
 
 
-    def test_delete_all_required_parameters(self):
-        """Test that delete_all handles parameters correctly."""
-        method = getattr(self.connections_client, "delete_all")
-        # No required parameters, method should be callable without args
+    def test_delete_by_endpoint_required_parameters(self):
+        """Test that delete_by_endpoint handles parameters correctly."""
+        method = getattr(self.connections_client, "delete_by_endpoint")
+        # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
             mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {}
-            mock_response.raise_for_status.return_value = None
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
             mock_session.delete.return_value = mock_response
-            try:
-                method()
-            except Exception as e:
-                pytest.fail(f"Method with no required params should be callable: {e}")
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
 
 
-    def test_delete_all_response_structure(self):
-        """Test delete_all response structure validation."""
+    def test_delete_by_endpoint_response_structure(self):
+        """Test delete_by_endpoint response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {}
@@ -198,9 +205,10 @@ class TestConnectionsContracts:
             mock_session.delete.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
+            kwargs["endpoint_id"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.connections_client, "delete_all")
+            method = getattr(self.connections_client, "delete_by_endpoint")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed
@@ -606,8 +614,8 @@ class TestConnectionsContracts:
                 )
 
 
-    def test_delete_by_endpoint_request_structure(self):
-        """Test delete_by_endpoint request structure."""
+    def test_delete_all_request_structure(self):
+        """Test delete_all request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -618,11 +626,10 @@ class TestConnectionsContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["endpoint_id"] = "test_endpoint_id"
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.connections_client, "delete_by_endpoint")
+                method = getattr(self.connections_client, "delete_all")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -703,7 +710,7 @@ class TestConnectionsContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/connections/{endpoint_id}"
+                expected_path = "/2/connections/all"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -731,33 +738,27 @@ class TestConnectionsContracts:
                     # Validation error is acceptable - request was made, just response parsing failed
                     mock_session.delete.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for delete_by_endpoint: {e}")
+                    pytest.fail(f"Contract test failed for delete_all: {e}")
 
 
-    def test_delete_by_endpoint_required_parameters(self):
-        """Test that delete_by_endpoint handles parameters correctly."""
-        method = getattr(self.connections_client, "delete_by_endpoint")
-        # Test with missing required parameters - mock the request to avoid network calls
+    def test_delete_all_required_parameters(self):
+        """Test that delete_all handles parameters correctly."""
+        method = getattr(self.connections_client, "delete_all")
+        # No required parameters, method should be callable without args
         with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
             mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_response.status_code = 200
+            mock_response.json.return_value = {}
+            mock_response.raise_for_status.return_value = None
             mock_session.delete.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            # For generator methods (paginated), we need to iterate to trigger the exception
-            import types
-            with pytest.raises((TypeError, ValueError, Exception)):
-                result = method()
-                # Check if it's a generator (paginated method)
-                if isinstance(result, types.GeneratorType):
-                    # For generators, exception is raised when iterating
-                    next(result)
+            try:
+                method()
+            except Exception as e:
+                pytest.fail(f"Method with no required params should be callable: {e}")
 
 
-    def test_delete_by_endpoint_response_structure(self):
-        """Test delete_by_endpoint response structure validation."""
+    def test_delete_all_response_structure(self):
+        """Test delete_all response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response with expected structure
             mock_response_data = {}
@@ -768,10 +769,9 @@ class TestConnectionsContracts:
             mock_session.delete.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["endpoint_id"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.connections_client, "delete_by_endpoint")
+            method = getattr(self.connections_client, "delete_all")
             result = method(**kwargs)
             # Verify response object has expected attributes
             # Optional field - just check it doesn't cause errors if accessed

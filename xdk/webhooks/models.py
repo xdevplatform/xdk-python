@@ -52,59 +52,6 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
-# Models for create_webhook_replay_job
-
-
-class CreateWebhookReplayJobRequest(BaseModel):
-    """Request model for create_webhook_replay_job"""
-
-    from_date: str = Field(
-        ...,
-        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format.",
-    )
-    to_date: str = Field(
-        ...,
-        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format.",
-    )
-    webhook_id: str = Field(
-        ..., description="The unique identifier of this webhook config."
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateWebhookReplayJobResponse(BaseModel):
-    """Response model for create_webhook_replay_job"""
-
-    created_at: Optional[str] = None
-    job_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for get_stream_links
-
-
-class GetStreamLinksResponse(BaseModel):
-    """Response model for get_stream_links"""
-
-    data: Optional["GetStreamLinksResponseData"] = Field(
-        description="The list of active webhook links for a given stream",
-        default_factory=dict,
-    )
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetStreamLinksResponseData(BaseModel):
-    """Nested model for GetStreamLinksResponseData"""
-
-    links: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
 # Models for get
 
 
@@ -148,6 +95,36 @@ class CreateResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+# Models for create_webhook_replay_job
+
+
+class CreateWebhookReplayJobRequest(BaseModel):
+    """Request model for create_webhook_replay_job"""
+
+    from_date: str = Field(
+        ...,
+        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format.",
+    )
+    to_date: str = Field(
+        ...,
+        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format.",
+    )
+    webhook_id: str = Field(
+        ..., description="The unique identifier of this webhook config."
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateWebhookReplayJobResponse(BaseModel):
+    """Response model for create_webhook_replay_job"""
+
+    created_at: Optional[str] = None
+    job_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 # Models for validate
 
 
@@ -184,6 +161,29 @@ class DeleteResponseData(BaseModel):
     """Nested model for DeleteResponseData"""
 
     deleted: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_stream_links
+
+
+class GetStreamLinksResponse(BaseModel):
+    """Response model for get_stream_links"""
+
+    data: Optional["GetStreamLinksResponseData"] = Field(
+        description="The list of active webhook links for a given stream",
+        default_factory=dict,
+    )
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetStreamLinksResponseData(BaseModel):
+    """Nested model for GetStreamLinksResponseData"""
+
+    links: Optional[List] = None
 
     model_config = ConfigDict(populate_by_name=True)
 

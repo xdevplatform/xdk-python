@@ -52,22 +52,93 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
-# Models for get_events_by_participant_id
+# Models for create_conversation
 
 
-class GetEventsByParticipantIdResponse(BaseModel):
-    """Response model for get_events_by_participant_id"""
+class CreateConversationRequest(BaseModel):
+    """Request model for create_conversation"""
 
-    data: Optional[List] = None
+    conversation_type: str = Field(
+        ..., description="The conversation type that is being created."
+    )
+    message: str = Field(...)
+    participant_ids: str = Field(
+        ..., description="Participants for the DM Conversation."
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateConversationResponse(BaseModel):
+    """Response model for create_conversation"""
+
+    data: Optional["CreateConversationResponseData"] = Field(default_factory=dict)
     errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-    meta: Optional["GetEventsByParticipantIdResponseMeta"] = None
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class GetEventsByParticipantIdResponseIncludes(BaseModel):
-    """Nested model for GetEventsByParticipantIdResponseIncludes"""
+class CreateConversationResponseData(BaseModel):
+    """Nested model for CreateConversationResponseData"""
+
+    dm_conversation_id: Optional[str] = None
+    dm_event_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for create_by_conversation_id
+
+
+class CreateByConversationIdRequest(BaseModel):
+    """Request model for create_by_conversation_id"""
+
+    attachments: Optional[List] = Field(
+        default=None, description="Attachments to a DM Event."
+    )
+    text: Optional[str] = Field(default=None, description="Text of the message.")
+    attachments: Optional[List] = Field(
+        default=None, description="Attachments to a DM Event."
+    )
+    text: Optional[str] = Field(default=None, description="Text of the message.")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateByConversationIdResponse(BaseModel):
+    """Response model for create_by_conversation_id"""
+
+    data: Optional["CreateByConversationIdResponseData"] = Field(default_factory=dict)
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateByConversationIdResponseData(BaseModel):
+    """Nested model for CreateByConversationIdResponseData"""
+
+    dm_conversation_id: Optional[str] = None
+    dm_event_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_events
+
+
+class GetEventsResponse(BaseModel):
+    """Response model for get_events"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+    meta: Optional["GetEventsResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetEventsResponseIncludes(BaseModel):
+    """Nested model for GetEventsResponseIncludes"""
 
     media: Optional[List] = None
     places: Optional[List] = None
@@ -79,8 +150,8 @@ class GetEventsByParticipantIdResponseIncludes(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class GetEventsByParticipantIdResponseMeta(BaseModel):
-    """Nested model for GetEventsByParticipantIdResponseMeta"""
+class GetEventsResponseMeta(BaseModel):
+    """Nested model for GetEventsResponseMeta"""
 
     next_token: Optional[str] = None
     previous_token: Optional[str] = None
@@ -122,6 +193,79 @@ class GetEventsByConversationIdResponseMeta(BaseModel):
     next_token: Optional[str] = None
     previous_token: Optional[str] = None
     result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_events_by_participant_id
+
+
+class GetEventsByParticipantIdResponse(BaseModel):
+    """Response model for get_events_by_participant_id"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+    meta: Optional["GetEventsByParticipantIdResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetEventsByParticipantIdResponseIncludes(BaseModel):
+    """Nested model for GetEventsByParticipantIdResponseIncludes"""
+
+    media: Optional[List] = None
+    places: Optional[List] = None
+    polls: Optional[List] = None
+    topics: Optional[List] = None
+    tweets: Optional[List] = None
+    users: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetEventsByParticipantIdResponseMeta(BaseModel):
+    """Nested model for GetEventsByParticipantIdResponseMeta"""
+
+    next_token: Optional[str] = None
+    previous_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for create_by_participant_id
+
+
+class CreateByParticipantIdRequest(BaseModel):
+    """Request model for create_by_participant_id"""
+
+    attachments: Optional[List] = Field(
+        default=None, description="Attachments to a DM Event."
+    )
+    text: Optional[str] = Field(default=None, description="Text of the message.")
+    attachments: Optional[List] = Field(
+        default=None, description="Attachments to a DM Event."
+    )
+    text: Optional[str] = Field(default=None, description="Text of the message.")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateByParticipantIdResponse(BaseModel):
+    """Response model for create_by_participant_id"""
+
+    data: Optional["CreateByParticipantIdResponseData"] = Field(default_factory=dict)
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateByParticipantIdResponseData(BaseModel):
+    """Nested model for CreateByParticipantIdResponseData"""
+
+    dm_conversation_id: Optional[str] = None
+    dm_event_id: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -197,149 +341,5 @@ class DeleteEventsResponseData(BaseModel):
     """Nested model for DeleteEventsResponseData"""
 
     deleted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create_conversation
-
-
-class CreateConversationRequest(BaseModel):
-    """Request model for create_conversation"""
-
-    conversation_type: str = Field(
-        ..., description="The conversation type that is being created."
-    )
-    message: str = Field(...)
-    participant_ids: str = Field(
-        ..., description="Participants for the DM Conversation."
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateConversationResponse(BaseModel):
-    """Response model for create_conversation"""
-
-    data: Optional["CreateConversationResponseData"] = Field(default_factory=dict)
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateConversationResponseData(BaseModel):
-    """Nested model for CreateConversationResponseData"""
-
-    dm_conversation_id: Optional[str] = None
-    dm_event_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create_by_conversation_id
-
-
-class CreateByConversationIdRequest(BaseModel):
-    """Request model for create_by_conversation_id"""
-
-    attachments: Optional[List] = Field(
-        default=None, description="Attachments to a DM Event."
-    )
-    text: Optional[str] = Field(default=None, description="Text of the message.")
-    attachments: Optional[List] = Field(
-        default=None, description="Attachments to a DM Event."
-    )
-    text: Optional[str] = Field(default=None, description="Text of the message.")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateByConversationIdResponse(BaseModel):
-    """Response model for create_by_conversation_id"""
-
-    data: Optional["CreateByConversationIdResponseData"] = Field(default_factory=dict)
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateByConversationIdResponseData(BaseModel):
-    """Nested model for CreateByConversationIdResponseData"""
-
-    dm_conversation_id: Optional[str] = None
-    dm_event_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create_by_participant_id
-
-
-class CreateByParticipantIdRequest(BaseModel):
-    """Request model for create_by_participant_id"""
-
-    attachments: Optional[List] = Field(
-        default=None, description="Attachments to a DM Event."
-    )
-    text: Optional[str] = Field(default=None, description="Text of the message.")
-    attachments: Optional[List] = Field(
-        default=None, description="Attachments to a DM Event."
-    )
-    text: Optional[str] = Field(default=None, description="Text of the message.")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateByParticipantIdResponse(BaseModel):
-    """Response model for create_by_participant_id"""
-
-    data: Optional["CreateByParticipantIdResponseData"] = Field(default_factory=dict)
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateByParticipantIdResponseData(BaseModel):
-    """Nested model for CreateByParticipantIdResponseData"""
-
-    dm_conversation_id: Optional[str] = None
-    dm_event_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_events
-
-
-class GetEventsResponse(BaseModel):
-    """Response model for get_events"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-    meta: Optional["GetEventsResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetEventsResponseIncludes(BaseModel):
-    """Nested model for GetEventsResponseIncludes"""
-
-    media: Optional[List] = None
-    places: Optional[List] = None
-    polls: Optional[List] = None
-    topics: Optional[List] = None
-    tweets: Optional[List] = None
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class GetEventsResponseMeta(BaseModel):
-    """Nested model for GetEventsResponseMeta"""
-
-    next_token: Optional[str] = None
-    previous_token: Optional[str] = None
-    result_count: Optional[int] = None
 
     model_config = ConfigDict(populate_by_name=True)

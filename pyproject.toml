@@ -14,7 +14,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xdk"
-version = "0.8.1"
+version = "0.9.0"
 description = "Python SDK for the X API"
 authors = [
     {name = "X Developer Platform", email = "devs@x.com"},

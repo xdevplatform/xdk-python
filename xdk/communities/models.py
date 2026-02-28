@@ -52,6 +52,27 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
+# Models for search
+
+
+class SearchResponse(BaseModel):
+    """Response model for search"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    meta: Optional["SearchResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchResponseMeta(BaseModel):
+    """Nested model for SearchResponseMeta"""
+
+    next_token: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # Models for get_by_id
 
 
@@ -72,26 +93,5 @@ class GetByIdResponseData(BaseModel):
     created_at: Optional[str] = None
     id: Optional[str] = None
     name: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for search
-
-
-class SearchResponse(BaseModel):
-    """Response model for search"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    meta: Optional["SearchResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SearchResponseMeta(BaseModel):
-    """Nested model for SearchResponseMeta"""
-
-    next_token: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)

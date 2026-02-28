@@ -52,6 +52,145 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
+# Models for get_members
+
+
+class GetMembersResponse(BaseModel):
+    """Response model for get_members"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+    meta: Optional["GetMembersResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetMembersResponseIncludes(BaseModel):
+    """Nested model for GetMembersResponseIncludes"""
+
+    media: Optional[List] = None
+    places: Optional[List] = None
+    polls: Optional[List] = None
+    topics: Optional[List] = None
+    tweets: Optional[List] = None
+    users: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetMembersResponseMeta(BaseModel):
+    """Nested model for GetMembersResponseMeta"""
+
+    next_token: Optional[str] = None
+    previous_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for add_member
+
+
+class AddMemberRequest(BaseModel):
+    """Request model for add_member"""
+
+    user_id: str = Field(
+        ...,
+        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class AddMemberResponse(BaseModel):
+    """Response model for add_member"""
+
+    data: Optional["AddMemberResponseData"] = None
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddMemberResponseData(BaseModel):
+    """Nested model for AddMemberResponseData"""
+
+    is_member: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_posts
+
+
+class GetPostsResponse(BaseModel):
+    """Response model for get_posts"""
+
+    data: Optional[List] = None
+    errors: Optional[List] = None
+    includes: Optional["Expansions"] = None
+    meta: Optional["GetPostsResponseMeta"] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsResponseIncludes(BaseModel):
+    """Nested model for GetPostsResponseIncludes"""
+
+    media: Optional[List] = None
+    places: Optional[List] = None
+    polls: Optional[List] = None
+    topics: Optional[List] = None
+    tweets: Optional[List] = None
+    users: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class GetPostsResponseMeta(BaseModel):
+    """Nested model for GetPostsResponseMeta"""
+
+    next_token: Optional[str] = None
+    previous_token: Optional[str] = None
+    result_count: Optional[int] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for create
+
+
+class CreateRequest(BaseModel):
+    """Request model for create"""
+
+    name: str = Field(...)
+
+    description: Optional[str] = None
+    private: Optional[bool] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CreateResponse(BaseModel):
+    """Response model for create"""
+
+    data: Optional["CreateResponseData"] = Field(
+        description="A X List is a curated group of accounts.", default_factory=dict
+    )
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateResponseData(BaseModel):
+    """Nested model for CreateResponseData"""
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # Models for get_followers
 
 
@@ -105,43 +244,6 @@ class RemoveMemberByUserIdResponseData(BaseModel):
     """Nested model for RemoveMemberByUserIdResponseData"""
 
     is_member: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_posts
-
-
-class GetPostsResponse(BaseModel):
-    """Response model for get_posts"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-    meta: Optional["GetPostsResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetPostsResponseIncludes(BaseModel):
-    """Nested model for GetPostsResponseIncludes"""
-
-    media: Optional[List] = None
-    places: Optional[List] = None
-    polls: Optional[List] = None
-    topics: Optional[List] = None
-    tweets: Optional[List] = None
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class GetPostsResponseMeta(BaseModel):
-    """Nested model for GetPostsResponseMeta"""
-
-    next_token: Optional[str] = None
-    previous_token: Optional[str] = None
-    result_count: Optional[int] = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -235,107 +337,5 @@ class DeleteResponseData(BaseModel):
     """Nested model for DeleteResponseData"""
 
     deleted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_members
-
-
-class GetMembersResponse(BaseModel):
-    """Response model for get_members"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-    meta: Optional["GetMembersResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetMembersResponseIncludes(BaseModel):
-    """Nested model for GetMembersResponseIncludes"""
-
-    media: Optional[List] = None
-    places: Optional[List] = None
-    polls: Optional[List] = None
-    topics: Optional[List] = None
-    tweets: Optional[List] = None
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class GetMembersResponseMeta(BaseModel):
-    """Nested model for GetMembersResponseMeta"""
-
-    next_token: Optional[str] = None
-    previous_token: Optional[str] = None
-    result_count: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for add_member
-
-
-class AddMemberRequest(BaseModel):
-    """Request model for add_member"""
-
-    user_id: str = Field(
-        ...,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AddMemberResponse(BaseModel):
-    """Response model for add_member"""
-
-    data: Optional["AddMemberResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AddMemberResponseData(BaseModel):
-    """Nested model for AddMemberResponseData"""
-
-    is_member: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create
-
-
-class CreateRequest(BaseModel):
-    """Request model for create"""
-
-    name: str = Field(...)
-
-    description: Optional[str] = None
-    private: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateResponse(BaseModel):
-    """Response model for create"""
-
-    data: Optional["CreateResponseData"] = Field(
-        description="A X List is a curated group of accounts.", default_factory=dict
-    )
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateResponseData(BaseModel):
-    """Nested model for CreateResponseData"""
-
-    id: Optional[str] = None
-    name: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)

@@ -52,34 +52,6 @@ Subtitles = Any
 SubtitleLanguageCode = Any
 
 
-# Models for get_jobs_by_id
-
-
-class GetJobsByIdResponse(BaseModel):
-    """Response model for get_jobs_by_id"""
-
-    data: "ComplianceJob" = Field(default_factory=dict)
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetJobsByIdResponseData(BaseModel):
-    """Nested model for GetJobsByIdResponseData"""
-
-    created_at: Optional[str] = None
-    download_expires_at: Optional[str] = None
-    download_url: Optional[str] = None
-    id: Optional[str] = None
-    name: Optional[str] = None
-    status: Optional[str] = None
-    type: Optional[str] = None
-    upload_expires_at: Optional[str] = None
-    upload_url: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
 # Models for get_jobs
 
 
@@ -126,6 +98,34 @@ class CreateJobsResponse(BaseModel):
 
 class CreateJobsResponseData(BaseModel):
     """Nested model for CreateJobsResponseData"""
+
+    created_at: Optional[str] = None
+    download_expires_at: Optional[str] = None
+    download_url: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+    type: Optional[str] = None
+    upload_expires_at: Optional[str] = None
+    upload_url: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Models for get_jobs_by_id
+
+
+class GetJobsByIdResponse(BaseModel):
+    """Response model for get_jobs_by_id"""
+
+    data: "ComplianceJob" = Field(default_factory=dict)
+    errors: Optional[List] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetJobsByIdResponseData(BaseModel):
+    """Nested model for GetJobsByIdResponseData"""
 
     created_at: Optional[str] = None
     download_expires_at: Optional[str] = None
