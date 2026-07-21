@@ -18,6 +18,9 @@ import requests
 import time
 import urllib.parse
 
+
+from .. import schemas
+
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
@@ -37,9 +40,24 @@ class NewsClient:
     def search(
         self,
         query: str,
-        max_results: int = None,
-        max_age_hours: int = None,
-        news_fields: List = None,
+        max_results: Optional[int] = None,
+        max_age_hours: Optional[int] = None,
+        news_fields: Optional[
+            List[
+                Literal[
+                    "category",
+                    "cluster_posts_results",
+                    "contexts",
+                    "disclaimer",
+                    "hook",
+                    "id",
+                    "keywords",
+                    "name",
+                    "summary",
+                    "updated_at",
+                ]
+            ]
+        ] = None,
     ) -> SearchResponse:
         """
         Search News
@@ -204,7 +222,26 @@ class NewsClient:
         return SearchResponse.model_validate(response_data)
 
 
-    def get(self, id: Any, news_fields: List = None) -> GetResponse:
+    def get(
+        self,
+        id: schemas.NewsId,
+        news_fields: Optional[
+            List[
+                Literal[
+                    "category",
+                    "cluster_posts_results",
+                    "contexts",
+                    "disclaimer",
+                    "hook",
+                    "id",
+                    "keywords",
+                    "name",
+                    "summary",
+                    "updated_at",
+                ]
+            ]
+        ] = None,
+    ) -> GetResponse:
         """
         Get news stories by ID
         Retrieves news story by its ID.

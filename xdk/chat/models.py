@@ -6,375 +6,106 @@ Auto-generated chat models for the X API.
 
 This module provides Pydantic models for request and response data structures
 for the chat endpoints of the X API. All models are generated
-from the OpenAPI specification and provide type safety and validation.
+from the OpenAPI specification and reference the canonical component schemas
+in xdk.schemas, so they are fully typed.
 
 Generated automatically - do not edit manually.
 """
 
-from typing import Dict, List, Optional, Any, Union, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Union, Literal
+from pydantic import BaseModel, Field, ConfigDict, RootModel
 
-# Type aliases for referenced schemas (defined as Any for flexibility)
-# These allow models to reference types without requiring full schema definitions
-Expansions = Any
-Tweet = Any
-User = Any
-Space = Any
-Community = Any
-Media = Any
-Poll = Any
-Place = Any
-XList = Any  # Avoid conflict with typing.List
-DmEvent = Any
-News = Any
-Usage = Any
-ComplianceJob = Any
-ComplianceJobName = Any
-RulesCount = Any
-RulesResponseMetadata = Any
-Rule = Any
-MediaId = Any
-MediaCategory = Any
-MediaCategorySubtitles = Any
-TweetId = Any
-UserId = Any
-CommunityId = Any
-ListId = Any
-SpaceId = Any
-WebhookConfigId = Any
-PublicKey = Any
-FilteredStreamingTweetResponse = Any
-TweetText = Any
-TweetReplySettings = Any
-SubtitleLanguage = Any
-Subtitles = Any
-SubtitleLanguageCode = Any
+from .. import schemas
+
+# Request model for add_conversation_keys
+AddConversationKeysRequest = schemas.ChatInitializeConversationKeysRequest
 
 
-# Models for media_upload_finalize
+# Response model for add_conversation_keys
+AddConversationKeysResponse = schemas.ChatInitializeConversationKeysResponse
 
 
-class MediaUploadFinalizeRequest(BaseModel):
-    """Request model for media_upload_finalize"""
-
-    conversation_id: Optional[str] = None
-    media_hash_key: Optional[str] = None
-    message_id: Optional[str] = None
-    num_parts: Optional[str] = None
-    ttl_msec: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for send_typing_indicator
+SendTypingIndicatorResponse = schemas.ChatSendTypingIndicatorResponse
 
 
-class MediaUploadFinalizeResponse(BaseModel):
-    """Response model for media_upload_finalize"""
-
-    data: Optional["MediaUploadFinalizeResponseData"] = Field(default_factory=dict)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Request model for media_upload_finalize
+MediaUploadFinalizeRequest = schemas.ChatMediaUploadFinalizeRequest
 
 
-class MediaUploadFinalizeResponseData(BaseModel):
-    """Nested model for MediaUploadFinalizeResponseData"""
-
-    success: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for media_upload_finalize
+MediaUploadFinalizeResponse = schemas.ChatMediaUploadFinalizeResponse
 
 
-# Models for send_typing_indicator
+# Response model for get_conversation_events
+GetConversationEventsResponse = schemas.ChatGetConversationResponse
 
 
-class SendTypingIndicatorResponse(BaseModel):
-    """Response model for send_typing_indicator"""
-
-    data: Optional["SendTypingIndicatorResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Response model for initialize_group
+InitializeGroupResponse = schemas.ChatInitializeGroupResponse
 
 
-class SendTypingIndicatorResponseData(BaseModel):
-    """Nested model for SendTypingIndicatorResponseData"""
-
-    success: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Request model for mark_conversation_read
+MarkConversationReadRequest = schemas.ChatMarkConversationReadRequest
 
 
-# Models for get_conversation
+# Response model for mark_conversation_read
+MarkConversationReadResponse = schemas.ChatMarkConversationReadResponse
 
 
-class GetConversationResponse(BaseModel):
-    """Response model for get_conversation"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    meta: Optional["GetConversationResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Response model for get_conversation
+GetConversationResponse = schemas.ChatGetConversationsResponse
 
 
-class GetConversationResponseMeta(BaseModel):
-    """Nested model for GetConversationResponseMeta"""
-
-    has_more: Optional[bool] = None
-    missing_conversation_key_change_events: Optional[List] = None
-    next_token: Optional[str] = None
-    result_count: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Request model for add_user_public_key
+AddUserPublicKeyRequest = schemas.ChatAddPublicKeyRequest
 
 
-# Models for media_download
+# Response model for add_user_public_key
+AddUserPublicKeyResponse = schemas.ChatAddPublicKeyResponse
 
 
-class MediaDownloadResponse(BaseModel):
-    """Response model for media_download"""
-
-    data: Optional[str] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Response model for get_conversations
+GetConversationsResponse = schemas.ChatGetConversationsResponse
 
 
-# Models for media_upload_append
+# Request model for add_group_members
+AddGroupMembersRequest = schemas.ChatAddGroupMembersRequest
 
 
-class MediaUploadAppendRequest(BaseModel):
+# Response model for add_group_members
+AddGroupMembersResponse = schemas.ChatAddGroupMembersResponse
+
+
+# Request model for send_message
+SendMessageRequest = schemas.ChatSendMessageRequest
+
+
+# Response model for send_message
+SendMessageResponse = schemas.ChatSendMessageResponse
+
+
+# Request model for create_conversation
+CreateConversationRequest = schemas.ChatCreateConversationRequest
+
+
+# Response model for create_conversation
+CreateConversationResponse = schemas.ChatCreateConversationResponse
+
+
+class MediaUploadAppendRequest(RootModel[schemas.ChatMediaUploadAppendRequest]):
     """Request model for media_upload_append"""
 
-    conversation_id: Optional[str] = Field(
-        default=None, description="XChat conversation identifier for the upload."
-    )
-    media: Optional[str] = Field(default=None, description="The file to upload.")
-    media_hash_key: Optional[str] = Field(
-        default=None, description="Media hash key returned from initialize."
-    )
-    segment_index: Optional[Any] = Field(default=None)
-    conversation_id: Optional[str] = Field(
-        default=None, description="XChat conversation identifier for the upload."
-    )
-    media: Optional[str] = Field(default=None, description="The file to upload.")
-    media_hash_key: Optional[str] = Field(
-        default=None, description="Media hash key returned from initialize."
-    )
-    segment_index: Optional[Any] = Field(default=None)
+    pass
 
-    model_config = ConfigDict(populate_by_name=True)
 
+# Response model for media_upload_append
+MediaUploadAppendResponse = schemas.MediaUploadAppendResponse
 
-class MediaUploadAppendResponse(BaseModel):
-    """Response model for media_upload_append"""
 
-    data: Optional["MediaUploadAppendResponseData"] = None
-    errors: Optional[List] = None
+# Request model for media_upload_initialize
+MediaUploadInitializeRequest = schemas.ChatMediaUploadInitializeRequest
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-
-class MediaUploadAppendResponseData(BaseModel):
-    """Nested model for MediaUploadAppendResponseData"""
-
-    expires_at: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for send_message
-
-
-class SendMessageRequest(BaseModel):
-    """Request model for send_message"""
-
-    encoded_message_create_event: str = Field(
-        ...,
-        description="Base64-encoded Thrift MessageCreateEvent containing encrypted message contents.",
-    )
-    message_id: str = Field(..., description="Unique identifier for this message.")
-
-    conversation_token: Optional[str] = None
-    encoded_message_event_signature: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class SendMessageResponse(BaseModel):
-    """Response model for send_message"""
-
-    data: Optional["SendMessageResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SendMessageResponseData(BaseModel):
-    """Nested model for SendMessageResponseData"""
-
-    encoded_message_event: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for mark_conversation_read
-
-
-class MarkConversationReadRequest(BaseModel):
-    """Request model for mark_conversation_read"""
-
-    seen_until_sequence_id: str = Field(
-        ..., description="The sequence ID of the last message to mark as read up to."
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class MarkConversationReadResponse(BaseModel):
-    """Response model for mark_conversation_read"""
-
-    data: Optional["MarkConversationReadResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MarkConversationReadResponseData(BaseModel):
-    """Nested model for MarkConversationReadResponseData"""
-
-    success: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_conversations
-
-
-class GetConversationsResponse(BaseModel):
-    """Response model for get_conversations"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["GetConversationsResponseIncludes"] = None
-    meta: Optional["GetConversationsResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetConversationsResponseIncludes(BaseModel):
-    """Nested model for GetConversationsResponseIncludes"""
-
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class GetConversationsResponseMeta(BaseModel):
-    """Nested model for GetConversationsResponseMeta"""
-
-    has_message_requests: Optional[bool] = None
-    next_token: Optional[str] = None
-    result_count: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for media_upload_initialize
-
-
-class MediaUploadInitializeRequest(BaseModel):
-    """Request model for media_upload_initialize"""
-
-    conversation_id: Optional[str] = None
-    total_bytes: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class MediaUploadInitializeResponse(BaseModel):
-    """Response model for media_upload_initialize"""
-
-    data: Optional["MediaUploadInitializeResponseData"] = Field(default_factory=dict)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaUploadInitializeResponseData(BaseModel):
-    """Nested model for MediaUploadInitializeResponseData"""
-
-    conversation_id: Optional[str] = None
-    media_hash_key: Optional[str] = None
-    session_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_user_public_keys
-
-
-class GetUserPublicKeysResponse(BaseModel):
-    """Response model for get_user_public_keys"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for add_user_public_key
-
-
-class AddUserPublicKeyRequest(BaseModel):
-    """Request model for add_user_public_key"""
-
-    public_key: str = Field(..., description="Public key registration payload.")
-    version: str = Field(..., description="Public key version.")
-
-    generate_version: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AddUserPublicKeyResponse(BaseModel):
-    """Response model for add_user_public_key"""
-
-    data: Optional["AddUserPublicKeyResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AddUserPublicKeyRequestPublicKey(BaseModel):
-    """Nested model for AddUserPublicKeyRequestPublicKey"""
-
-    identity_public_key_signature: Optional[str] = None
-    public_key: Optional[str] = None
-    public_key_fingerprint: Optional[str] = None
-    registration_method: Optional[str] = None
-    signing_public_key: Optional[str] = None
-    signing_public_key_signature: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AddUserPublicKeyResponseData(BaseModel):
-    """Nested model for AddUserPublicKeyResponseData"""
-
-    error_code: Optional[str] = None
-    token_map: Optional["AddUserPublicKeyResponseDataTokenMap"] = None
-    version: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AddUserPublicKeyResponseDataTokenMap(BaseModel):
-    """Nested model for AddUserPublicKeyResponseDataTokenMap"""
-
-    key_store_token_map_json: Optional[str] = None
-    max_guess_count: Optional[int] = None
-    realm_state_string: Optional[str] = None
-    recover_threshold: Optional[int] = None
-    register_threshold: Optional[int] = None
-    token_map: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for media_upload_initialize
+MediaUploadInitializeResponse = schemas.ChatMediaUploadInitializeResponse

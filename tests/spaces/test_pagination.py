@@ -11,6 +11,7 @@ proper handling of pagination tokens, page limits, and item iteration.
 Generated automatically - do not edit manually.
 """
 
+import json
 import pytest
 from unittest.mock import Mock, patch
 from xdk.spaces.client import SpacesClient
@@ -61,18 +62,28 @@ class TestSpacesPagination:
             first_page_response = Mock()
             first_page_response.status_code = 200
             first_page_response.json.return_value = {
-                "data": [{"id": "1", "name": "Item 1"}, {"id": "2", "name": "Item 2"}],
-                "meta": {"next_token": "next_page_token", "result_count": 2},
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                "meta": {
+                    **json.loads(r"""{}"""),
+                    "next_token": "next_page_token",
+                    "result_count": 2,
+                },
             }
             first_page_response.raise_for_status.return_value = None
+            first_page_response.headers = {"content-type": "application/json"}
             # Mock second page response (no next token = end of pagination)
             second_page_response = Mock()
             second_page_response.status_code = 200
             second_page_response.json.return_value = {
-                "data": [{"id": "3", "name": "Item 3"}],
-                "meta": {"result_count": 1},
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                "meta": {**json.loads(r"""{}"""), "result_count": 1},
             }
             second_page_response.raise_for_status.return_value = None
+            second_page_response.headers = {"content-type": "application/json"}
             # Return different responses for consecutive calls
             mock_session.get.side_effect = [first_page_response, second_page_response]
             # Test pagination
@@ -99,28 +110,30 @@ class TestSpacesPagination:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
-                "data": [
-                    {"id": "1", "name": "Item 1"},
-                    {"id": "2", "name": "Item 2"},
-                    {"id": "3", "name": "Item 3"},
-                ],
-                "meta": {
-                    "result_count": 3
-                    # No next_token = single page
-                },
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                # No next_token = single page
+                "meta": {**json.loads(r"""{}"""), "result_count": 3},
             }
             mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Test item iteration
             method = getattr(self.spaces_client, "get_buyers")
             test_cursor = cursor(method, "test_id", max_results=10)
             items = list(test_cursor.items(5))  # Limit to 5 items
             assert len(items) == 3, f"Should get 3 items, got {len(items)}"
-            # Verify items have expected structure
+            # Verify items round-trip the spec-valid mock payload
+            _expected_item = json.loads(
+                r"""{"id":"test_value","name":"test_value","username":"test_value"}"""
+            )
             for item in items:
-                assert "id" in item or hasattr(
-                    item, "id"
-                ), "Items should have 'id' field"
+                if isinstance(_expected_item, dict):
+                    for _key in _expected_item:
+                        assert (isinstance(item, dict) and _key in item) or hasattr(
+                            item, _key
+                        ), f"Items should have '{_key}' field"
 
 
     def test_get_buyers_pagination_parameters(self):
@@ -128,8 +141,12 @@ class TestSpacesPagination:
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [], "meta": {"result_count": 0}}
+            mock_response.json.return_value = {
+                "data": [],
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
+            }
             mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             method = getattr(self.spaces_client, "get_buyers")
             # Test with max_results parameter
@@ -147,17 +164,25 @@ class TestSpacesPagination:
             mock_response_with_token = Mock()
             mock_response_with_token.status_code = 200
             mock_response_with_token.json.return_value = {
-                "data": [{"id": "1"}],
-                "meta": {"next_token": "next_token_value", "result_count": 1},
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                "meta": {
+                    **json.loads(r"""{}"""),
+                    "next_token": "next_token_value",
+                    "result_count": 1,
+                },
             }
             mock_response_with_token.raise_for_status.return_value = None
+            mock_response_with_token.headers = {"content-type": "application/json"}
             second_page_response = Mock()
             second_page_response.status_code = 200
             second_page_response.json.return_value = {
                 "data": [],
-                "meta": {"result_count": 0},
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
             }
             second_page_response.raise_for_status.return_value = None
+            second_page_response.headers = {"content-type": "application/json"}
             mock_session.get.side_effect = [
                 mock_response_with_token,
                 second_page_response,
@@ -190,8 +215,12 @@ class TestSpacesPagination:
             # Test empty response
             empty_response = Mock()
             empty_response.status_code = 200
-            empty_response.json.return_value = {"data": [], "meta": {"result_count": 0}}
+            empty_response.json.return_value = {
+                "data": [],
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
+            }
             empty_response.raise_for_status.return_value = None
+            empty_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = empty_response
             # Pick first paginatable method for testing
             method = getattr(self.spaces_client, "get_buyers")

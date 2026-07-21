@@ -49,8 +49,10 @@ class TestUsageContracts:
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {}
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
             mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Prepare test parameters
             kwargs = {}
@@ -179,6 +181,7 @@ class TestUsageContracts:
             mock_response.status_code = 200
             mock_response.json.return_value = {}
             mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             try:
                 method()
@@ -189,20 +192,43 @@ class TestUsageContracts:
     def test_get_response_structure(self):
         """Test get response structure validation."""
         with patch.object(self.client, "session") as mock_session:
-            # Create mock response with expected structure
-            mock_response_data = {}
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
             mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
             # Add request body if required
             # Call method and verify response structure
             method = getattr(self.usage_client, "get")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
             result = method(**kwargs)
-            # Verify response object has expected attributes
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
             # Optional field - just check it doesn't cause errors if accessed
             try:
                 getattr(result, "data", None)

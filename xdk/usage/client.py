@@ -18,6 +18,9 @@ import requests
 import time
 import urllib.parse
 
+
+from .. import schemas
+
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
@@ -33,7 +36,22 @@ class UsageClient:
         self.client = client
 
 
-    def get(self, days: int = None, usage_fields: List = None) -> GetResponse:
+    def get(
+        self,
+        days: Optional[int] = None,
+        usage_fields: Optional[
+            List[
+                Literal[
+                    "cap_reset_day",
+                    "daily_client_app_usage",
+                    "daily_project_usage",
+                    "project_cap",
+                    "project_id",
+                    "project_usage",
+                ]
+            ]
+        ] = None,
+    ) -> GetResponse:
         """
         Get usage
         Retrieves usage statistics for Posts over a specified number of days.

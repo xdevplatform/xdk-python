@@ -6,177 +6,38 @@ Auto-generated account activity models for the X API.
 
 This module provides Pydantic models for request and response data structures
 for the account activity endpoints of the X API. All models are generated
-from the OpenAPI specification and provide type safety and validation.
+from the OpenAPI specification and reference the canonical component schemas
+in xdk.schemas, so they are fully typed.
 
 Generated automatically - do not edit manually.
 """
 
-from typing import Dict, List, Optional, Any, Union, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Union, Literal
+from pydantic import BaseModel, Field, ConfigDict, RootModel
 
-# Type aliases for referenced schemas (defined as Any for flexibility)
-# These allow models to reference types without requiring full schema definitions
-Expansions = Any
-Tweet = Any
-User = Any
-Space = Any
-Community = Any
-Media = Any
-Poll = Any
-Place = Any
-XList = Any  # Avoid conflict with typing.List
-DmEvent = Any
-News = Any
-Usage = Any
-ComplianceJob = Any
-ComplianceJobName = Any
-RulesCount = Any
-RulesResponseMetadata = Any
-Rule = Any
-MediaId = Any
-MediaCategory = Any
-MediaCategorySubtitles = Any
-TweetId = Any
-UserId = Any
-CommunityId = Any
-ListId = Any
-SpaceId = Any
-WebhookConfigId = Any
-PublicKey = Any
-FilteredStreamingTweetResponse = Any
-TweetText = Any
-TweetReplySettings = Any
-SubtitleLanguage = Any
-Subtitles = Any
-SubtitleLanguageCode = Any
+from .. import schemas
+
+# Response model for get_subscription_count
+GetSubscriptionCountResponse = schemas.SubscriptionsCountGetResponse
 
 
-# Models for create_replay_job
+# Response model for delete_subscription
+DeleteSubscriptionResponse = schemas.SubscriptionsDeleteResponse
 
 
-class CreateReplayJobResponse(BaseModel):
-    """Response model for create_replay_job"""
-
-    created_at: Optional[str] = None
-    job_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Response model for validate_subscription
+ValidateSubscriptionResponse = schemas.SubscriptionsGetResponse
 
 
-# Models for get_subscriptions
-
-
-class GetSubscriptionsResponse(BaseModel):
-    """Response model for get_subscriptions"""
-
-    data: Optional["GetSubscriptionsResponseData"] = Field(
-        description="The list of active subscriptions for a specified webhook",
-        default_factory=dict,
-    )
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetSubscriptionsResponseData(BaseModel):
-    """Nested model for GetSubscriptionsResponseData"""
-
-    application_id: Optional[str] = None
-    subscriptions: Optional[List] = None
-    webhook_id: Optional[str] = None
-    webhook_url: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for validate_subscription
-
-
-class ValidateSubscriptionResponse(BaseModel):
-    """Response model for validate_subscription"""
-
-    data: Optional["ValidateSubscriptionResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ValidateSubscriptionResponseData(BaseModel):
-    """Nested model for ValidateSubscriptionResponseData"""
-
-    subscribed: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create_subscription
-
-
-class CreateSubscriptionRequest(BaseModel):
+class CreateSubscriptionRequest(RootModel[schemas.SubscriptionsCreateRequest]):
     """Request model for create_subscription"""
 
-    model_config = ConfigDict(populate_by_name=True)
+    pass
 
 
-class CreateSubscriptionResponse(BaseModel):
-    """Response model for create_subscription"""
-
-    data: Optional["CreateSubscriptionResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# Response model for create_subscription
+CreateSubscriptionResponse = schemas.SubscriptionsCreateResponse
 
 
-class CreateSubscriptionResponseData(BaseModel):
-    """Nested model for CreateSubscriptionResponseData"""
-
-    subscribed: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for delete_subscription
-
-
-class DeleteSubscriptionResponse(BaseModel):
-    """Response model for delete_subscription"""
-
-    data: Optional["DeleteSubscriptionResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DeleteSubscriptionResponseData(BaseModel):
-    """Nested model for DeleteSubscriptionResponseData"""
-
-    subscribed: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_subscription_count
-
-
-class GetSubscriptionCountResponse(BaseModel):
-    """Response model for get_subscription_count"""
-
-    data: Optional["GetSubscriptionCountResponseData"] = Field(
-        description="The count of active subscriptions across all webhooks",
-        default_factory=dict,
-    )
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetSubscriptionCountResponseData(BaseModel):
-    """Nested model for GetSubscriptionCountResponseData"""
-
-    account_name: Optional[str] = None
-    provisioned_count: Optional[str] = None
-    subscriptions_count_all: Optional[str] = None
-    subscriptions_count_direct_messages: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for get_subscriptions
+GetSubscriptionsResponse = schemas.SubscriptionsListGetResponse

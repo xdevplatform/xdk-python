@@ -6,223 +6,52 @@ Auto-generated webhooks models for the X API.
 
 This module provides Pydantic models for request and response data structures
 for the webhooks endpoints of the X API. All models are generated
-from the OpenAPI specification and provide type safety and validation.
+from the OpenAPI specification and reference the canonical component schemas
+in xdk.schemas, so they are fully typed.
 
 Generated automatically - do not edit manually.
 """
 
-from typing import Dict, List, Optional, Any, Union, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Union, Literal
+from pydantic import BaseModel, Field, ConfigDict, RootModel
 
-# Type aliases for referenced schemas (defined as Any for flexibility)
-# These allow models to reference types without requiring full schema definitions
-Expansions = Any
-Tweet = Any
-User = Any
-Space = Any
-Community = Any
-Media = Any
-Poll = Any
-Place = Any
-XList = Any  # Avoid conflict with typing.List
-DmEvent = Any
-News = Any
-Usage = Any
-ComplianceJob = Any
-ComplianceJobName = Any
-RulesCount = Any
-RulesResponseMetadata = Any
-Rule = Any
-MediaId = Any
-MediaCategory = Any
-MediaCategorySubtitles = Any
-TweetId = Any
-UserId = Any
-CommunityId = Any
-ListId = Any
-SpaceId = Any
-WebhookConfigId = Any
-PublicKey = Any
-FilteredStreamingTweetResponse = Any
-TweetText = Any
-TweetReplySettings = Any
-SubtitleLanguage = Any
-Subtitles = Any
-SubtitleLanguageCode = Any
+from .. import schemas
 
+# Response model for validate
+ValidateResponse = schemas.WebhookConfigPutResponse
 
-# Models for get
 
+# Response model for delete
+DeleteResponse = schemas.WebhookConfigDeleteResponse
 
-class GetResponse(BaseModel):
-    """Response model for get"""
 
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    meta: Optional["GetResponseMeta"] = None
+# Request model for create_webhook_replay_job
+CreateWebhookReplayJobRequest = schemas.WebhookReplayCreateRequest
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
+# Response model for create_webhook_replay_job
+CreateWebhookReplayJobResponse = schemas.ReplayJobCreateResponse
 
-class GetResponseMeta(BaseModel):
-    """Nested model for GetResponseMeta"""
 
-    result_count: Optional[int] = None
+# Response model for get
+GetResponse = schemas.Get2WebhooksResponse
 
-    model_config = ConfigDict(populate_by_name=True)
 
+# Request model for create
+CreateRequest = schemas.WebhookConfigCreateRequest
 
-# Models for create
 
+# Response model for create
+CreateResponse = schemas.WebhookConfigCreateResponse
 
-class CreateRequest(BaseModel):
-    """Request model for create"""
 
-    url: str = Field(...)
+# Response model for get_stream_links
+GetStreamLinksResponse = schemas.WebhookLinksGetResponse
 
-    model_config = ConfigDict(populate_by_name=True)
 
+# Response model for create_stream_link
+CreateStreamLinkResponse = schemas.WebhookLinksCreateResponse
 
-class CreateResponse(BaseModel):
-    """Response model for create"""
 
-    created_at: Optional[str] = None
-    id: Optional["WebhookConfigId"] = None
-    url: Optional[str] = None
-    valid: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for create_webhook_replay_job
-
-
-class CreateWebhookReplayJobRequest(BaseModel):
-    """Request model for create_webhook_replay_job"""
-
-    from_date: str = Field(
-        ...,
-        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format.",
-    )
-    to_date: str = Field(
-        ...,
-        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format.",
-    )
-    webhook_id: str = Field(
-        ..., description="The unique identifier of this webhook config."
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateWebhookReplayJobResponse(BaseModel):
-    """Response model for create_webhook_replay_job"""
-
-    created_at: Optional[str] = None
-    job_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Models for validate
-
-
-class ValidateResponse(BaseModel):
-    """Response model for validate"""
-
-    data: Optional["ValidateResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ValidateResponseData(BaseModel):
-    """Nested model for ValidateResponseData"""
-
-    attempted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for delete
-
-
-class DeleteResponse(BaseModel):
-    """Response model for delete"""
-
-    data: Optional["DeleteResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DeleteResponseData(BaseModel):
-    """Nested model for DeleteResponseData"""
-
-    deleted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_stream_links
-
-
-class GetStreamLinksResponse(BaseModel):
-    """Response model for get_stream_links"""
-
-    data: Optional["GetStreamLinksResponseData"] = Field(
-        description="The list of active webhook links for a given stream",
-        default_factory=dict,
-    )
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetStreamLinksResponseData(BaseModel):
-    """Nested model for GetStreamLinksResponseData"""
-
-    links: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create_stream_link
-
-
-class CreateStreamLinkResponse(BaseModel):
-    """Response model for create_stream_link"""
-
-    data: Optional["CreateStreamLinkResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateStreamLinkResponseData(BaseModel):
-    """Nested model for CreateStreamLinkResponseData"""
-
-    provisioned: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for delete_stream_link
-
-
-class DeleteStreamLinkResponse(BaseModel):
-    """Response model for delete_stream_link"""
-
-    data: Optional["DeleteStreamLinkResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DeleteStreamLinkResponseData(BaseModel):
-    """Nested model for DeleteStreamLinkResponseData"""
-
-    deleted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for delete_stream_link
+DeleteStreamLinkResponse = schemas.WebhookLinksDeleteResponse

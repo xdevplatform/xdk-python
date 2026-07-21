@@ -10,6 +10,7 @@ to the X API endpoints with type safety and authentication support.
 Generated automatically - do not edit manually.
 """
 
+from . import schemas
 from .client import Client
 from .paginator import Cursor, cursor, PaginationError
 from .streaming import StreamConfig, StreamError, StreamErrorType, StreamState

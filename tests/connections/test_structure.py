@@ -43,53 +43,6 @@ class TestConnectionsStructure:
         self.connections_client = getattr(self.client, "connections")
 
 
-    def test_delete_by_endpoint_exists(self):
-        """Test that delete_by_endpoint method exists with correct signature."""
-        # Check method exists
-        method = getattr(ConnectionsClient, "delete_by_endpoint", None)
-        assert (
-            method is not None
-        ), f"Method delete_by_endpoint does not exist on ConnectionsClient"
-        # Check method is callable
-        assert callable(method), f"delete_by_endpoint is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"delete_by_endpoint should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "endpoint_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from delete_by_endpoint"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_delete_by_endpoint_return_annotation(self):
-        """Test that delete_by_endpoint has proper return type annotation."""
-        method = getattr(ConnectionsClient, "delete_by_endpoint")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method delete_by_endpoint should have return type annotation"
-
-
     def test_get_connection_history_exists(self):
         """Test that get_connection_history method exists with correct signature."""
         # Check method exists
@@ -248,13 +201,60 @@ class TestConnectionsStructure:
         ), f"Method delete_all should have return type annotation"
 
 
+    def test_delete_by_endpoint_exists(self):
+        """Test that delete_by_endpoint method exists with correct signature."""
+        # Check method exists
+        method = getattr(ConnectionsClient, "delete_by_endpoint", None)
+        assert (
+            method is not None
+        ), f"Method delete_by_endpoint does not exist on ConnectionsClient"
+        # Check method is callable
+        assert callable(method), f"delete_by_endpoint is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"delete_by_endpoint should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "endpoint_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from delete_by_endpoint"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_delete_by_endpoint_return_annotation(self):
+        """Test that delete_by_endpoint has proper return type annotation."""
+        method = getattr(ConnectionsClient, "delete_by_endpoint")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method delete_by_endpoint should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "delete_by_endpoint",
             "get_connection_history",
             "delete_by_uuids",
             "delete_all",
+            "delete_by_endpoint",
         ]
         for expected_method in expected_methods:
             assert hasattr(

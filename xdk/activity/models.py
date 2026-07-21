@@ -6,257 +6,44 @@ Auto-generated activity models for the X API.
 
 This module provides Pydantic models for request and response data structures
 for the activity endpoints of the X API. All models are generated
-from the OpenAPI specification and provide type safety and validation.
+from the OpenAPI specification and reference the canonical component schemas
+in xdk.schemas, so they are fully typed.
 
 Generated automatically - do not edit manually.
 """
 
-from typing import Dict, List, Optional, Any, Union, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Union, Literal
+from pydantic import BaseModel, Field, ConfigDict, RootModel
 
-# Type aliases for referenced schemas (defined as Any for flexibility)
-# These allow models to reference types without requiring full schema definitions
-Expansions = Any
-Tweet = Any
-User = Any
-Space = Any
-Community = Any
-Media = Any
-Poll = Any
-Place = Any
-XList = Any  # Avoid conflict with typing.List
-DmEvent = Any
-News = Any
-Usage = Any
-ComplianceJob = Any
-ComplianceJobName = Any
-RulesCount = Any
-RulesResponseMetadata = Any
-Rule = Any
-MediaId = Any
-MediaCategory = Any
-MediaCategorySubtitles = Any
-TweetId = Any
-UserId = Any
-CommunityId = Any
-ListId = Any
-SpaceId = Any
-WebhookConfigId = Any
-PublicKey = Any
-FilteredStreamingTweetResponse = Any
-TweetText = Any
-TweetReplySettings = Any
-SubtitleLanguage = Any
-Subtitles = Any
-SubtitleLanguageCode = Any
+from .. import schemas
 
+# Response model for stream
+StreamResponse = schemas.ActivityStreamingResponse
 
-# Models for stream
 
+# Request model for update_subscription
+UpdateSubscriptionRequest = schemas.ActivitySubscriptionUpdateRequest
 
-class StreamResponse(BaseModel):
-    """Response model for stream"""
 
-    data: Optional["StreamResponseData"] = None
-    errors: Optional[List] = None
+# Response model for update_subscription
+UpdateSubscriptionResponse = schemas.ActivitySubscriptionUpdateResponse
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
+# Response model for delete_subscription
+DeleteSubscriptionResponse = schemas.ActivitySubscriptionDeleteResponse
 
-class StreamResponseData(BaseModel):
-    """Nested model for StreamResponseData"""
 
-    event_type: Optional[str] = None
-    event_uuid: Optional[str] = None
-    filter: Optional["StreamResponseDataFilter"] = None
-    payload: Any = None
-    tag: Optional[str] = None
+# Response model for get_subscriptions
+GetSubscriptionsResponse = schemas.ActivitySubscriptionGetResponse
 
-    model_config = ConfigDict(populate_by_name=True)
 
+# Request model for create_subscription
+CreateSubscriptionRequest = schemas.ActivitySubscriptionCreateRequest
 
-class StreamResponseDataFilter(BaseModel):
-    """Nested model for StreamResponseDataFilter"""
 
-    keyword: Optional[str] = None
-    user_id: Optional[str] = None
+# Response model for create_subscription
+CreateSubscriptionResponse = schemas.ActivitySubscriptionCreateResponse
 
-    model_config = ConfigDict(populate_by_name=True)
 
-
-# Models for update_subscription
-
-
-class UpdateSubscriptionRequest(BaseModel):
-    """Request model for update_subscription"""
-
-    tag: Optional[str] = None
-    webhook_id: Optional["WebhookConfigId"] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class UpdateSubscriptionResponse(BaseModel):
-    """Response model for update_subscription"""
-
-    data: Optional["UpdateSubscriptionResponseData"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UpdateSubscriptionResponseData(BaseModel):
-    """Nested model for UpdateSubscriptionResponseData"""
-
-    subscription: Optional["UpdateSubscriptionResponseDataSubscription"] = None
-    total_subscriptions: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class UpdateSubscriptionResponseDataSubscription(BaseModel):
-    """Nested model for UpdateSubscriptionResponseDataSubscription"""
-
-    created_at: Optional[str] = None
-    event_type: Optional[str] = None
-    filter: Optional["UpdateSubscriptionResponseDataSubscriptionFilter"] = None
-    subscription_id: Optional[str] = None
-    tag: Optional[str] = None
-    updated_at: Optional[str] = None
-    webhook_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class UpdateSubscriptionResponseDataSubscriptionFilter(BaseModel):
-    """Nested model for UpdateSubscriptionResponseDataSubscriptionFilter"""
-
-    keyword: Optional[str] = None
-    user_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for delete_subscription
-
-
-class DeleteSubscriptionResponse(BaseModel):
-    """Response model for delete_subscription"""
-
-    data: Optional["DeleteSubscriptionResponseData"] = None
-    errors: Optional[List] = None
-    meta: Optional["DeleteSubscriptionResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DeleteSubscriptionResponseData(BaseModel):
-    """Nested model for DeleteSubscriptionResponseData"""
-
-    deleted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class DeleteSubscriptionResponseMeta(BaseModel):
-    """Nested model for DeleteSubscriptionResponseMeta"""
-
-    total_subscriptions: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for get_subscriptions
-
-
-class GetSubscriptionsResponse(BaseModel):
-    """Response model for get_subscriptions"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    meta: Optional["GetSubscriptionsResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class GetSubscriptionsResponseMeta(BaseModel):
-    """Nested model for GetSubscriptionsResponseMeta"""
-
-    next_token: Optional[str] = None
-    result_count: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create_subscription
-
-
-class CreateSubscriptionRequest(BaseModel):
-    """Request model for create_subscription"""
-
-    event_type: str = Field(...)
-    filter: str = Field(..., description="An XAA subscription.")
-
-    tag: Optional[str] = None
-    webhook_id: Optional["WebhookConfigId"] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateSubscriptionResponse(BaseModel):
-    """Response model for create_subscription"""
-
-    data: Optional["CreateSubscriptionResponseData"] = None
-    errors: Optional[List] = None
-    meta: Optional["CreateSubscriptionResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateSubscriptionRequestFilter(BaseModel):
-    """Nested model for CreateSubscriptionRequestFilter"""
-
-    keyword: Optional[str] = None
-    user_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateSubscriptionResponseData(BaseModel):
-    """Nested model for CreateSubscriptionResponseData"""
-
-    subscription: Optional["CreateSubscriptionResponseDataSubscription"] = None
-    total_subscriptions_for_instance_id: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateSubscriptionResponseDataSubscription(BaseModel):
-    """Nested model for CreateSubscriptionResponseDataSubscription"""
-
-    created_at: Optional[str] = None
-    event_type: Optional[str] = None
-    filter: Optional["CreateSubscriptionResponseDataSubscriptionFilter"] = None
-    subscription_id: Optional[str] = None
-    tag: Optional[str] = None
-    updated_at: Optional[str] = None
-    webhook_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateSubscriptionResponseDataSubscriptionFilter(BaseModel):
-    """Nested model for CreateSubscriptionResponseDataSubscriptionFilter"""
-
-    keyword: Optional[str] = None
-    user_id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateSubscriptionResponseMeta(BaseModel):
-    """Nested model for CreateSubscriptionResponseMeta"""
-
-    total_subscriptions: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for delete_subscriptions_by_ids
+DeleteSubscriptionsByIdsResponse = schemas.ActivitySubscriptionDeleteResponse

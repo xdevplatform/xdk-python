@@ -6,204 +6,40 @@ Auto-generated community notes models for the X API.
 
 This module provides Pydantic models for request and response data structures
 for the community notes endpoints of the X API. All models are generated
-from the OpenAPI specification and provide type safety and validation.
+from the OpenAPI specification and reference the canonical component schemas
+in xdk.schemas, so they are fully typed.
 
 Generated automatically - do not edit manually.
 """
 
-from typing import Dict, List, Optional, Any, Union, Literal
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Union, Literal
+from pydantic import BaseModel, Field, ConfigDict, RootModel
 
-# Type aliases for referenced schemas (defined as Any for flexibility)
-# These allow models to reference types without requiring full schema definitions
-Expansions = Any
-Tweet = Any
-User = Any
-Space = Any
-Community = Any
-Media = Any
-Poll = Any
-Place = Any
-XList = Any  # Avoid conflict with typing.List
-DmEvent = Any
-News = Any
-Usage = Any
-ComplianceJob = Any
-ComplianceJobName = Any
-RulesCount = Any
-RulesResponseMetadata = Any
-Rule = Any
-MediaId = Any
-MediaCategory = Any
-MediaCategorySubtitles = Any
-TweetId = Any
-UserId = Any
-CommunityId = Any
-ListId = Any
-SpaceId = Any
-WebhookConfigId = Any
-PublicKey = Any
-FilteredStreamingTweetResponse = Any
-TweetText = Any
-TweetReplySettings = Any
-SubtitleLanguage = Any
-Subtitles = Any
-SubtitleLanguageCode = Any
+from .. import schemas
 
+# Request model for evaluate
+EvaluateRequest = schemas.EvaluateNoteRequest
 
-# Models for search_written
 
+# Response model for evaluate
+EvaluateResponse = schemas.EvaluateNoteResponse
 
-class SearchWrittenResponse(BaseModel):
-    """Response model for search_written"""
 
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    meta: Optional["SearchWrittenResponseMeta"] = None
+# Request model for create
+CreateRequest = schemas.CreateNoteRequest
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
+# Response model for create
+CreateResponse = schemas.CreateNoteResponse
 
-class SearchWrittenResponseMeta(BaseModel):
-    """Nested model for SearchWrittenResponseMeta"""
 
-    next_token: Optional[str] = None
-    result_count: Optional[int] = None
+# Response model for search_eligible_posts
+SearchEligiblePostsResponse = schemas.Get2NotesSearchPostsEligibleForNotesResponse
 
-    model_config = ConfigDict(populate_by_name=True)
 
+# Response model for delete
+DeleteResponse = schemas.DeleteNoteResponse
 
-# Models for delete
 
-
-class DeleteResponse(BaseModel):
-    """Response model for delete"""
-
-    data: Optional["DeleteResponseData"] = Field(default_factory=dict)
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DeleteResponseData(BaseModel):
-    """Nested model for DeleteResponseData"""
-
-    deleted: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for create
-
-
-class CreateRequest(BaseModel):
-    """Request model for create"""
-
-    info: str = Field(..., description="A X Community Note is a note on a Post.")
-    post_id: str = Field(
-        ...,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    test_mode: str = Field(
-        ...,
-        description="If true, the note being submitted is only for testing the capability of the bot, and won't be publicly visible. If false, the note being submitted will be a new proposed note on the product.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateResponse(BaseModel):
-    """Response model for create"""
-
-    data: Optional["CreateResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateRequestInfo(BaseModel):
-    """Nested model for CreateRequestInfo"""
-
-    classification: Optional[str] = None
-    misleading_tags: Optional[List] = None
-    text: Optional[str] = None
-    trustworthy_sources: Optional[bool] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateResponseData(BaseModel):
-    """Nested model for CreateResponseData"""
-
-    id: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for evaluate
-
-
-class EvaluateRequest(BaseModel):
-    """Request model for evaluate"""
-
-    note_text: str = Field(..., description="Text for the community note.")
-    post_id: str = Field(
-        ...,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class EvaluateResponse(BaseModel):
-    """Response model for evaluate"""
-
-    data: Optional["EvaluateResponseData"] = None
-    errors: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EvaluateResponseData(BaseModel):
-    """Nested model for EvaluateResponseData"""
-
-    claim_opinion_score: Optional[float] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# Models for search_eligible_posts
-
-
-class SearchEligiblePostsResponse(BaseModel):
-    """Response model for search_eligible_posts"""
-
-    data: Optional[List] = None
-    errors: Optional[List] = None
-    includes: Optional["Expansions"] = None
-    meta: Optional["SearchEligiblePostsResponseMeta"] = None
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SearchEligiblePostsResponseIncludes(BaseModel):
-    """Nested model for SearchEligiblePostsResponseIncludes"""
-
-    media: Optional[List] = None
-    places: Optional[List] = None
-    polls: Optional[List] = None
-    topics: Optional[List] = None
-    tweets: Optional[List] = None
-    users: Optional[List] = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class SearchEligiblePostsResponseMeta(BaseModel):
-    """Nested model for SearchEligiblePostsResponseMeta"""
-
-    next_token: Optional[str] = None
-    result_count: Optional[int] = None
-
-    model_config = ConfigDict(populate_by_name=True)
+# Response model for search_written
+SearchWrittenResponse = schemas.Get2NotesSearchNotesWrittenResponse
