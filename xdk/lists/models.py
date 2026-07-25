@@ -33,20 +33,8 @@ UpdateResponse = schemas.ListUpdateResponse
 DeleteResponse = schemas.ListDeleteResponse
 
 
-# Request model for create
-CreateRequest = schemas.ListCreateRequest
-
-
-# Response model for create
-CreateResponse = schemas.ListCreateResponse
-
-
 # Response model for get_followers
 GetFollowersResponse = schemas.Get2ListsIdFollowersResponse
-
-
-# Response model for remove_member_by_user_id
-RemoveMemberByUserIdResponse = schemas.ListMutateResponse
 
 
 # Response model for get_members
@@ -63,3 +51,15 @@ AddMemberResponse = schemas.ListMutateResponse
 
 # Response model for get_posts
 GetPostsResponse = schemas.Get2ListsIdTweetsResponse
+
+
+# Request model for create
+CreateRequest = schemas.ListCreateRequest
+
+
+# Response model for create
+CreateResponse = schemas.ListCreateResponse
+
+
+# Response model for remove_member_by_user_id
+RemoveMemberByUserIdResponse = schemas.ListMutateResponse

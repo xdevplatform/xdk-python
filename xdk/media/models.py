@@ -21,24 +21,20 @@ from .. import schemas
 FinalizeUploadResponse = schemas.MediaUploadResponse
 
 
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.MediaAnalytics
+# Request model for create_subtitles
+CreateSubtitlesRequest = schemas.SubtitlesCreateRequest
 
 
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.MediaUploadConfigRequest
+# Response model for create_subtitles
+CreateSubtitlesResponse = schemas.SubtitlesCreateResponse
 
 
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.MediaUploadResponse
+# Request model for delete_subtitles
+DeleteSubtitlesRequest = schemas.SubtitlesDeleteRequest
 
 
-# Request model for create_metadata
-CreateMetadataRequest = schemas.MetadataCreateRequest
-
-
-# Response model for create_metadata
-CreateMetadataResponse = schemas.MetadataCreateResponse
+# Response model for delete_subtitles
+DeleteSubtitlesResponse = schemas.SubtitlesDeleteResponse
 
 
 # Response model for get_upload_status
@@ -57,20 +53,20 @@ UploadResponse = schemas.MediaUploadResponse
 GetByKeysResponse = schemas.Get2MediaResponse
 
 
-# Request model for create_subtitles
-CreateSubtitlesRequest = schemas.SubtitlesCreateRequest
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.MediaAnalytics
 
 
-# Response model for create_subtitles
-CreateSubtitlesResponse = schemas.SubtitlesCreateResponse
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.MediaUploadConfigRequest
 
 
-# Request model for delete_subtitles
-DeleteSubtitlesRequest = schemas.SubtitlesDeleteRequest
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.MediaUploadResponse
 
 
-# Response model for delete_subtitles
-DeleteSubtitlesResponse = schemas.SubtitlesDeleteResponse
+# Response model for get_by_key
+GetByKeyResponse = schemas.Get2MediaMediaKeyResponse
 
 
 class AppendUploadRequest(RootModel[schemas.MediaUploadAppendRequest]):
@@ -83,5 +79,9 @@ class AppendUploadRequest(RootModel[schemas.MediaUploadAppendRequest]):
 AppendUploadResponse = schemas.MediaUploadAppendResponse
 
 
-# Response model for get_by_key
-GetByKeyResponse = schemas.Get2MediaMediaKeyResponse
+# Request model for create_metadata
+CreateMetadataRequest = schemas.MetadataCreateRequest
+
+
+# Response model for create_metadata
+CreateMetadataResponse = schemas.MetadataCreateResponse

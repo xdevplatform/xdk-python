@@ -6890,10 +6890,10 @@ CashtagEntity = EntityIndicesInclusiveExclusive
 ChatConversationOrRecipientId = str
 
 # The file to upload.
-MediaPayloadByte = str
+MediaPayloadBinary = str
 
 # The file to upload.
-MediaPayloadBinary = str
+MediaPayloadByte = str
 
 MediaSegments = Union[int, str]
 

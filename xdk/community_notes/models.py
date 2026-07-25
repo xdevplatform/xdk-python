@@ -17,20 +17,8 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for search_eligible_posts
-SearchEligiblePostsResponse = schemas.Get2NotesSearchPostsEligibleForNotesResponse
-
-
 # Response model for delete
 DeleteResponse = schemas.DeleteNoteResponse
-
-
-# Request model for create
-CreateRequest = schemas.CreateNoteRequest
-
-
-# Response model for create
-CreateResponse = schemas.CreateNoteResponse
 
 
 # Request model for evaluate
@@ -39,6 +27,18 @@ EvaluateRequest = schemas.EvaluateNoteRequest
 
 # Response model for evaluate
 EvaluateResponse = schemas.EvaluateNoteResponse
+
+
+# Response model for search_eligible_posts
+SearchEligiblePostsResponse = schemas.Get2NotesSearchPostsEligibleForNotesResponse
+
+
+# Request model for create
+CreateRequest = schemas.CreateNoteRequest
+
+
+# Response model for create
+CreateResponse = schemas.CreateNoteResponse
 
 
 # Response model for search_written

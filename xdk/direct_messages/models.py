@@ -17,16 +17,21 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Request model for create_conversation
-CreateConversationRequest = schemas.CreateDmConversationRequest
+
+class CreateByParticipantIdRequest(RootModel[schemas.CreateMessageRequest]):
+    """Request model for create_by_participant_id"""
+
+    pass
 
 
-# Response model for create_conversation
-CreateConversationResponse = schemas.CreateDmEventResponse
+# Response model for create_by_participant_id
+CreateByParticipantIdResponse = schemas.CreateDmEventResponse
 
 
-# Response model for get_events_by_conversation_id
-GetEventsByConversationIdResponse = schemas.Get2DmConversationsIdDmEventsResponse
+# Response model for get_events_by_participant_id
+GetEventsByParticipantIdResponse = (
+    schemas.Get2DmConversationsWithParticipantIdDmEventsResponse
+)
 
 
 class CreateByConversationIdRequest(RootModel[schemas.CreateMessageRequest]):
@@ -39,24 +44,12 @@ class CreateByConversationIdRequest(RootModel[schemas.CreateMessageRequest]):
 CreateByConversationIdResponse = schemas.CreateDmEventResponse
 
 
-# Response model for get_events_by_participant_id
-GetEventsByParticipantIdResponse = (
-    schemas.Get2DmConversationsWithParticipantIdDmEventsResponse
-)
+# Request model for create_conversation
+CreateConversationRequest = schemas.CreateDmConversationRequest
 
 
-class CreateByParticipantIdRequest(RootModel[schemas.CreateMessageRequest]):
-    """Request model for create_by_participant_id"""
-
-    pass
-
-
-# Response model for create_by_participant_id
-CreateByParticipantIdResponse = schemas.CreateDmEventResponse
-
-
-# Response model for get_events
-GetEventsResponse = schemas.Get2DmEventsResponse
+# Response model for create_conversation
+CreateConversationResponse = schemas.CreateDmEventResponse
 
 
 # Response model for get_events_by_id
@@ -65,3 +58,11 @@ GetEventsByIdResponse = schemas.Get2DmEventsEventIdResponse
 
 # Response model for delete_events
 DeleteEventsResponse = schemas.DeleteDmResponse
+
+
+# Response model for get_events_by_conversation_id
+GetEventsByConversationIdResponse = schemas.Get2DmConversationsIdDmEventsResponse
+
+
+# Response model for get_events
+GetEventsResponse = schemas.Get2DmEventsResponse

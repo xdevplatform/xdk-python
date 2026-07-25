@@ -48,9 +48,11 @@ class TestArticlesContracts:
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
-            mock_response.status_code = 201
+            mock_response.status_code = 200
             # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.json.return_value = json.loads(
+                r"""{"code":1,"message":"test_value"}"""
+            )
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.post.return_value = mock_response
@@ -113,7 +115,7 @@ class TestArticlesContracts:
                 # Set up streaming mock only for actual streaming operations
                 if has_stream_config_param:
                     mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 201
+                    mock_streaming_response.status_code = 200
                     mock_streaming_response.raise_for_status.return_value = None
                     # Make it a proper context manager
                     mock_streaming_response.__enter__ = Mock(
@@ -242,9 +244,9 @@ class TestArticlesContracts:
         """Test article_create_draft response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
+            mock_response_data = json.loads(r"""{"code":1,"message":"test_value"}""")
             mock_response = Mock()
-            mock_response.status_code = 201
+            mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
