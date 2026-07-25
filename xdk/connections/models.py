@@ -18,20 +18,20 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 from .. import schemas
 
 # Response model for delete_by_endpoint
-DeleteByEndpointResponse = schemas.KillConnectionsByEndpointResponse
+DeleteByEndpointResponse = schemas.DeleteConnectionsByEndpointResponse
 
 
 # Response model for delete_all
-DeleteAllResponse = schemas.KillAllConnectionsResponse
+DeleteAllResponse = schemas.DeleteAllConnectionsResponse
 
 
 # Response model for get_connection_history
-GetConnectionHistoryResponse = schemas.Get2ConnectionsResponse
+GetConnectionHistoryResponse = schemas.GetConnectionHistoryResponse
 
 
 # Request model for delete_by_uuids
-DeleteByUuidsRequest = schemas.KillConnectionsByUuidsRequest
+DeleteByUuidsRequest = schemas.DeleteConnectionsByUuidsRequest
 
 
 # Response model for delete_by_uuids
-DeleteByUuidsResponse = schemas.KillConnectionsByUuidsResponse
+DeleteByUuidsResponse = schemas.DeleteConnectionsByUuidsResponse

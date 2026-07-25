@@ -17,49 +17,65 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_followers
-GetFollowersResponse = schemas.Get2ListsIdFollowersResponse
-
-
-# Response model for get_posts
-GetPostsResponse = schemas.Get2ListsIdTweetsResponse
+# Response model for unpin_list
+UnpinListResponse = schemas.UnpinListResponse
 
 
 # Request model for create
-CreateRequest = schemas.ListCreateRequest
+CreateRequest = schemas.CreateListsRequest
 
 
 # Response model for create
-CreateResponse = schemas.ListCreateResponse
+CreateResponse = schemas.CreateListsResponse
 
 
-# Response model for get_members
-GetMembersResponse = schemas.Get2ListsIdMembersResponse
+# Request model for pin_list
+PinListRequest = schemas.PinListRequest
 
 
-# Request model for add_member
-AddMemberRequest = schemas.ListAddUserRequest
-
-
-# Response model for add_member
-AddMemberResponse = schemas.ListMutateResponse
+# Response model for pin_list
+PinListResponse = schemas.PinListResponse
 
 
 # Response model for get_by_id
-GetByIdResponse = schemas.Get2ListsIdResponse
+GetByIdResponse = schemas.GetListsByIdResponse
 
 
 # Request model for update
-UpdateRequest = schemas.ListUpdateRequest
+UpdateRequest = schemas.UpdateListsRequest
 
 
 # Response model for update
-UpdateResponse = schemas.ListUpdateResponse
+UpdateResponse = schemas.UpdateListsResponse
 
 
 # Response model for delete
-DeleteResponse = schemas.ListDeleteResponse
+DeleteResponse = schemas.DeleteListsResponse
+
+
+# Response model for get_followers
+GetFollowersResponse = schemas.GetListsFollowersResponse
+
+
+# Response model for get_posts
+GetPostsResponse = schemas.GetListsPostsResponse
 
 
 # Response model for remove_member_by_user_id
-RemoveMemberByUserIdResponse = schemas.ListMutateResponse
+RemoveMemberByUserIdResponse = schemas.RemoveListsMemberByUserIdResponse
+
+
+# Response model for unfollow_list
+UnfollowListResponse = schemas.UnfollowListResponse
+
+
+# Response model for get_members
+GetMembersResponse = schemas.GetListsMembersResponse
+
+
+# Request model for add_member
+AddMemberRequest = schemas.AddListsMemberRequest
+
+
+# Response model for add_member
+AddMemberResponse = schemas.AddListsMemberResponse

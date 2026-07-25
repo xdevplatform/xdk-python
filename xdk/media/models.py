@@ -17,72 +17,69 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-
-class AppendUploadRequest(RootModel[schemas.MediaUploadAppendRequest]):
-    """Request model for append_upload"""
-
-    pass
+# Request model for create_metadata
+CreateMetadataRequest = schemas.CreateMediaMetadataRequest
 
 
-# Response model for append_upload
-AppendUploadResponse = schemas.MediaUploadAppendResponse
+# Response model for create_metadata
+CreateMetadataResponse = schemas.CreateMediaMetadataResponse
 
 
 # Response model for get_by_key
-GetByKeyResponse = schemas.Get2MediaMediaKeyResponse
-
-
-# Response model for get_by_keys
-GetByKeysResponse = schemas.Get2MediaResponse
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.MediaUploadConfigRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.MediaUploadResponse
-
-
-# Request model for create_subtitles
-CreateSubtitlesRequest = schemas.SubtitlesCreateRequest
-
-
-# Response model for create_subtitles
-CreateSubtitlesResponse = schemas.SubtitlesCreateResponse
-
-
-# Request model for delete_subtitles
-DeleteSubtitlesRequest = schemas.SubtitlesDeleteRequest
-
-
-# Response model for delete_subtitles
-DeleteSubtitlesResponse = schemas.SubtitlesDeleteResponse
+GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
 
 
 # Response model for get_upload_status
-GetUploadStatusResponse = schemas.MediaUploadResponse
+GetUploadStatusResponse = schemas.GetMediaUploadStatusResponse
 
 
 # Request model for upload
-UploadRequest = schemas.MediaUploadRequestOneShot
+UploadRequest = schemas.MediaUploadRequest
 
 
 # Response model for upload
 UploadResponse = schemas.MediaUploadResponse
 
 
-# Request model for create_metadata
-CreateMetadataRequest = schemas.MetadataCreateRequest
-
-
-# Response model for create_metadata
-CreateMetadataResponse = schemas.MetadataCreateResponse
-
-
 # Response model for get_analytics
-GetAnalyticsResponse = schemas.MediaAnalytics
+GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
+
+
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.InitializeMediaUploadRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.InitializeMediaUploadResponse
+
+
+# Request model for create_subtitles
+CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
+
+
+# Response model for create_subtitles
+CreateSubtitlesResponse = schemas.CreateMediaSubtitlesResponse
+
+
+# Request model for delete_subtitles
+DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
+
+
+# Response model for delete_subtitles
+DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
 
 
 # Response model for finalize_upload
-FinalizeUploadResponse = schemas.MediaUploadResponse
+FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
+
+
+# Response model for get_by_keys
+GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
+
+
+# Request model for append_upload
+AppendUploadRequest = schemas.AppendMediaUploadRequest
+
+
+# Response model for append_upload
+AppendUploadResponse = schemas.AppendMediaUploadResponse

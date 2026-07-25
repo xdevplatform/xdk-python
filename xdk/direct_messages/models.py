@@ -17,51 +17,57 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Request model for create_conversation
-CreateConversationRequest = schemas.CreateDmConversationRequest
-
-
-# Response model for create_conversation
-CreateConversationResponse = schemas.CreateDmEventResponse
-
-
-# Response model for get_events
-GetEventsResponse = schemas.Get2DmEventsResponse
-
-
-# Response model for get_events_by_conversation_id
-GetEventsByConversationIdResponse = schemas.Get2DmConversationsIdDmEventsResponse
-
-
-class CreateByParticipantIdRequest(RootModel[schemas.CreateMessageRequest]):
-    """Request model for create_by_participant_id"""
-
-    pass
-
-
-# Response model for create_by_participant_id
-CreateByParticipantIdResponse = schemas.CreateDmEventResponse
-
-
-class CreateByConversationIdRequest(RootModel[schemas.CreateMessageRequest]):
-    """Request model for create_by_conversation_id"""
-
-    pass
+# Request model for create_by_conversation_id
+CreateByConversationIdRequest = schemas.CreateDirectMessagesByConversationIdRequest
 
 
 # Response model for create_by_conversation_id
-CreateByConversationIdResponse = schemas.CreateDmEventResponse
+CreateByConversationIdResponse = schemas.CreateDirectMessagesByConversationIdResponse
+
+
+# Response model for unblock_users_dms
+UnblockUsersDmsResponse = schemas.UnblockUsersDmsResponse
+
+
+# Response model for get_events
+GetEventsResponse = schemas.GetDirectMessagesEventsResponse
 
 
 # Response model for get_events_by_participant_id
 GetEventsByParticipantIdResponse = (
-    schemas.Get2DmConversationsWithParticipantIdDmEventsResponse
+    schemas.GetDirectMessagesEventsByParticipantIdResponse
+)
+
+
+# Response model for get_events_by_conversation_id
+GetEventsByConversationIdResponse = (
+    schemas.GetDirectMessagesEventsByConversationIdResponse
 )
 
 
 # Response model for get_events_by_id
-GetEventsByIdResponse = schemas.Get2DmEventsEventIdResponse
+GetEventsByIdResponse = schemas.GetDirectMessagesEventsByIdResponse
 
 
 # Response model for delete_events
-DeleteEventsResponse = schemas.DeleteDmResponse
+DeleteEventsResponse = schemas.DeleteDirectMessagesEventsResponse
+
+
+# Request model for create_conversation
+CreateConversationRequest = schemas.CreateDirectMessagesConversationRequest
+
+
+# Response model for create_conversation
+CreateConversationResponse = schemas.CreateDirectMessagesConversationResponse
+
+
+# Response model for block_users_dms
+BlockUsersDmsResponse = schemas.BlockUsersDmsResponse
+
+
+# Request model for create_by_participant_id
+CreateByParticipantIdRequest = schemas.CreateDirectMessagesByParticipantIdRequest
+
+
+# Response model for create_by_participant_id
+CreateByParticipantIdResponse = schemas.CreateDirectMessagesByParticipantIdResponse

@@ -57,7 +57,7 @@ class TestComplianceContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["id"] = "test_value"
+            kwargs["id"] = "test_id"
             # Add request body if required
             # Call the method
             try:
@@ -208,7 +208,7 @@ class TestComplianceContracts:
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["id"] = "test"
+            kwargs["id"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
             method = getattr(self.compliance_client, "get_jobs_by_id")

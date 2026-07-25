@@ -43,7 +43,7 @@ class ArticlesClient:
         Publish Article
         Publishes a draft Article, making it publicly visible.
         Args:
-            article_id: The ID of the draft article to publish.
+            article_id: article_id
             Returns:
             ArticlePublishResponse: Response data
         """

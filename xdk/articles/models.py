@@ -22,8 +22,8 @@ ArticlePublishResponse = schemas.ArticlePublishResponse
 
 
 # Request model for article_create_draft
-ArticleCreateDraftRequest = schemas.ArticleDraftCreateRequest
+ArticleCreateDraftRequest = schemas.ArticleCreateDraftRequest
 
 
 # Response model for article_create_draft
-ArticleCreateDraftResponse = schemas.ArticleDraftCreateResponse
+ArticleCreateDraftResponse = schemas.ArticleCreateDraftResponse

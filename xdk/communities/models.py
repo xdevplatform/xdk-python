@@ -17,9 +17,9 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_by_id
-GetByIdResponse = schemas.Get2CommunitiesIdResponse
-
-
 # Response model for search
-SearchResponse = schemas.Get2CommunitiesSearchResponse
+SearchResponse = schemas.SearchCommunitiesResponse
+
+
+# Response model for get_by_id
+GetByIdResponse = schemas.GetCommunitiesByIdResponse

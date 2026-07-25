@@ -15,8 +15,8 @@ from typing import Any, Dict, List, Optional, Union, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ActivityStreamingResponseData(BaseModel):
-    """Nested model for ActivityStreamingResponseData"""
+class ActivityStreamResponseData(BaseModel):
+    """Nested model for ActivityStreamResponseData"""
 
     event_type: Optional[str] = Field(default=None)
     event_uuid: Optional["ActivityEventId"] = Field(
@@ -32,37 +32,898 @@ class ActivityStreamingResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivityStreamingResponse(BaseModel):
+class ActivityStreamResponse(BaseModel):
     """An activity event or error that can be returned by the x activity streaming API."""
 
-    data: Optional["ActivityStreamingResponseData"] = Field(default=None)
+    data: Optional["ActivityStreamResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscription(BaseModel):
-    """An XActivity subscription."""
+class ActivitySubscriptionFilter(BaseModel):
+    """An XAA subscription filter."""
 
-    created_at: str
-    event_type: str
-    filter: "ActivitySubscriptionFilter" = Field(
-        description="An XAA subscription filter."
+    direction: Optional[Literal["inbound", "outbound"]] = Field(
+        default=None, description="Optional direction filter for directional events."
     )
-    subscription_id: "ActivitySubscriptionId" = Field(
-        description="The unique identifier of this subscription."
+    keyword: Optional["Keyword"] = Field(
+        default=None, description="A keyword to filter on."
     )
-    updated_at: str
-    tag: Optional[str] = Field(default=None)
-    webhook_id: Optional["WebhookConfigId"] = Field(
-        default=None, description="The unique identifier of this webhook config."
+    user_id: Optional["UserId"] = Field(
+        default=None, description="Unique identifier of a User"
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscriptionCreateRequest(BaseModel):
-    """Model for ActivitySubscriptionCreateRequest"""
+class AddChatGroupMembersActionSignatures(BaseModel):
+    """Model for AddChatGroupMembersActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded message event detail."
+    )
+    message_event_signature: "AddChatGroupMembersActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupMembersActionSignaturesMessageEventSignature(BaseModel):
+    """Model for AddChatGroupMembersActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "AddChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for AddChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupMembersConversationParticipantKeys(BaseModel):
+    """Model for AddChatGroupMembersConversationParticipantKeys"""
+
+    encrypted_conversation_key: Optional[str] = Field(
+        default=None,
+        description="Conversation key encrypted with this participant's public key.",
+    )
+    public_key_version: Optional[str] = Field(
+        default=None,
+        description="Version of the participant's public key used for encryption.",
+    )
+    user_id: Optional[str] = Field(default=None, description="Participant user ID.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupMembersRequest(BaseModel):
+    """Model for AddChatGroupMembersRequest"""
+
+    user_ids: List[str] = Field(
+        description="List of user IDs to add to the group conversation."
+    )
+    action_signatures: Optional[List["AddChatGroupMembersActionSignatures"]] = Field(
+        default=None, description="Cryptographic signatures for the action."
+    )
+    conversation_key_version: Optional[str] = Field(
+        default=None, description="Version of the new rotated conversation key."
+    )
+    conversation_participant_keys: Optional[
+        List["AddChatGroupMembersConversationParticipantKeys"]
+    ] = Field(
+        default=None, description="Encrypted conversation keys for each participant."
+    )
+    encrypted_avatar_url: Optional[str] = Field(
+        default=None,
+        description="Re-encrypted group avatar URL with new conversation key.",
+    )
+    encrypted_title: Optional[str] = Field(
+        default=None, description="Re-encrypted group title with new conversation key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupMembersResponse(BaseModel):
+    """Model for AddChatGroupMembersResponse"""
+
+    data: Optional["Post"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysActionSignatures(BaseModel):
+    """Model for AddConversationKeysActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded message event detail."
+    )
+    message_event_signature: "AddConversationKeysActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysActionSignaturesMessageEventSignature(BaseModel):
+    """Model for AddConversationKeysActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "AddConversationKeysActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for AddConversationKeysActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysConversationParticipantKeys(BaseModel):
+    """Model for AddConversationKeysConversationParticipantKeys"""
+
+    encrypted_conversation_key: Optional[str] = Field(
+        default=None,
+        description="Conversation key encrypted with this participant's public key.",
+    )
+    public_key_version: Optional[str] = Field(
+        default=None,
+        description="Version of the participant's public key used for encryption.",
+    )
+    user_id: Optional[str] = Field(default=None, description="Participant user ID.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysRequest(BaseModel):
+    """Model for AddConversationKeysRequest"""
+
+    conversation_key_version: str = Field(
+        description="Version of the conversation encryption key (typically a timestamp in milliseconds)."
+    )
+    conversation_participant_keys: List[
+        "AddConversationKeysConversationParticipantKeys"
+    ] = Field(description="Encrypted conversation keys for each participant.")
+    action_signatures: Optional[List["AddConversationKeysActionSignatures"]] = Field(
+        default=None, description="Cryptographic signatures for the action."
+    )
+    base64_encoded_key_rotation: Optional[str] = Field(
+        default=None,
+        description="Base64-encoded key rotation payload for ratchet tree key management.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysResponse(BaseModel):
+    """Model for AddConversationKeysResponse"""
+
+    data: Optional["AddConversationKeysResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddConversationKeysResponseData(BaseModel):
+    """Model for AddConversationKeysResponseData"""
+
+    conversation_id: Optional[str] = Field(
+        default=None, description="Canonical ID of the conversation."
+    )
+    sequence_id: Optional[str] = Field(
+        default=None, description="Sequence ID of the key change."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddListsMemberRequest(BaseModel):
+    """Model for AddListsMemberRequest"""
+
+    user_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddListsMemberResponse(BaseModel):
+    """Model for AddListsMemberResponse"""
+
+    data: Optional["AddListsMemberResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddListsMemberResponseData(BaseModel):
+    """Model for AddListsMemberResponseData"""
+
+    is_member: bool = Field(
+        description="Indicates whether the user is a member of the List."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddUserPublicKeyPublicKey(BaseModel):
+    """Model for AddUserPublicKeyPublicKey"""
+
+    identity_public_key_signature: Optional[str] = Field(
+        default=None, description="Signature over the identity public key."
+    )
+    public_key: Optional[str] = Field(
+        default=None, description="Identity public key (base64 encoded)."
+    )
+    public_key_fingerprint: Optional[str] = Field(
+        default=None, description="Fingerprint of the identity public key."
+    )
+    registration_method: Optional[str] = Field(
+        default=None, description="Registration method for the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="Signing public key (base64 encoded)."
+    )
+    signing_public_key_signature: Optional[str] = Field(
+        default=None, description="Signature over the signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddUserPublicKeyRequest(BaseModel):
+    """Model for AddUserPublicKeyRequest"""
+
+    public_key: "AddUserPublicKeyPublicKey"
+    version: str = Field(description="Public key version.")
+    generate_version: Optional[bool] = Field(
+        default=None, description="When true, the server generates a new version."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddUserPublicKeyResponse(BaseModel):
+    """Model for AddUserPublicKeyResponse"""
+
+    data: Optional["AddUserPublicKeyResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddUserPublicKeyResponseData(BaseModel):
+    """Model for AddUserPublicKeyResponseData"""
+
+    juicebox_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Juicebox recovery-service configuration for this key.",
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="Version assigned to the registered public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Analytics(BaseModel):
+    """Model for Analytics"""
+
+    app_install_attempts: Optional[int] = Field(default=None)
+    app_opens: Optional[int] = Field(default=None)
+    bookmarks: Optional[int] = Field(default=None)
+    detail_expands: Optional[int] = Field(default=None)
+    email_tweet: Optional[int] = Field(default=None)
+    engagements: Optional[int] = Field(default=None)
+    follows: Optional[int] = Field(default=None)
+    hashtag_clicks: Optional[int] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    impressions: Optional[int] = Field(default=None)
+    likes: Optional[int] = Field(default=None)
+    media_views: Optional[int] = Field(default=None)
+    permalink_clicks: Optional[int] = Field(default=None)
+    quote_tweets: Optional[int] = Field(default=None)
+    replies: Optional[int] = Field(default=None)
+    retweets: Optional[int] = Field(default=None)
+    shares: Optional[int] = Field(default=None)
+    timestamp: Optional[str] = Field(default=None)
+    timestamped_metrics: Optional["AnalyticsTimestampedMetrics"] = Field(
+        default=None,
+        description="Time-bucketed engagement metrics for the Post, one entry per granularity bucket.",
+    )
+    unfollows: Optional[int] = Field(default=None)
+    unlikes: Optional[int] = Field(default=None)
+    url_clicks: Optional[int] = Field(default=None)
+    user_profile_clicks: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AppendMediaUploadRequest(BaseModel):
+    """Model for AppendMediaUploadRequest"""
+
+    media: str = Field(description="The media chunk to upload.")
+    segment_index: int = Field(
+        description="The index of this segment in the upload sequence."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AppendMediaUploadResponse(BaseModel):
+    """Model for AppendMediaUploadResponse"""
+
+    data: Optional["AppendMediaUploadResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AppendMediaUploadResponseData(BaseModel):
+    """Model for AppendMediaUploadResponseData"""
+
+    expires_at: Optional[int] = Field(
+        default=None, description="Epoch seconds when the upload session expires."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentState(BaseModel):
+    """Model for ArticleCreateDraftContentState"""
+
+    blocks: List["ArticleCreateDraftContentStateBlocks"] = Field(
+        description="The text blocks that make up the article body."
+    )
+    entities: List["ArticleCreateDraftContentStateEntities"] = Field(
+        description="Non-text entities referenced by blocks (links, embedded posts, images, emoji,          markdown/code/tables, dividers, LaTeX). Full set matches article storage."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocks(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocks"""
+
+    text: str = Field(
+        description="The text content of this block. For latex entities, this holds the LaTeX source;          for divider/markdown/image/post atomic placeholders, typically a single space."
+    )
+    type: Literal[
+        "unstyled",
+        "header-one",
+        "header-two",
+        "header-three",
+        "unordered-list-item",
+        "ordered-list-item",
+        "blockquote",
+        "atomic",
+    ] = Field(
+        description="The block type. Use atomic for non-text embeds (image, post, markdown, divider, latex)."
+    )
+    data: Optional["ArticleCreateDraftContentStateBlocksData"] = Field(default=None)
+    entity_ranges: Optional[
+        List["ArticleCreateDraftContentStateBlocksEntityRanges"]
+    ] = Field(default=None, description="References to entries in entities.")
+    inline_style_ranges: Optional[
+        List["ArticleCreateDraftContentStateBlocksInlineStyleRanges"]
+    ] = Field(default=None, description="Inline formatting ranges.")
+    key: Optional[str] = Field(default=None, description="Optional block key.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksData(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksData"""
+
+    cashtags: Optional[List["ArticleCreateDraftContentStateBlocksDataCashtags"]] = (
+        Field(default=None, description="Cashtag spans in this block.")
+    )
+    hashtags: Optional[List["ArticleCreateDraftContentStateBlocksDataHashtags"]] = (
+        Field(default=None, description="Hashtag spans in this block.")
+    )
+    mentions: Optional[List["ArticleCreateDraftContentStateBlocksDataMentions"]] = (
+        Field(default=None, description="Mention spans in this block.")
+    )
+    urls: Optional[List["ArticleCreateDraftContentStateBlocksDataUrls"]] = Field(
+        default=None, description="URL spans in this block."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksDataCashtags(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksDataCashtags"""
+
+    from_index: int = Field(description="Start index of the tagged span.")
+    text: str = Field(description="The tagged text.")
+    to_index: int = Field(description="End index of the tagged span.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksDataHashtags(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksDataHashtags"""
+
+    from_index: int = Field(description="Start index of the tagged span.")
+    text: str = Field(description="The tagged text.")
+    to_index: int = Field(description="End index of the tagged span.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksDataMentions(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksDataMentions"""
+
+    from_index: int = Field(description="Start index of the tagged span.")
+    text: str = Field(description="The tagged text.")
+    to_index: int = Field(description="End index of the tagged span.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksDataUrls(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksDataUrls"""
+
+    from_index: int = Field(description="Start index of the tagged span.")
+    text: str = Field(description="The tagged text.")
+    to_index: int = Field(description="End index of the tagged span.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksEntityRanges(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksEntityRanges"""
+
+    key: int = Field(description="Index into the entities array.")
+    length: int = Field(description="Length of the entity range.")
+    offset: int = Field(description="Start offset in the text.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateBlocksInlineStyleRanges(BaseModel):
+    """Model for ArticleCreateDraftContentStateBlocksInlineStyleRanges"""
+
+    length: int = Field(description="Length of the styled range.")
+    offset: int = Field(description="Start offset in the text.")
+    style: Literal["bold", "italic", "strikethrough"] = Field(
+        description="The inline style."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateEntities(BaseModel):
+    """Model for ArticleCreateDraftContentStateEntities"""
+
+    key: str = Field(description="The entity key referenced by entity_ranges.")
+    value: "ArticleCreateDraftContentStateEntitiesValue"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateEntitiesValue(BaseModel):
+    """Model for ArticleCreateDraftContentStateEntitiesValue"""
+
+    data: "ArticleCreateDraftContentStateEntitiesValueData"
+    mutability: Literal["immutable", "mutable", "segmented"] = Field(
+        description="Whether the entity can be edited. Recommended: immutable for post, image, divider, latex; mutable for link and markdown (matches the in-app Articles composer)."
+    )
+    type: Literal["post", "link", "image", "emoji", "markdown", "divider", "latex"] = (
+        Field(
+            description="The entity type. markdown carries code blocks, GFM tables, and other Markdown;          emoji maps to backend TWEMOJI (Twemoji is internal); divider is a horizontal rule;          latex renders TeX from the block text. Tables are not a separate enum value — use          type markdown with a pipe table in data.markdown."
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateEntitiesValueData(BaseModel):
+    """Model for ArticleCreateDraftContentStateEntitiesValueData"""
+
+    caption: Optional[str] = Field(default=None, description="Caption text.")
+    entity_key: Optional[str] = Field(
+        default=None,
+        description="Opaque entity key. Used with type emoji (and reserved for other keyed embeds) to match in-app Articles composer payloads.",
+    )
+    markdown: Optional[str] = Field(
+        default=None,
+        description="Markdown body for type markdown. Use fenced code blocks (```lang ... ```) for code. Max weighted length is enforced by the Articles backend (10,000 per article).",
+    )
+    media_items: Optional[
+        List["ArticleCreateDraftContentStateEntitiesValueDataMediaItems"]
+    ] = Field(default=None, description="Media keys. Used with type image.")
+    post_id: Optional[str] = Field(
+        default=None, description="The ID of the post to embed. Used with type post."
+    )
+    url: Optional[str] = Field(
+        default=None, description="The URL. Used with type link."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftContentStateEntitiesValueDataMediaItems(BaseModel):
+    """Model for ArticleCreateDraftContentStateEntitiesValueDataMediaItems"""
+
+    media_category: str
+    media_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftCoverMedia(BaseModel):
+    """Model for ArticleCreateDraftCoverMedia"""
+
+    media_category: str = Field(description="The media category (e.g. tweet_image).")
+    media_id: str = Field(description="The media ID from the media upload endpoint.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftRequest(BaseModel):
+    """Model for ArticleCreateDraftRequest"""
+
+    content_state: "ArticleCreateDraftContentState"
+    title: str = Field(description="The title of the Article.")
+    cover_media: Optional["ArticleCreateDraftCoverMedia"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftResponse(BaseModel):
+    """Model for ArticleCreateDraftResponse"""
+
+    data: Optional["ArticleCreateDraftResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticleCreateDraftResponseData(BaseModel):
+    """Model for ArticleCreateDraftResponseData"""
+
+    id: str = Field(description="Unique identifier of the created draft Article.")
+    title: str = Field(description="The title of the draft Article.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticlePublishResponse(BaseModel):
+    """Model for ArticlePublishResponse"""
+
+    data: Optional["ArticlePublishResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArticlePublishResponseData(BaseModel):
+    """Model for ArticlePublishResponseData"""
+
+    post_id: str = Field(
+        description="The ID of the post created for the published Article."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class BlockUsersDmsResponse(BaseModel):
+    """Model for BlockUsersDmsResponse"""
+
+    data: Optional["BlockUsersDmsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class BlockUsersDmsResponseData(BaseModel):
+    """Model for BlockUsersDmsResponseData"""
+
+    blocked: bool = Field(
+        description="Indicates whether the target user is DM-blocked."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatConversation(BaseModel):
+    """Model for ChatConversation"""
+
+    admin_ids: Optional[List[str]] = Field(default=None)
+    created_at: Optional[str] = Field(default=None)
+    group_avatar_url: Optional[str] = Field(default=None)
+    group_name: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    is_muted: Optional[bool] = Field(default=None)
+    member_ids: Optional[List[str]] = Field(default=None)
+    message_ttl_ms: Optional[int] = Field(default=None)
+    participant_ids: Optional[List[str]] = Field(default=None)
+    screen_capture_blocking_enabled: Optional[bool] = Field(default=None)
+    screen_capture_detection_enabled: Optional[bool] = Field(default=None)
+    type: Optional[str] = Field(default=None)
+    updated_at: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadAppendRequest(BaseModel):
+    """Model for ChatMediaUploadAppendRequest"""
+
+    conversation_id: str = Field(
+        description="The XChat conversation the upload belongs to."
+    )
+    media: str = Field(
+        description="The media segment bytes: base64-encoded in JSON bodies, raw bytes in multipart bodies."
+    )
+    media_hash_key: str = Field(
+        description="The media hash key returned by the initialize step."
+    )
+    segment_index: int = Field(
+        description="The index of this segment in the upload sequence."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadAppendResponse(BaseModel):
+    """Model for ChatMediaUploadAppendResponse"""
+
+    data: Optional["ChatMediaUploadAppendResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadAppendResponseData(BaseModel):
+    """Model for ChatMediaUploadAppendResponseData"""
+
+    expires_at: Optional[int] = Field(
+        default=None, description="Epoch seconds when the upload session expires."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadFinalizeRequest(BaseModel):
+    """Model for ChatMediaUploadFinalizeRequest"""
+
+    conversation_id: str = Field(
+        description="The XChat conversation the upload belongs to."
+    )
+    media_hash_key: str = Field(
+        description="The media hash key returned by the initialize step."
+    )
+    num_parts: str = Field(
+        description="Total number of uploaded parts, as a numeric string."
+    )
+    message_id: Optional[str] = Field(
+        default=None,
+        description="Optional message identifier associated with the upload.",
+    )
+    ttl_msec: Optional[str] = Field(
+        default=None,
+        description="Optional TTL for the media in milliseconds, as a numeric string.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadFinalizeResponse(BaseModel):
+    """Model for ChatMediaUploadFinalizeResponse"""
+
+    data: Optional["ChatMediaUploadFinalizeResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadFinalizeResponseData(BaseModel):
+    """Model for ChatMediaUploadFinalizeResponseData"""
+
+    success: bool = Field(description="Whether the upload was finalized.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadInitializeRequest(BaseModel):
+    """Model for ChatMediaUploadInitializeRequest"""
+
+    conversation_id: str = Field(
+        description="The XChat conversation the upload belongs to."
+    )
+    total_bytes: int = Field(description="Total size of the media upload in bytes.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadInitializeResponse(BaseModel):
+    """Model for ChatMediaUploadInitializeResponse"""
+
+    data: Optional["ChatMediaUploadInitializeResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMediaUploadInitializeResponseData(BaseModel):
+    """Model for ChatMediaUploadInitializeResponseData"""
+
+    conversation_id: str = Field(description="Canonical ID of the conversation.")
+    media_hash_key: str = Field(description="Hash key addressing the uploaded media.")
+    session_id: str = Field(description="Upload session ID.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMessageEvent(BaseModel):
+    """Model for ChatMessageEvent"""
+
+    conversation_id: Optional[str] = Field(default=None)
+    conversation_token: Optional[str] = Field(default=None)
+    created_at: Optional[str] = Field(default=None)
+    encoded_event: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    is_trusted: Optional[bool] = Field(default=None)
+    message_event_signature: Optional[Dict[str, Any]] = Field(default=None)
+    previous_id: Optional[str] = Field(default=None)
+    sender_id: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Community(BaseModel):
+    """Model for Community"""
+
+    access: Optional[str] = Field(default=None)
+    created_at: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    join_policy: Optional[str] = Field(default=None)
+    member_count: Optional[int] = Field(default=None)
+    name: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ComplianceJob(BaseModel):
+    """Model for ComplianceJob"""
+
+    created_at: Optional[str] = Field(default=None)
+    download_expires_at: Optional[str] = Field(default=None)
+    download_url: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    name: Optional[str] = Field(default=None)
+    resumable: Optional[bool] = Field(default=None)
+    status: Optional[str] = Field(default=None)
+    type: Optional[str] = Field(default=None)
+    upload_expires_at: Optional[str] = Field(default=None)
+    upload_url: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Connection(BaseModel):
+    """Model for Connection"""
+
+    client_ip: Optional[str] = Field(default=None)
+    connected_at: Optional[str] = Field(default=None)
+    disconnect_reason: Optional[str] = Field(default=None)
+    disconnected_at: Optional[str] = Field(default=None)
+    endpoint_name: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateAccountActivitySubscriptionResponse(BaseModel):
+    """Model for CreateAccountActivitySubscriptionResponse"""
+
+    data: Optional["CreateAccountActivitySubscriptionResponseData"] = Field(
+        default=None
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateAccountActivitySubscriptionResponseData(BaseModel):
+    """Model for CreateAccountActivitySubscriptionResponseData"""
+
+    subscribed: bool = Field(description="Whether the subscription is active.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateActivitySubscriptionFilter(BaseModel):
+    """Model for CreateActivitySubscriptionFilter"""
+
+    direction: Optional[Literal["inbound", "outbound"]] = Field(
+        default=None,
+        description="Optional direction filter for directional events. Not supported for mute.* or block.* events.",
+    )
+    keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    user_id: Optional[str] = Field(
+        default=None,
+        description="User the subscription is scoped to. For mute.* and block.* events, this must be the authenticated source user.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateActivitySubscriptionRequest(BaseModel):
+    """Model for CreateActivitySubscriptionRequest"""
 
     event_type: Literal[
         "profile.update.bio",
@@ -90,599 +951,88 @@ class ActivitySubscriptionCreateRequest(BaseModel):
         "post.delete",
         "post.mention.create",
         "like.create",
-    ]
-    filter: "ActivitySubscriptionFilter" = Field(
-        description="An XAA subscription filter."
-    )
-    tag: Optional[str] = Field(default=None)
-    webhook_id: Optional["WebhookConfigId"] = Field(
-        default=None, description="The unique identifier of this webhook config."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionCreateResponseMeta(BaseModel):
-    """Nested model for ActivitySubscriptionCreateResponseMeta"""
-
-    total_subscriptions: Optional[int] = Field(
-        default=None, description="Number of active subscriptions."
+        "mute.mute",
+        "mute.unmute",
+        "block.block",
+        "block.unblock",
+    ] = Field(description="Activity event type in dot notation.")
+    filter: "CreateActivitySubscriptionFilter"
+    tag: Optional[str] = Field(default=None, description="Optional caller-defined tag.")
+    webhook_id: Optional[str] = Field(
+        default=None, description="Webhook to deliver the subscription events to."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscriptionCreateResponseData(BaseModel):
-    """Nested model for ActivitySubscriptionCreateResponseData"""
+class CreateActivitySubscriptionResponse(BaseModel):
+    """Model for CreateActivitySubscriptionResponse"""
 
-    subscription: Optional["ActivitySubscription"] = Field(
-        default=None, description="An XActivity subscription."
-    )
-    total_subscriptions_for_instance_id: Optional[int] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionCreateResponse(BaseModel):
-    """Model for ActivitySubscriptionCreateResponse"""
-
-    data: Optional["ActivitySubscriptionCreateResponseData"] = Field(default=None)
+    data: Optional["CreateActivitySubscriptionResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["ActivitySubscriptionCreateResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscriptionDeleteResponseMeta(BaseModel):
-    """Nested model for ActivitySubscriptionDeleteResponseMeta"""
+class CreateActivitySubscriptionResponseData(BaseModel):
+    """Model for CreateActivitySubscriptionResponseData"""
 
-    total_subscriptions: Optional[int] = Field(
-        default=None, description="Number of active subscriptions remaining."
+    subscription: Optional["CreateActivitySubscriptionResponseDataSubscription"] = (
+        Field(default=None)
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscriptionDeleteResponseData(BaseModel):
-    """Nested model for ActivitySubscriptionDeleteResponseData"""
+class CreateActivitySubscriptionResponseDataSubscription(BaseModel):
+    """Model for CreateActivitySubscriptionResponseDataSubscription"""
 
-    deleted: Optional[bool] = Field(default=None)
+    created_at: Optional[str] = Field(
+        default=None, description="Subscription creation time."
+    )
+    event_type: Optional[str] = Field(
+        default=None, description="Activity event type in dot notation."
+    )
+    filter: Optional["CreateActivitySubscriptionResponseDataSubscriptionFilter"] = (
+        Field(default=None)
+    )
+    subscription_id: Optional[str] = Field(
+        default=None, description="Unique identifier of the subscription."
+    )
+    tag: Optional[str] = Field(default=None, description="Optional caller-defined tag.")
+    updated_at: Optional[str] = Field(
+        default=None, description="Subscription last-update time."
+    )
+    webhook_id: Optional[str] = Field(
+        default=None, description="Webhook receiving the subscription events."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscriptionDeleteResponse(BaseModel):
-    """Model for ActivitySubscriptionDeleteResponse"""
+class CreateActivitySubscriptionResponseDataSubscriptionFilter(BaseModel):
+    """Model for CreateActivitySubscriptionResponseDataSubscriptionFilter"""
 
-    data: Optional["ActivitySubscriptionDeleteResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["ActivitySubscriptionDeleteResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionFilter(BaseModel):
-    """An XAA subscription filter."""
-
-    direction: Optional[Literal["inbound", "outbound"]] = Field(
-        default=None, description="Optional direction filter for directional events."
-    )
-    keyword: Optional["Keyword"] = Field(
-        default=None, description="A keyword to filter on."
-    )
-    user_id: Optional["UserId"] = Field(
+    direction: Optional[str] = Field(
         default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="Optional direction filter for directional events. Not present for mute.* or block.* events.",
+    )
+    keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    user_id: Optional[str] = Field(
+        default=None, description="User the subscription is scoped to."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ActivitySubscriptionGetResponseMeta(BaseModel):
-    """Nested model for ActivitySubscriptionGetResponseMeta"""
-
-    next_token: Optional[str] = Field(
-        default=None, description="Token to retrieve the next page of results."
-    )
-    result_count: Optional[int] = Field(
-        default=None, description="Number of active subscriptions returned in response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionGetResponse(BaseModel):
-    """Model for ActivitySubscriptionGetResponse"""
-
-    data: Optional[List["ActivitySubscription"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["ActivitySubscriptionGetResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionUpdateRequest(BaseModel):
-    """Model for ActivitySubscriptionUpdateRequest"""
-
-    tag: Optional[str] = Field(default=None)
-    webhook_id: Optional["WebhookConfigId"] = Field(
-        default=None, description="The unique identifier of this webhook config."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionUpdateResponseData(BaseModel):
-    """Nested model for ActivitySubscriptionUpdateResponseData"""
-
-    subscription: Optional["ActivitySubscription"] = Field(
-        default=None, description="An XActivity subscription."
-    )
-    total_subscriptions: Optional[int] = Field(
-        default=None, description="Number of active subscriptions."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ActivitySubscriptionUpdateResponse(BaseModel):
-    """Model for ActivitySubscriptionUpdateResponse"""
-
-    data: Optional["ActivitySubscriptionUpdateResponseData"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AddOrDeleteRulesResponse(BaseModel):
-    """A response from modifying user-specified stream filtering rules."""
-
-    meta: "RulesResponseMetadata"
-    data: Optional[List["Rule"]] = Field(
-        default=None,
-        description="All user-specified stream filtering rules that were created.",
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AddRulesRequest(BaseModel):
-    """A request to add a user-specified stream filtering rule."""
-
-    add: List["RuleNoId"]
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AllowDownloadStatus(BaseModel):
-    """Model for AllowDownloadStatus"""
-
-    allow_download: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AltText(BaseModel):
-    """Model for AltText"""
-
-    text: str = Field(description="Description of media ( <= 1000 characters )")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AnalyticsDataItem(BaseModel):
-    """Nested model for AnalyticsDataItem"""
-
-    id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    timestamped_metrics: Optional[List["TimestampedMetrics"]] = Field(
-        default=None,
-        description="Array containing metrics data along with the timestamps of their recording.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Analytics(BaseModel):
-    """Model for Analytics"""
-
-    data: Optional[List["AnalyticsDataItem"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AppRulesCount(BaseModel):
-    """A count of user-provided stream filtering rules at the client application level."""
-
-    client_app_id: Optional["ClientAppId"] = Field(
-        default=None, description="The ID of the client application"
-    )
-    rule_count: Optional[int] = Field(
-        default=None, description="Number of rules for client application"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateEntitiesItemValueDataMediaItemsItem(
-    BaseModel
-):
-    """Nested model for ArticleDraftCreateRequestContentStateEntitiesItemValueDataMediaItemsItem"""
-
-    media_category: str = Field(description="The media category (e.g., TWEET_IMAGE).")
-    media_id: str = Field(description="The media ID from the media upload endpoint.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateEntitiesItemValueData(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateEntitiesItemValueData"""
-
-    caption: Optional[str] = Field(default=None, description="Caption text.")
-    entity_key: Optional[str] = Field(default=None, description="Opaque entity key.")
-    markdown: Optional[str] = Field(default=None, description="Markdown content.")
-    media_items: Optional[
-        List["ArticleDraftCreateRequestContentStateEntitiesItemValueDataMediaItemsItem"]
-    ] = Field(default=None, description="Media keys. Used with type image.")
-    post_id: Optional[str] = Field(
-        default=None, description="The ID of the post to embed. Used with type post."
-    )
-    url: Optional[str] = Field(
-        default=None, description="The URL. Used with type link."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemDataUrlsItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemDataUrlsItem"""
-
-    from_index: int = Field(description="Start index of the tagged span.")
-    text: str = Field(description="The tagged text.")
-    to_index: int = Field(description="End index of the tagged span.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemDataMentionsItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemDataMentionsItem"""
-
-    from_index: int = Field(description="Start index of the tagged span.")
-    text: str = Field(description="The tagged text.")
-    to_index: int = Field(description="End index of the tagged span.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemDataHashtagsItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemDataHashtagsItem"""
-
-    from_index: int = Field(description="Start index of the tagged span.")
-    text: str = Field(description="The tagged text.")
-    to_index: int = Field(description="End index of the tagged span.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemDataCashtagsItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemDataCashtagsItem"""
-
-    from_index: int = Field(description="Start index of the tagged span.")
-    text: str = Field(description="The tagged text.")
-    to_index: int = Field(description="End index of the tagged span.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateEntitiesItemValue(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateEntitiesItemValue"""
-
-    data: "ArticleDraftCreateRequestContentStateEntitiesItemValueData" = Field(
-        description="Entity payload. Fields depend on the entity type."
-    )
-    mutability: Literal["immutable", "mutable", "segmented"] = Field(
-        description="Whether the entity can be edited."
-    )
-    type: Literal["post", "link", "image"] = Field(description="The entity type.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemInlineStyleRangesItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemInlineStyleRangesItem"""
-
-    length: int = Field(description="Length of the styled range.")
-    offset: int = Field(description="Start offset in the text.")
-    style: Literal["bold", "italic", "strikethrough"] = Field(
-        description="The inline style."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemEntityRangesItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemEntityRangesItem"""
-
-    key: int = Field(description="Index into the entities array.")
-    length: int = Field(description="Length of the entity range.")
-    offset: int = Field(description="Start offset in the text.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItemData(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItemData"""
-
-    cashtags: Optional[
-        List["ArticleDraftCreateRequestContentStateBlocksItemDataCashtagsItem"]
-    ] = Field(default=None, description="Cashtag spans in this block.")
-    hashtags: Optional[
-        List["ArticleDraftCreateRequestContentStateBlocksItemDataHashtagsItem"]
-    ] = Field(default=None, description="Hashtag spans in this block.")
-    mentions: Optional[
-        List["ArticleDraftCreateRequestContentStateBlocksItemDataMentionsItem"]
-    ] = Field(default=None, description="Mention spans in this block.")
-    urls: Optional[
-        List["ArticleDraftCreateRequestContentStateBlocksItemDataUrlsItem"]
-    ] = Field(default=None, description="URL spans in this block.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateEntitiesItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateEntitiesItem"""
-
-    key: str = Field(description="The entity key referenced by entity_ranges.")
-    value: "ArticleDraftCreateRequestContentStateEntitiesItemValue"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentStateBlocksItem(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentStateBlocksItem"""
-
-    text: str = Field(description="The text content of this block.")
-    type: Literal[
-        "unstyled",
-        "header-one",
-        "header-two",
-        "header-three",
-        "unordered-list-item",
-        "ordered-list-item",
-        "blockquote",
-        "atomic",
-    ] = Field(description="The block type.")
-    data: Optional["ArticleDraftCreateRequestContentStateBlocksItemData"] = Field(
-        default=None,
-        description="Block-level metadata for mentions, hashtags, cashtags, and URLs.",
-    )
-    entity_ranges: Optional[
-        List["ArticleDraftCreateRequestContentStateBlocksItemEntityRangesItem"]
-    ] = Field(default=None, description="References to entries in entities.")
-    inline_style_ranges: Optional[
-        List["ArticleDraftCreateRequestContentStateBlocksItemInlineStyleRangesItem"]
-    ] = Field(default=None, description="Inline formatting ranges.")
-    key: Optional[str] = Field(default=None, description="Optional block key.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestCoverMedia(BaseModel):
-    """Nested model for ArticleDraftCreateRequestCoverMedia"""
-
-    media_category: str = Field(description="The media category (e.g., TWEET_IMAGE).")
-    media_id: str = Field(description="The media ID from the media upload endpoint.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequestContentState(BaseModel):
-    """Nested model for ArticleDraftCreateRequestContentState"""
-
-    blocks: List["ArticleDraftCreateRequestContentStateBlocksItem"] = Field(
-        description="The text blocks that make up the article body."
-    )
-    entities: List["ArticleDraftCreateRequestContentStateEntitiesItem"] = Field(
-        description="Non-text entities referenced by blocks (links, embedded posts, images)."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateRequest(BaseModel):
-    """Model for ArticleDraftCreateRequest"""
-
-    content_state: "ArticleDraftCreateRequestContentState" = Field(
-        description="DraftJS content state representing the article body."
-    )
-    title: str = Field(description="The title of the article.")
-    cover_media: Optional["ArticleDraftCreateRequestCoverMedia"] = Field(
-        default=None,
-        description="A reference to uploaded media, identified by category and ID.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateResponseData(BaseModel):
-    """Nested model for ArticleDraftCreateResponseData"""
-
-    id: "ArticleId" = Field(description="The unique identifier of this Article.")
-    title: str = Field(description="The title of the draft Article.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticleDraftCreateResponse(BaseModel):
-    """Model for ArticleDraftCreateResponse"""
-
-    data: Optional["ArticleDraftCreateResponseData"] = Field(
-        default=None, description="The newly created draft Article."
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticlePublishResponseData(BaseModel):
-    """Nested model for ArticlePublishResponseData"""
-
-    post_id: str = Field(
-        description="The ID of the post created for the published Article."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ArticlePublishResponse(BaseModel):
-    """Model for ArticlePublishResponse"""
-
-    data: Optional["ArticlePublishResponseData"] = Field(
-        default=None, description="The published Article's seed post."
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class AudiencePolicy(BaseModel):
-    """Model for AudiencePolicy"""
-
-    creator_subscriptions: Optional[List[Literal["Any"]]] = Field(default=None)
-    x_subscriptions: Optional[List[Literal["Any"]]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkAddRequest(BaseModel):
-    """Model for BookmarkAddRequest"""
-
-    tweet_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkFolderPostsResponseMeta(BaseModel):
-    """Nested model for BookmarkFolderPostsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkFolderPostsResponseDataItem(BaseModel):
-    """Nested model for BookmarkFolderPostsResponseDataItem"""
-
-    id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkFolderPostsResponse(BaseModel):
-    """Model for BookmarkFolderPostsResponse"""
-
-    data: Optional[List["BookmarkFolderPostsResponseDataItem"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["BookmarkFolderPostsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkFoldersResponseMeta(BaseModel):
-    """Nested model for BookmarkFoldersResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkFoldersResponseDataItem(BaseModel):
-    """Nested model for BookmarkFoldersResponseDataItem"""
-
-    id: Optional["BookmarkFolderId"] = Field(
-        default=None, description="The unique identifier of this Bookmark folder."
-    )
-    name: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkFoldersResponse(BaseModel):
-    """Model for BookmarkFoldersResponse"""
-
-    data: Optional[List["BookmarkFoldersResponseDataItem"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["BookmarkFoldersResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkMutationResponseData(BaseModel):
-    """Nested model for BookmarkMutationResponseData"""
-
-    bookmarked: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class BookmarkMutationResponse(BaseModel):
-    """Model for BookmarkMutationResponse"""
-
-    data: Optional["BookmarkMutationResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CashtagFields(BaseModel):
-    """Represent the portion of text recognized as a Cashtag, and its start and end position within the text."""
-
-    tag: str
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatActionMessageEventSignature(BaseModel):
-    """Message event signature supplied with an action signature."""
-
-    public_key_version: str = Field(
-        description="The version of the public key used for signing."
-    )
-    signature: str = Field(description="The signature of the message event.")
-    signature_version: str = Field(
-        description="The version of the signature algorithm."
-    )
-    message_signing_key_info_list: Optional[List["ChatMessageSigningKeyInfo"]] = Field(
-        default=None,
-        description="List of signing key information for message verification.",
-    )
-    signing_public_key: Optional[str] = Field(
-        default=None, description="The public key used for signing."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatActionSignature(BaseModel):
-    """Cryptographic signature for a chat action."""
+class CreateChatConversationActionSignatures(BaseModel):
+    """Model for CreateChatConversationActionSignatures"""
 
     encoded_message_event_detail: str = Field(
         description="Base64-encoded message event detail."
     )
-    message_event_signature: "ChatActionMessageEventSignature" = Field(
-        description="Message event signature supplied with an action signature."
+    message_event_signature: (
+        "CreateChatConversationActionSignaturesMessageEventSignature"
     )
     message_id: str = Field(
         description="Client-generated ID of the message being signed."
@@ -695,157 +1045,51 @@ class ChatActionSignature(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatAddGroupMembersRequest(BaseModel):
-    """Model for ChatAddGroupMembersRequest"""
+class CreateChatConversationActionSignaturesMessageEventSignature(BaseModel):
+    """Model for CreateChatConversationActionSignaturesMessageEventSignature"""
 
-    user_ids: List[str] = Field(
-        description="List of user IDs to add to the group conversation."
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
     )
-    action_signatures: Optional[List["ChatActionSignature"]] = Field(
-        default=None, description="Cryptographic signatures for the add-members action."
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
     )
-    conversation_key_version: Optional[str] = Field(
-        default=None, description="Version of the new rotated conversation key."
-    )
-    conversation_participant_keys: Optional[List["ChatConversationParticipantKey"]] = (
-        Field(
-            default=None,
-            description="Encrypted conversation keys for each new participant after key rotation.",
-        )
-    )
-    encrypted_avatar_url: Optional[str] = Field(
+    message_signing_key_info_list: Optional[
+        List[
+            "CreateChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
         default=None,
-        description="Re-encrypted group avatar URL with new conversation key.",
-    )
-    encrypted_title: Optional[str] = Field(
-        default=None, description="Re-encrypted group title with new conversation key."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatAddGroupMembersResponse(BaseModel):
-    """Model for ChatAddGroupMembersResponse"""
-
-    conversation_key_change_sequence_id: Optional[str] = Field(
-        default=None, description="Sequence ID of the conversation key change event."
-    )
-    current_member_ids: Optional[List[str]] = Field(
-        default=None, description="List of all current member IDs in the conversation."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatAddPublicKeyRequestPublicKey(BaseModel):
-    """Nested model for ChatAddPublicKeyRequestPublicKey"""
-
-    identity_public_key_signature: Optional[str] = Field(
-        default=None, description="Signature over the identity public key."
-    )
-    public_key: Optional[str] = Field(
-        default=None, description="Identity public key (base64 encoded)."
-    )
-    public_key_fingerprint: Optional[str] = Field(
-        default=None, description="Fingerprint of the identity public key."
-    )
-    registration_method: Optional[str] = Field(
-        default=None, description="Registration method for the public key."
+        description="List of signing key information for message verification.",
     )
     signing_public_key: Optional[str] = Field(
-        default=None, description="Signing public key (base64 encoded)."
-    )
-    signing_public_key_signature: Optional[str] = Field(
-        default=None, description="Signature over the signing public key."
+        default=None, description="The public key used for signing."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatAddPublicKeyRequest(BaseModel):
-    """Model for ChatAddPublicKeyRequest"""
+class CreateChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for CreateChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
 
-    public_key: "ChatAddPublicKeyRequestPublicKey" = Field(
-        description="Public key registration payload."
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
     )
-    version: str = Field(description="Public key version.")
-    generate_version: Optional[bool] = Field(
-        default=None, description="When true, the server generates a new version."
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatAddPublicKeyResponse(BaseModel):
-    """Model for ChatAddPublicKeyResponse"""
-
-    data: Optional["PublicKey"] = Field(
-        default=None,
-        description="A user's public key with associated key recovery configuration.",
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatConversation(BaseModel):
-    """A Chat conversation resource representing either a direct or group conversation."""
-
-    id: str = Field(
-        description="The unique identifier for this conversation: the hyphen-separated participant pair for a 1:1 conversation (e.g. '123-456'), or a 'g'-prefixed ID for a group."
-    )
-    admin_ids: Optional[List[str]] = Field(
-        default=None,
-        description="User IDs of group admins. Only present for group conversations.",
-    )
-    created_at: Optional[str] = Field(
-        default=None,
-        description="ISO 8601 timestamp when the group was created. Only present for group conversations.",
-    )
-    group_avatar_url: Optional[str] = Field(
-        default=None,
-        description="URL for the group avatar. Only present for group conversations.",
-    )
-    group_name: Optional[str] = Field(
-        default=None,
-        description="Encrypted group name. Only present for group conversations.",
-    )
-    is_muted: Optional[bool] = Field(
-        default=None,
-        description="Whether notifications are muted for this conversation.",
-    )
-    member_ids: Optional[List[str]] = Field(
-        default=None,
-        description="User IDs of group members. Only present for group conversations.",
-    )
-    message_ttl_msec: Optional[str] = Field(
-        default=None, description="Message time-to-live in milliseconds."
-    )
-    participant_ids: Optional[List[str]] = Field(
-        default=None,
-        description="Array of user IDs who are participants in this conversation.",
-    )
-    screen_capture_blocking_enabled: Optional[bool] = Field(
-        default=None,
-        description="Whether screen capture blocking is enabled for this conversation.",
-    )
-    screen_capture_detection_enabled: Optional[bool] = Field(
-        default=None,
-        description="Whether screen capture detection is enabled for this conversation.",
-    )
-    type: Optional[Literal["direct", "group"]] = Field(
-        default=None, description="The type of conversation: 'direct' or 'group'."
-    )
-    updated_at: Optional[str] = Field(
-        default=None,
-        description="ISO 8601 timestamp when the group was last updated. Only present for group conversations.",
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatConversationParticipantKey(BaseModel):
-    """A participant's encrypted conversation key."""
+class CreateChatConversationConversationParticipantKeys(BaseModel):
+    """Model for CreateChatConversationConversationParticipantKeys"""
 
     encrypted_conversation_key: Optional[str] = Field(
         default=None,
@@ -860,21 +1104,21 @@ class ChatConversationParticipantKey(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatCreateConversationRequest(BaseModel):
-    """Model for ChatCreateConversationRequest"""
+class CreateChatConversationRequest(BaseModel):
+    """Model for CreateChatConversationRequest"""
 
     conversation_id: str = Field(description="Client-generated conversation ID.")
     conversation_key_version: str = Field(
         description="Version of the conversation encryption key."
     )
-    conversation_participant_keys: List["ChatConversationParticipantKey"] = Field(
-        description="Encrypted conversation keys for each participant."
-    )
+    conversation_participant_keys: List[
+        "CreateChatConversationConversationParticipantKeys"
+    ] = Field(description="Encrypted conversation keys for each participant.")
     group_members: List[str] = Field(
         description="User IDs of group members to include in the conversation."
     )
-    action_signatures: Optional[List["ChatActionSignature"]] = Field(
-        default=None, description="Cryptographic signatures for the create action."
+    action_signatures: Optional[List["CreateChatConversationActionSignatures"]] = Field(
+        default=None, description="Cryptographic signatures for the action."
     )
     base64_encoded_key_rotation: Optional[str] = Field(
         default=None, description="Base64-encoded key rotation payload."
@@ -900,369 +1144,1079 @@ class ChatCreateConversationRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatCreateConversationResponseData(BaseModel):
-    """Nested model for ChatCreateConversationResponseData"""
+class CreateChatConversationResponse(BaseModel):
+    """Model for CreateChatConversationResponse"""
 
-    conversation_id: Optional[str] = Field(
-        default=None,
-        description="The ID of the created group conversation (prefixed with 'g').",
-    )
-    conversation_key_change_sequence_id: Optional[str] = Field(
-        default=None,
-        description="Sequence ID of the conversation key change event, if applicable.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatCreateConversationResponse(BaseModel):
-    """Model for ChatCreateConversationResponse"""
-
-    data: Optional["ChatCreateConversationResponseData"] = Field(default=None)
+    data: Optional["CreateChatConversationResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatGetConversationResponseMeta(BaseModel):
-    """Nested model for ChatGetConversationResponseMeta"""
-
-    conversation_key_events: Optional[List[str]] = Field(
-        default=None,
-        description="Conversation key change events needed for decryption.",
-    )
-    has_more: Optional[bool] = Field(
-        default=None, description="Whether there are more messages to fetch."
-    )
-    next_token: Optional[str] = Field(
-        default=None, description="Token to retrieve the next page of results."
-    )
-    result_count: Optional[int] = Field(
-        default=None, description="The number of message events returned."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatGetConversationResponse(BaseModel):
-    """Model for ChatGetConversationResponse"""
-
-    data: Optional[List["ChatMessageEvent"]] = Field(
-        default=None, description="List of message events in the conversation."
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["ChatGetConversationResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatGetConversationsResponseMeta(BaseModel):
-    """Nested model for ChatGetConversationsResponseMeta"""
-
-    has_message_requests: Optional[bool] = Field(
-        default=None, description="Whether the user has pending message requests."
-    )
-    has_more: Optional[bool] = Field(
-        default=None, description="Whether there are more conversations to fetch."
-    )
-    next_token: Optional[str] = Field(
-        default=None, description="Token to retrieve the next page of results."
-    )
-    result_count: Optional[int] = Field(
-        default=None, description="The number of conversations returned."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatGetConversationsResponse(BaseModel):
-    """Model for ChatGetConversationsResponse"""
-
-    data: Optional[List["ChatConversation"]] = Field(
-        default=None, description="List of conversations in the user's inbox."
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["ChatGetConversationsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatInitializeConversationKeysRequest(BaseModel):
-    """Model for ChatInitializeConversationKeysRequest"""
-
-    conversation_key_version: str = Field(
-        description="Version of the conversation encryption key (typically a timestamp in milliseconds)."
-    )
-    conversation_participant_keys: List["ChatConversationParticipantKey"] = Field(
-        description="The conversation key encrypted for each participant using their public key."
-    )
-    action_signatures: Optional[List["ChatActionSignature"]] = Field(
-        default=None,
-        description="Cryptographic signatures for the key initialization action.",
-    )
-    base64_encoded_key_rotation: Optional[str] = Field(
-        default=None,
-        description="Base64-encoded key rotation payload for ratchet tree key management.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatInitializeConversationKeysResponseData(BaseModel):
-    """Nested model for ChatInitializeConversationKeysResponseData"""
-
-    conversation_id: Optional[str] = Field(
-        default=None,
-        description="Canonical ID of the conversation the keys were added to: the hyphen-joined participant pair for a one-to-one (for example `123-456`), or the g-prefixed ID for a group. Use this ID for subsequent requests and to match conversation events.",
-    )
-    sequence_id: Optional[str] = Field(
-        default=None,
-        description="Sequence ID of the conversation key change event. Use this to track key changes in the conversation event stream.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatInitializeConversationKeysResponse(BaseModel):
-    """Model for ChatInitializeConversationKeysResponse"""
-
-    data: Optional["ChatInitializeConversationKeysResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatInitializeGroupResponseData(BaseModel):
-    """Nested model for ChatInitializeGroupResponseData"""
-
-    conversation_id: Optional[str] = Field(
-        default=None,
-        description="The unique identifier for the initialized group conversation. This ID is prefixed with 'g' (e.g., 'g1234567890123456789'). Use this ID when calling POST /chat/conversations to create the group.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatInitializeGroupResponse(BaseModel):
-    """Model for ChatInitializeGroupResponse"""
-
-    data: Optional["ChatInitializeGroupResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatJuiceboxConfigTokenMapItemValue(BaseModel):
-    """Nested model for ChatJuiceboxConfigTokenMapItemValue"""
-
-    address: Optional[str] = Field(default=None, description="Realm URL.")
-    public_key: Optional[str] = Field(
-        default=None,
-        description="Realm public key. Only returned when registering a key.",
-    )
-    token: Optional[str] = Field(
-        default=None, description="JWT auth token for the realm."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatJuiceboxConfigTokenMapItem(BaseModel):
-    """Nested model for ChatJuiceboxConfigTokenMapItem"""
-
-    key: Optional[str] = Field(default=None, description="Realm identifier.")
-    value: Optional["ChatJuiceboxConfigTokenMapItemValue"] = Field(
-        default=None, description="Realm connection details."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatJuiceboxConfig(BaseModel):
-    """Key recovery configuration for Juicebox-based key storage."""
-
-    key_store_token_map_json: Optional[str] = Field(
-        default=None, description="Raw JSON for key recovery configuration."
-    )
-    max_guess_count: Optional[int] = Field(
-        default=None, description="Maximum guess count for key recovery."
-    )
-    realm_state_string: Optional[str] = Field(
-        default=None,
-        description="Serialized realm state for key recovery. Only returned when registering a key.",
-    )
-    recover_threshold: Optional[int] = Field(
-        default=None,
-        description="Threshold required to recover the key. Only returned when registering a key.",
-    )
-    register_threshold: Optional[int] = Field(
-        default=None,
-        description="Threshold required to register the key. Only returned when registering a key.",
-    )
-    token_map: Optional[List["ChatJuiceboxConfigTokenMapItem"]] = Field(
-        default=None, description="Per-realm auth tokens for key recovery."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMarkConversationReadRequest(BaseModel):
-    """Model for ChatMarkConversationReadRequest"""
-
-    seen_until_sequence_id: str = Field(
-        description="The sequence ID of the last message to mark as read up to."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMarkConversationReadResponseData(BaseModel):
-    """Nested model for ChatMarkConversationReadResponseData"""
-
-    success: Optional[bool] = Field(
-        default=None,
-        description="Whether the conversation was marked as read successfully.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMarkConversationReadResponse(BaseModel):
-    """Model for ChatMarkConversationReadResponse"""
-
-    data: Optional["ChatMarkConversationReadResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMediaUploadFinalizeRequest(BaseModel):
-    """Request body for finalizing a Chat media upload."""
-
-    conversation_id: Optional[str] = Field(
-        default=None, description="XChat conversation identifier for the upload."
-    )
-    media_hash_key: Optional[str] = Field(
-        default=None, description="Media hash key returned from initialize."
-    )
-    message_id: Optional[str] = Field(
-        default=None,
-        description="Optional message identifier associated with the upload.",
-    )
-    num_parts: Optional[str] = Field(
-        default=None, description="Total number of uploaded parts as a numeric string."
-    )
-    ttl_msec: Optional[str] = Field(
-        default=None, description="Optional TTL for the media in milliseconds."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMediaUploadFinalizeResponseData(BaseModel):
-    """Nested model for ChatMediaUploadFinalizeResponseData"""
-
-    success: bool = Field(description="Whether the finalize request succeeded.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMediaUploadFinalizeResponse(BaseModel):
-    """Response from finalizing a Chat media upload."""
-
-    data: Optional["ChatMediaUploadFinalizeResponseData"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMediaUploadInitializeRequest(BaseModel):
-    """Request body for initializing a Chat media upload."""
-
-    conversation_id: Optional[str] = Field(
-        default=None, description="XChat conversation identifier for the upload."
-    )
-    total_bytes: Optional[int] = Field(
-        default=None, description="Total size of the media upload in bytes."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatMediaUploadInitializeResponseData(BaseModel):
-    """Nested model for ChatMediaUploadInitializeResponseData"""
+class CreateChatConversationResponseData(BaseModel):
+    """Model for CreateChatConversationResponseData"""
 
     conversation_id: str = Field(
-        description="Conversation ID associated with the upload: the colon-separated participant pair for a 1:1 conversation, or a 'g'-prefixed ID for a group."
+        description="Canonical ID of the created conversation."
     )
-    media_hash_key: str = Field(description="Media hash key returned by XChat.")
-    session_id: str = Field(description="Resume/session id for the upload.")
+    conversation_key_change_sequence_id: Optional[str] = Field(
+        default=None, description="Sequence ID of the conversation key change."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatMediaUploadInitializeResponse(BaseModel):
-    """Response from initializing a Chat media upload."""
+class CreateCommunityNotesInfo(BaseModel):
+    """Model for CreateCommunityNotesInfo"""
 
-    data: Optional["ChatMediaUploadInitializeResponseData"] = Field(default=None)
+    classification: Literal[
+        "misinformed_or_potentially_misleading", "not_misleading"
+    ] = Field(description="Community Note classification.")
+    misleading_tags: List[
+        Literal[
+            "disputed_claim_as_fact",
+            "factual_error",
+            "manipulated_media",
+            "misinterpreted_satire",
+            "missing_important_context",
+            "other",
+            "outdated_information",
+        ]
+    ] = Field(description="Tags describing why the Post is misleading.")
+    text: str = Field(
+        description="The text summary of the Community Note (must contain a URL)."
+    )
+    trustworthy_sources: bool = Field(
+        description="Whether the note cites trustworthy sources."
+    )
+    is_media_note: Optional[bool] = Field(
+        default=None, description="Whether the note is a media note."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatMessageEvent(BaseModel):
-    """An Chat message event with extracted envelope fields and the original encoded event."""
+class CreateCommunityNotesRequest(BaseModel):
+    """Model for CreateCommunityNotesRequest"""
 
-    encoded_event: str = Field(
-        description="Base64-encoded MessageEvent for client decoding."
+    info: "CreateCommunityNotesInfo"
+    post_id: str = Field(description="ID of the Post the note is about.")
+    test_mode: bool = Field(
+        description="If true, the note is only for testing and is not publicly visible."
     )
-    conversation_id: Optional[str] = Field(
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateCommunityNotesResponse(BaseModel):
+    """Model for CreateCommunityNotesResponse"""
+
+    data: Optional["CreateCommunityNotesResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateCommunityNotesResponseData(BaseModel):
+    """Model for CreateCommunityNotesResponseData"""
+
+    id: str = Field(description="Unique identifier of the created Community Note.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateComplianceJobsRequest(BaseModel):
+    """Model for CreateComplianceJobsRequest"""
+
+    type: Literal["tweets", "users"] = Field(
+        description="Type of compliance job to list."
+    )
+    name: Optional[str] = Field(
+        default=None, description="A user-provided name for this job."
+    )
+    resumable: Optional[bool] = Field(
         default=None,
-        description="The conversation ID this message belongs to, in the form embedded in events: the colon-separated participant pair for a 1:1 conversation (e.g. '123:456'), or a 'g'-prefixed ID for a group.",
+        description="Whether to enable the upload URL with support for resumable uploads.",
     )
-    conversation_token: Optional[str] = Field(
-        default=None, description="The conversation token for this message."
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateComplianceJobsResponse(BaseModel):
+    """Model for CreateComplianceJobsResponse"""
+
+    data: Optional["ComplianceJob"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByConversationIdAttachments(BaseModel):
+    """Model for CreateDirectMessagesByConversationIdAttachments"""
+
+    media_id: str = Field(description="A media id to attach to the message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByConversationIdRequest(BaseModel):
+    """At least one of `text`, `attachments` is required."""
+
+    attachments: Optional[List["CreateDirectMessagesByConversationIdAttachments"]] = (
+        Field(default=None, description="Attachments to include with the message.")
     )
-    created_at_msec: Optional[str] = Field(
-        default=None, description="The creation timestamp in milliseconds."
+    text: Optional[str] = Field(default=None, description="Text of the Direct Message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByConversationIdResponse(BaseModel):
+    """Model for CreateDirectMessagesByConversationIdResponse"""
+
+    data: Optional["CreateDirectMessagesByConversationIdResponseData"] = Field(
+        default=None
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByConversationIdResponseData(BaseModel):
+    """Model for CreateDirectMessagesByConversationIdResponseData"""
+
+    dm_conversation_id: str = Field(
+        description="The conversation the message was sent to."
+    )
+    dm_event_id: str = Field(description="The id of the created DM event.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByParticipantIdAttachments(BaseModel):
+    """Model for CreateDirectMessagesByParticipantIdAttachments"""
+
+    media_id: str = Field(description="A media id to attach to the message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByParticipantIdRequest(BaseModel):
+    """At least one of `text`, `attachments` is required."""
+
+    attachments: Optional[List["CreateDirectMessagesByParticipantIdAttachments"]] = (
+        Field(default=None, description="Attachments to include with the message.")
+    )
+    text: Optional[str] = Field(default=None, description="Text of the Direct Message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByParticipantIdResponse(BaseModel):
+    """Model for CreateDirectMessagesByParticipantIdResponse"""
+
+    data: Optional["CreateDirectMessagesByParticipantIdResponseData"] = Field(
+        default=None
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesByParticipantIdResponseData(BaseModel):
+    """Model for CreateDirectMessagesByParticipantIdResponseData"""
+
+    dm_conversation_id: str = Field(
+        description="The conversation the message was sent to."
+    )
+    dm_event_id: str = Field(description="The id of the created DM event.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesConversationMessage(BaseModel):
+    """Model for CreateDirectMessagesConversationMessage"""
+
+    attachments: Optional[
+        List["CreateDirectMessagesConversationMessageAttachments"]
+    ] = Field(default=None, description="Attachments to include with the message.")
+    text: Optional[str] = Field(default=None, description="Text of the Direct Message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesConversationMessageAttachments(BaseModel):
+    """Model for CreateDirectMessagesConversationMessageAttachments"""
+
+    media_id: str = Field(description="A media id to attach to the message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesConversationRequest(BaseModel):
+    """Model for CreateDirectMessagesConversationRequest"""
+
+    conversation_type: Literal["Group"] = Field(
+        description="The conversation type to create. Supports `Group` only."
+    )
+    message: "CreateDirectMessagesConversationMessage"
+    participant_ids: List[str] = Field(description="Participants for the conversation.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesConversationResponse(BaseModel):
+    """Model for CreateDirectMessagesConversationResponse"""
+
+    data: Optional["CreateDirectMessagesConversationResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateDirectMessagesConversationResponseData(BaseModel):
+    """Model for CreateDirectMessagesConversationResponseData"""
+
+    dm_conversation_id: str = Field(description="The id of the created conversation.")
+    dm_event_id: str = Field(description="The id of the created DM event.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateListsRequest(BaseModel):
+    """Model for CreateListsRequest"""
+
+    name: str = Field(description="Name of the List (1-25 characters).")
+    description: Optional[str] = Field(
+        default=None, description="Description of the List (up to 100 characters)."
+    )
+    private: Optional[bool] = Field(
+        default=None, description="Whether the List is private."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateListsResponse(BaseModel):
+    """Model for CreateListsResponse"""
+
+    data: Optional["CreateListsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateListsResponseData(BaseModel):
+    """Model for CreateListsResponseData"""
+
+    id: str = Field(description="Unique identifier of the created List.")
+    name: str = Field(description="The name of the created List.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadata(BaseModel):
+    """Model for CreateMediaMetadataMetadata"""
+
+    allow_download_status: Optional[
+        "CreateMediaMetadataMetadataAllowDownloadStatus"
+    ] = Field(default=None)
+    alt_text: Optional["CreateMediaMetadataMetadataAltText"] = Field(default=None)
+    audience_policy: Optional[Dict[str, Any]] = Field(default=None)
+    content_expiration: Optional["CreateMediaMetadataMetadataContentExpiration"] = (
+        Field(default=None)
+    )
+    domain_restrictions: Optional["CreateMediaMetadataMetadataDomainRestrictions"] = (
+        Field(default=None)
+    )
+    found_media_origin: Optional["CreateMediaMetadataMetadataFoundMediaOrigin"] = Field(
+        default=None
+    )
+    geo_restrictions: Optional[Dict[str, Any]] = Field(default=None)
+    management_info: Optional["CreateMediaMetadataMetadataManagementInfo"] = Field(
+        default=None
+    )
+    preview_image: Optional["CreateMediaMetadataMetadataPreviewImage"] = Field(
+        default=None
+    )
+    sensitive_media_warning: Optional[Dict[str, Any]] = Field(default=None)
+    shared_info: Optional["CreateMediaMetadataMetadataSharedInfo"] = Field(default=None)
+    sticker_info: Optional["CreateMediaMetadataMetadataStickerInfo"] = Field(
+        default=None
+    )
+    upload_source: Optional["CreateMediaMetadataMetadataUploadSource"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataAllowDownloadStatus(BaseModel):
+    """Model for CreateMediaMetadataMetadataAllowDownloadStatus"""
+
+    allow_download: Optional[bool] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataAltText(BaseModel):
+    """Model for CreateMediaMetadataMetadataAltText"""
+
+    text: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataContentExpiration(BaseModel):
+    """Model for CreateMediaMetadataMetadataContentExpiration"""
+
+    timestamp_sec: float
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataDomainRestrictions(BaseModel):
+    """Model for CreateMediaMetadataMetadataDomainRestrictions"""
+
+    whitelist: List[str]
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataFoundMediaOrigin(BaseModel):
+    """Model for CreateMediaMetadataMetadataFoundMediaOrigin"""
+
+    id: str
+    provider: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataManagementInfo(BaseModel):
+    """Model for CreateMediaMetadataMetadataManagementInfo"""
+
+    managed: bool
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataPreviewImage(BaseModel):
+    """Model for CreateMediaMetadataMetadataPreviewImage"""
+
+    media_key: Dict[str, Any]
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataSharedInfo(BaseModel):
+    """Model for CreateMediaMetadataMetadataSharedInfo"""
+
+    shared: bool
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataStickerInfo(BaseModel):
+    """Model for CreateMediaMetadataMetadataStickerInfo"""
+
+    stickers: List["CreateMediaMetadataMetadataStickerInfoStickers"]
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataMetadataUploadSource(BaseModel):
+    """Model for CreateMediaMetadataMetadataUploadSource"""
+
+    upload_source: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataRequest(BaseModel):
+    """Model for CreateMediaMetadataRequest"""
+
+    id: str = Field(description="The media id the metadata is attached to.")
+    metadata: Optional["CreateMediaMetadataMetadata"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataResponse(BaseModel):
+    """Model for CreateMediaMetadataResponse"""
+
+    data: Optional["CreateMediaMetadataResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaMetadataResponseData(BaseModel):
+    """Model for CreateMediaMetadataResponseData"""
+
+    id: str = Field(description="The media id the metadata was attached to.")
+    associated_metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="The metadata now associated with the media."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaSubtitlesRequest(BaseModel):
+    """Model for CreateMediaSubtitlesRequest"""
+
+    id: Optional[str] = Field(
+        default=None, description="The media id of the video the subtitles belong to."
+    )
+    media_category: Optional[Literal["AmplifyVideo", "TweetVideo"]] = Field(
+        default=None, description="The media category of the target media."
+    )
+    subtitles: Optional["CreateMediaSubtitlesSubtitles"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaSubtitlesResponse(BaseModel):
+    """Model for CreateMediaSubtitlesResponse"""
+
+    data: Optional["CreateMediaSubtitlesResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaSubtitlesResponseData(BaseModel):
+    """Model for CreateMediaSubtitlesResponseData"""
+
+    associated_subtitles: Optional[Dict[str, Any]] = Field(
+        default=None, description="The subtitles now associated with the media."
+    )
+    id: Optional[str] = Field(default=None, description="The media id.")
+    media_category: Optional[str] = Field(
+        default=None, description="The media category."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateMediaSubtitlesSubtitles(BaseModel):
+    """Model for CreateMediaSubtitlesSubtitles"""
+
+    display_name: Optional[str] = Field(
+        default=None, description="Language name in a human readable form."
     )
     id: Optional[str] = Field(
-        default=None,
-        description="The unique identifier for this message event (message_id).",
+        default=None, description="The media id of the subtitle track."
     )
-    is_trusted: Optional[bool] = Field(
-        default=None, description="Whether the message is from a trusted source."
-    )
-    message_event_signature: Optional["ChatMessageEventSignature"] = Field(
-        default=None, description="Message event signature for verification."
-    )
-    previous_sequence_id: Optional[str] = Field(
-        default=None, description="The sequence ID of the previous message."
-    )
-    sender_id: Optional[str] = Field(
-        default=None, description="The user ID of the message sender."
-    )
-    sequence_id: Optional[str] = Field(
-        default=None, description="The sequence identifier for ordering messages."
+    language_code: Optional[str] = Field(
+        default=None, description="BCP47 language code of the subtitle track."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatMessageEventSignature(BaseModel):
-    """Message event signature for verification."""
+class CreatePostsEditOptions(BaseModel):
+    """Model for CreatePostsEditOptions"""
 
-    message_signing_key_info_list: Optional[List["ChatMessageSigningKeyInfo"]] = Field(
+    previous_post_id: str = Field(description="The ID of the Post being edited.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsGeo(BaseModel):
+    """Model for CreatePostsGeo"""
+
+    place_id: str = Field(description="Place ID for geo tagging.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsMedia(BaseModel):
+    """Model for CreatePostsMedia"""
+
+    media_ids: List[str] = Field(description="Media IDs to attach to the tweet.")
+    call_to_actions: Optional["CreatePostsMediaCallToActions"] = Field(default=None)
+    description: Optional[str] = Field(
+        default=None,
+        description="Description for the media, rendered on the Post card for video and Amplify content.",
+    )
+    embeddable: Optional[bool] = Field(
+        default=None,
+        description="When true, the media's asset URLs do not expire and external syndicated playback is allowed.",
+    )
+    preview_media_id: Optional[str] = Field(
+        default=None, description="Media id whose asset is used as the preview image."
+    )
+    tagged_user_ids: Optional[List[str]] = Field(
+        default=None, description="User IDs tagged in the media."
+    )
+    title: Optional[str] = Field(
+        default=None,
+        description="Title for the media, rendered on the Post card for video and Amplify content.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsMediaCallToActions(BaseModel):
+    """Model for CreatePostsMediaCallToActions"""
+
+    app_install: Optional["CreatePostsMediaCallToActionsAppInstall"] = Field(
+        default=None
+    )
+    visit_site: Optional["CreatePostsMediaCallToActionsVisitSite"] = Field(default=None)
+    watch_now: Optional["CreatePostsMediaCallToActionsWatchNow"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsMediaCallToActionsAppInstall(BaseModel):
+    """Model for CreatePostsMediaCallToActionsAppInstall"""
+
+    app_store_id: Optional[str] = Field(
+        default=None, description="Apple App Store iPhone app id."
+    )
+    ipad_app_store_id: Optional[str] = Field(
+        default=None, description="Apple App Store iPad app id."
+    )
+    play_store_id: Optional[str] = Field(
+        default=None, description="Google Play Store app id."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsMediaCallToActionsVisitSite(BaseModel):
+    """Model for CreatePostsMediaCallToActionsVisitSite"""
+
+    url: str = Field(description="HTTPS URL the CTA links to.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsMediaCallToActionsWatchNow(BaseModel):
+    """Model for CreatePostsMediaCallToActionsWatchNow"""
+
+    url: str = Field(description="HTTPS URL the CTA links to.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsPoll(BaseModel):
+    """Model for CreatePostsPoll"""
+
+    duration_minutes: int = Field(description="Duration of the poll in minutes.")
+    options: List[str] = Field(
+        description="Poll options (2-4 choices, 1-25 characters each)."
+    )
+    reply_settings: Optional[
+        Literal["following", "mentionedUsers", "subscribers", "verified"]
+    ] = Field(
+        default=None,
+        description="Who can reply to the poll Tweet. Accepted for compatibility; it carries no backend argument and is dropped before the mutation is issued (see `translate_body`).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsReply(BaseModel):
+    """Model for CreatePostsReply"""
+
+    in_reply_to_tweet_id: str = Field(
+        description="The ID of the tweet being replied to."
+    )
+    auto_populate_reply_metadata: Optional[bool] = Field(
+        default=None,
+        description="If true, reply metadata is automatically populated. Accepted for compatibility; it carries no backend argument and is dropped before the mutation is issued (see `translate_body`).",
+    )
+    exclude_reply_user_ids: Optional[List[str]] = Field(
+        default=None, description="User IDs to exclude from the reply thread."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsRequest(BaseModel):
+    """Model for CreatePostsRequest"""
+
+    card_uri: Optional[str] = Field(default=None, description="Card URI parameter.")
+    community_id: Optional[str] = Field(
+        default=None, description="Community to post the tweet to."
+    )
+    direct_message_deep_link: Optional[str] = Field(
+        default=None, description="Direct message deep link."
+    )
+    edit_options: Optional["CreatePostsEditOptions"] = Field(default=None)
+    for_super_followers_only: Optional[bool] = Field(
+        default=None, description="Restrict tweet to super followers."
+    )
+    geo: Optional["CreatePostsGeo"] = Field(default=None)
+    made_with_ai: Optional[bool] = Field(
+        default=None, description="Disclose that the tweet contains AI-generated media."
+    )
+    media: Optional["CreatePostsMedia"] = Field(default=None)
+    nullcast: Optional[bool] = Field(
+        default=None,
+        description="If true, the tweet is not shown in the public timeline.",
+    )
+    paid_partnership: Optional[bool] = Field(
+        default=None, description="Disclose that the tweet is a paid partnership."
+    )
+    poll: Optional["CreatePostsPoll"] = Field(default=None)
+    quote_tweet_id: Optional[str] = Field(
+        default=None, description="Tweet ID to quote."
+    )
+    reply: Optional["CreatePostsReply"] = Field(default=None)
+    reply_settings: Optional[
+        Literal["following", "mentionedUsers", "subscribers", "verified"]
+    ] = Field(default=None, description="Who can reply to this tweet.")
+    share_with_followers: Optional[bool] = Field(
+        default=None,
+        description="Share an exclusive (super-follower) tweet with all followers.",
+    )
+    text: Optional[str] = Field(
+        default=None,
+        description="Text of the tweet. Required unless media is provided.  Defaulted to an empty string so it is always sent: the backend's `tweet_text` variable is non-null and rejects an absent value.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsResponse(BaseModel):
+    """Model for CreatePostsResponse"""
+
+    data: Optional["CreatePostsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsResponseData(BaseModel):
+    """Model for CreatePostsResponseData"""
+
+    id: str = Field(description="Unique identifier of the created Post.")
+    text: str = Field(description="The content of the created Post.")
+    edit_history_post_ids: Optional[List[str]] = Field(
+        default=None, description="Post IDs in this Post's edit history chain."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateScheduledBroadcastRecurrence(BaseModel):
+    """Model for CreateScheduledBroadcastRecurrence"""
+
+    frequency: Literal["Daily", "Weekly"] = Field(description="Recurrence frequency.")
+    repeats: str = Field(description="Number of repeats (numeric string).")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateScheduledBroadcastRequest(BaseModel):
+    """Model for CreateScheduledBroadcastRequest"""
+
+    scheduled_end_ms: str = Field(
+        description="End time, ms since Unix epoch (decimal string)."
+    )
+    scheduled_start_ms: str = Field(
+        description="Start time, ms since Unix epoch (decimal string)."
+    )
+    source_id: str = Field(
+        description="Ingest / source id to bind (same as sources `rtmp_stream_key`)."
+    )
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Enable replay."
+    )
+    chat_option: Optional[str] = Field(
+        default=None, description="Chat permission option (numeric string)."
+    )
+    description: Optional[str] = Field(default=None, description="Description.")
+    is_locked: Optional[bool] = Field(default=None, description="Lock the broadcast.")
+    locale: Optional[str] = Field(default=None, description="Locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="If true, do not auto-publish at start; call POST .../live when ready.",
+    )
+    recurrence: Optional["CreateScheduledBroadcastRecurrence"] = Field(default=None)
+    telecast_id: Optional[str] = Field(
+        default=None, description="Optional telecast id (numeric string)."
+    )
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Pre-live slate media id (numeric string)."
+    )
+    title: Optional[str] = Field(default=None, description="Title / status text.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateScheduledBroadcastResponse(BaseModel):
+    """Model for CreateScheduledBroadcastResponse"""
+
+    data: Optional["CreateScheduledBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateScheduledBroadcastResponseData(BaseModel):
+    """Model for CreateScheduledBroadcastResponseData"""
+
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether replay is enabled."
+    )
+    broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+    )
+    chat_option: Optional[str] = Field(
+        default=None, description="Optional chat permission option."
+    )
+    description: Optional[str] = Field(
+        default=None, description="Optional description."
+    )
+    locale: Optional[str] = Field(default=None, description="Optional locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="When true, coordinator will not auto-publish; call POST .../live when ready.",
+    )
+    recurring_schedule_id: Optional[str] = Field(
+        default=None, description="Set when this occurrence belongs to a recurrence."
+    )
+    scheduled_broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Numeric scheduler id. Required in the update request body.",
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start, milliseconds since Unix epoch (decimal string).",
+    )
+    source_id: Optional[str] = Field(
+        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+    )
+    state: Optional[str] = Field(
+        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+    )
+    telecast_id: Optional[str] = Field(
+        default=None, description="Optional telecast association."
+    )
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Optional pre-live slate media id."
+    )
+    title: Optional[str] = Field(
+        default=None, description="Broadcast title / status text."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkFolderRequest(BaseModel):
+    """Model for CreateUsersBookmarkFolderRequest"""
+
+    name: str = Field(description="Name of the Bookmark folder (1-25 characters).")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkFolderResponse(BaseModel):
+    """Model for CreateUsersBookmarkFolderResponse"""
+
+    data: Optional["CreateUsersBookmarkFolderResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkFolderResponseData(BaseModel):
+    """Model for CreateUsersBookmarkFolderResponseData"""
+
+    id: str = Field(description="Unique identifier of the created Bookmark folder.")
+    name: str = Field(description="The name of the created Bookmark folder.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkRequest(BaseModel):
+    """Model for CreateUsersBookmarkRequest"""
+
+    tweet_id: str = Field(
+        description="The ID of the Post to add to the user's Bookmarks."
+    )
+    folder_id: Optional[str] = Field(
+        default=None,
+        description="Optional ID of the Bookmark folder to add the Post to. When omitted, the Post is added to the user's top-level Bookmarks only.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkResponse(BaseModel):
+    """Model for CreateUsersBookmarkResponse"""
+
+    data: Optional["CreateUsersBookmarkResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkResponseData(BaseModel):
+    """Model for CreateUsersBookmarkResponseData"""
+
+    bookmarked: bool = Field(
+        description="Indicates whether the Post is bookmarked by the user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhookReplayJobRequest(BaseModel):
+    """Model for CreateWebhookReplayJobRequest"""
+
+    from_date: str = Field(
+        description="The oldest (inclusive) UTC timestamp from which events are replayed, in yyyymmddhhmm format."
+    )
+    to_date: str = Field(
+        description="The newest (inclusive) UTC timestamp up to which events are replayed, in yyyymmddhhmm format."
+    )
+    webhook_id: str = Field(description="The ID of the webhook to replay events to.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhookReplayJobResponse(BaseModel):
+    """Model for CreateWebhookReplayJobResponse"""
+
+    data: Optional["CreateWebhookReplayJobResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhookReplayJobResponseData(BaseModel):
+    """Model for CreateWebhookReplayJobResponseData"""
+
+    created_at: str = Field(
+        description="The UTC timestamp when the replay job was created."
+    )
+    job_id: str = Field(
+        description="The unique identifier for the initiated replay job."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhooksRequest(BaseModel):
+    """Model for CreateWebhooksRequest"""
+
+    url: str = Field(description="The URL the webhook delivers events to.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhooksResponse(BaseModel):
+    """Model for CreateWebhooksResponse"""
+
+    data: Optional["CreateWebhooksResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhooksResponseData(BaseModel):
+    """Model for CreateWebhooksResponseData"""
+
+    created_at: str = Field(description="Creation time of the webhook configuration.")
+    id: str = Field(description="Unique identifier of the webhook configuration.")
+    url: str = Field(description="The URL the webhook delivers events to.")
+    valid: bool = Field(
+        description="Indicates whether the webhook URL passed validation."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhooksStreamLinkResponse(BaseModel):
+    """Model for CreateWebhooksStreamLinkResponse"""
+
+    data: Optional["CreateWebhooksStreamLinkResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateWebhooksStreamLinkResponseData(BaseModel):
+    """Model for CreateWebhooksStreamLinkResponseData"""
+
+    provisioned: bool = Field(
+        description="Indicates whether the stream link was provisioned."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteAccountActivitySubscriptionResponse(BaseModel):
+    """Model for DeleteAccountActivitySubscriptionResponse"""
+
+    data: Optional["DeleteAccountActivitySubscriptionResponseData"] = Field(
+        default=None
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteAccountActivitySubscriptionResponseData(BaseModel):
+    """Model for DeleteAccountActivitySubscriptionResponseData"""
+
+    subscribed: bool = Field(description="Whether the user has an active subscription.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteActivitySubscriptionResponse(BaseModel):
+    """Model for DeleteActivitySubscriptionResponse"""
+
+    data: Optional["DeleteActivitySubscriptionResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteActivitySubscriptionResponseData(BaseModel):
+    """Model for DeleteActivitySubscriptionResponseData"""
+
+    deleted: bool = Field(description="Whether the subscription was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteActivitySubscriptionsByIdsResponseMeta(BaseModel):
+    """Nested model for DeleteActivitySubscriptionsByIdsResponseMeta"""
+
+    total_subscriptions: Optional[int] = Field(
+        default=None, description="Subscriptions remaining after deletion."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteActivitySubscriptionsByIdsResponseErrorsItem(BaseModel):
+    """Nested model for DeleteActivitySubscriptionsByIdsResponseErrorsItem"""
+
+    message: Optional[str] = Field(
+        default=None, description="Human-readable failure detail."
+    )
+    reason: Optional[str] = Field(
+        default=None, description="Machine-readable failure reason."
+    )
+    subscription_id: Optional[str] = Field(
+        default=None, description="Id the failure applies to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteActivitySubscriptionsByIdsResponseDataItem(BaseModel):
+    """Nested model for DeleteActivitySubscriptionsByIdsResponseDataItem"""
+
+    deleted: Optional[bool] = Field(
+        default=None, description="Whether the subscription was deleted."
+    )
+    subscription_id: Optional[str] = Field(
+        default=None, description="Id of the deleted subscription."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteActivitySubscriptionsByIdsResponse(BaseModel):
+    """Model for DeleteActivitySubscriptionsByIdsResponse"""
+
+    data: Optional[List["DeleteActivitySubscriptionsByIdsResponseDataItem"]] = Field(
+        default=None
+    )
+    errors: Optional[List["DeleteActivitySubscriptionsByIdsResponseErrorsItem"]] = (
+        Field(
+            default=None,
+            description="Per-id failures; deletion continues for the remaining ids.",
+        )
+    )
+    meta: Optional["DeleteActivitySubscriptionsByIdsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteAllConnectionsResponse(BaseModel):
+    """Model for DeleteAllConnectionsResponse"""
+
+    data: Optional["DeleteAllConnectionsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteAllConnectionsResponseData(BaseModel):
+    """Model for DeleteAllConnectionsResponseData"""
+
+    failed_kills: int = Field(
+        description="Number of connections that could not be terminated."
+    )
+    successful_kills: int = Field(
+        description="Number of connections successfully terminated."
+    )
+    results: Optional[List["DeleteAllConnectionsResponseDataResults"]] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteAllConnectionsResponseDataResults(BaseModel):
+    """Model for DeleteAllConnectionsResponseDataResults"""
+
+    success: bool
+    uuid: str
+    error_message: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatMessagesActionSignatures(BaseModel):
+    """Model for DeleteChatMessagesActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded message event detail."
+    )
+    message_event_signature: "DeleteChatMessagesActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatMessagesActionSignaturesMessageEventSignature(BaseModel):
+    """Model for DeleteChatMessagesActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "DeleteChatMessagesActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
         default=None,
         description="List of signing key information for message verification.",
-    )
-    public_key_version: Optional[str] = Field(
-        default=None, description="The version of the public key used for signing."
-    )
-    signature: Optional[str] = Field(
-        default=None, description="The signature of the message event."
-    )
-    signature_version: Optional[str] = Field(
-        default=None, description="The version of the signature algorithm."
     )
     signing_public_key: Optional[str] = Field(
         default=None, description="The public key used for signing."
@@ -1271,8 +2225,10 @@ class ChatMessageEventSignature(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatMessageSigningKeyInfo(BaseModel):
-    """Signing key information for message verification."""
+class DeleteChatMessagesActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for DeleteChatMessagesActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
 
     member_id: Optional[str] = Field(
         default=None, description="The member ID associated with this signing key."
@@ -1287,379 +2243,300 @@ class ChatMessageSigningKeyInfo(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatSendMessageRequest(BaseModel):
-    """Model for ChatSendMessageRequest"""
+class DeleteChatMessagesRequest(BaseModel):
+    """Model for DeleteChatMessagesRequest"""
 
-    encoded_message_create_event: str = Field(
-        description="Base64-encoded Thrift MessageCreateEvent containing encrypted message contents."
+    action_signatures: List["DeleteChatMessagesActionSignatures"] = Field(
+        description="Cryptographic signatures for the action."
     )
-    message_id: str = Field(description="Unique identifier for this message.")
-    conversation_token: Optional[str] = Field(
-        default=None, description="Optional conversation token."
+    delete_message_action: Literal["delete_for_all", "delete_for_self"] = Field(
+        description="delete_for_all removes the messages for every participant; delete_for_self removes them only from the authenticated user's view."
     )
-    encoded_message_event_signature: Optional[str] = Field(
+    sequence_ids: List[str] = Field(
+        description="Sequence IDs of the messages to delete."
+    )
+    media_hash_keys: Optional[List[str]] = Field(
         default=None,
-        description="Base64-encoded Thrift MessageEventSignature for message verification.",
+        description="Hash keys of encrypted media blobs to delete alongside the messages (delete_for_all only).",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatSendMessageResponseData(BaseModel):
-    """Nested model for ChatSendMessageResponseData"""
+class DeleteChatMessagesResponse(BaseModel):
+    """Model for DeleteChatMessagesResponse"""
 
-    encoded_message_event: Optional[str] = Field(
-        default=None, description="Base64-encoded response message event."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ChatSendMessageResponse(BaseModel):
-    """Model for ChatSendMessageResponse"""
-
-    data: Optional["ChatSendMessageResponseData"] = Field(default=None)
+    data: Optional["DeleteChatMessagesResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatSendTypingIndicatorResponseData(BaseModel):
-    """Nested model for ChatSendTypingIndicatorResponseData"""
+class DeleteChatMessagesResponseData(BaseModel):
+    """Model for DeleteChatMessagesResponseData"""
 
-    success: Optional[bool] = Field(
-        default=None, description="Whether the typing indicator was sent successfully."
-    )
+    deleted: bool = Field(description="Whether the messages were deleted.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatSendTypingIndicatorResponse(BaseModel):
-    """Model for ChatSendTypingIndicatorResponse"""
+class DeleteCommunityNotesResponse(BaseModel):
+    """Model for DeleteCommunityNotesResponse"""
 
-    data: Optional["ChatSendTypingIndicatorResponseData"] = Field(default=None)
+    data: Optional["DeleteCommunityNotesResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ClientAppUsage(BaseModel):
-    """Usage per client app"""
+class DeleteCommunityNotesResponseData(BaseModel):
+    """Model for DeleteCommunityNotesResponseData"""
 
-    client_app_id: Optional[str] = Field(
-        default=None, description="The unique identifier for this project"
-    )
-    usage: Optional[List["UsageFields"]] = Field(
-        default=None, description="The usage value"
-    )
-    usage_result_count: Optional[int] = Field(
-        default=None, description="The number of results returned"
+    deleted: bool = Field(
+        description="Indicates whether the Community Note was deleted."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Community(BaseModel):
-    """A X Community is a curated group of Posts."""
+class DeleteConnectionsByEndpointResponse(BaseModel):
+    """Model for DeleteConnectionsByEndpointResponse"""
 
-    id: "CommunityId" = Field(description="The unique identifier of this Community.")
-    name: str = Field(description="The name of this Community.")
-    created_at: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ComplianceJob(BaseModel):
-    """Model for ComplianceJob"""
-
-    created_at: "CreatedAt" = Field(description="Creation time of the compliance job.")
-    download_expires_at: "DownloadExpiration" = Field(
-        description="Expiration time of the download URL."
-    )
-    download_url: "DownloadUrl" = Field(
-        description="URL from which the user will retrieve their compliance results."
-    )
-    id: "JobId" = Field(description="Compliance Job ID.")
-    status: "ComplianceJobStatus" = Field(description="Status of a compliance job.")
-    type: "ComplianceJobType" = Field(description="Type of compliance job to list.")
-    upload_expires_at: "UploadExpiration" = Field(
-        description="Expiration time of the upload URL."
-    )
-    upload_url: "UploadUrl" = Field(
-        description="URL to which the user will upload their Tweet or user IDs."
-    )
-    name: Optional["ComplianceJobName"] = Field(
-        default=None, description="User-provided name for a compliance job."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Connection(BaseModel):
-    """Model for Connection"""
-
-    connected_at: str = Field(
-        description="The timestamp when the connection was established."
-    )
-    endpoint_name: str = Field(description="The name of the streaming endpoint.")
-    client_ip: Optional[str] = Field(
-        default=None, description="The IP address of the connected client."
-    )
-    disconnect_reason: Optional[str] = Field(
-        default=None,
-        description="The reason for disconnection, if the connection is inactive.",
-    )
-    disconnected_at: Optional[str] = Field(
-        default=None,
-        description="The timestamp when the connection was disconnected, if applicable.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ContentExpiration(BaseModel):
-    """Model for ContentExpiration"""
-
-    timestamp_sec: float = Field(
-        description="Expiration time for content as a Unix timestamp in seconds"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ContextAnnotation(BaseModel):
-    """Annotation inferred from the Tweet text."""
-
-    domain: "ContextAnnotationDomainFields" = Field(
-        description="Represents the data for the context annotation domain."
-    )
-    entity: "ContextAnnotationEntityFields" = Field(
-        description="Represents the data for the context annotation entity."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ContextAnnotationDomainFields(BaseModel):
-    """Represents the data for the context annotation domain."""
-
-    id: str = Field(description="The unique id for a context annotation domain.")
-    description: Optional[str] = Field(
-        default=None, description="Description of the context annotation domain."
-    )
-    name: Optional[str] = Field(
-        default=None, description="Name of the context annotation domain."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ContextAnnotationEntityFields(BaseModel):
-    """Represents the data for the context annotation entity."""
-
-    id: str = Field(description="The unique id for a context annotation entity.")
-    description: Optional[str] = Field(
-        default=None, description="Description of the context annotation entity."
-    )
-    name: Optional[str] = Field(
-        default=None, description="Name of the context annotation entity."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateAttachmentsMessageRequest(BaseModel):
-    """Model for CreateAttachmentsMessageRequest"""
-
-    attachments: "DmAttachments" = Field(description="Attachments to a DM Event.")
-    text: Optional[str] = Field(default=None, description="Text of the message.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateComplianceJobRequest(BaseModel):
-    """A request to create a new batch compliance job."""
-
-    type: Literal["tweets", "users"] = Field(
-        description="Type of compliance job to list."
-    )
-    name: Optional["ComplianceJobName"] = Field(
-        default=None, description="User-provided name for a compliance job."
-    )
-    resumable: Optional[bool] = Field(
-        default=None,
-        description="If true, this endpoint will return a pre-signed URL with resumable uploads enabled.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateComplianceJobResponse(BaseModel):
-    """Model for CreateComplianceJobResponse"""
-
-    data: Optional["ComplianceJob"] = Field(default=None)
+    data: Optional["DeleteConnectionsByEndpointResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class CreateDmConversationRequest(BaseModel):
-    """Model for CreateDmConversationRequest"""
+class DeleteConnectionsByEndpointResponseData(BaseModel):
+    """Model for DeleteConnectionsByEndpointResponseData"""
 
-    conversation_type: Literal["Group"] = Field(
-        description="The conversation type that is being created."
+    failed_kills: int = Field(
+        description="Number of connections that could not be terminated."
     )
-    message: "CreateMessageRequest"
-    participant_ids: "DmParticipants" = Field(
-        description="Participants for the DM Conversation."
+    successful_kills: int = Field(
+        description="Number of connections successfully terminated."
+    )
+    results: Optional[List["DeleteConnectionsByEndpointResponseDataResults"]] = Field(
+        default=None
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class CreateDmEventResponseData(BaseModel):
-    """Nested model for CreateDmEventResponseData"""
+class DeleteConnectionsByEndpointResponseDataResults(BaseModel):
+    """Model for DeleteConnectionsByEndpointResponseDataResults"""
 
-    dm_conversation_id: "DmConversationId" = Field(
-        description="Unique identifier of a DM conversation. This can either be a numeric string, or a pair of numeric strings separated by a '-' character in the case of one-on-one DM Conversations."
-    )
-    dm_event_id: "DmEventId" = Field(description="Unique identifier of a DM Event.")
+    success: bool
+    uuid: str
+    error_message: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class CreateDmEventResponse(BaseModel):
-    """Model for CreateDmEventResponse"""
+class DeleteConnectionsByUuidsRequest(BaseModel):
+    """Model for DeleteConnectionsByUuidsRequest"""
 
-    data: Optional["CreateDmEventResponseData"] = Field(default=None)
+    uuids: List[str] = Field(description="Connection UUIDs to terminate (1-100).")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteConnectionsByUuidsResponse(BaseModel):
+    """Model for DeleteConnectionsByUuidsResponse"""
+
+    data: Optional["DeleteConnectionsByUuidsResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class CreateNoteRequest(BaseModel):
-    """Model for CreateNoteRequest"""
+class DeleteConnectionsByUuidsResponseData(BaseModel):
+    """Model for DeleteConnectionsByUuidsResponseData"""
 
-    info: "NoteInfo" = Field(description="A X Community Note is a note on a Post.")
-    post_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+    failed_kills: int = Field(
+        description="Number of connections that could not be terminated."
     )
-    test_mode: bool = Field(
-        description="If true, the note being submitted is only for testing the capability of the bot, and won't be publicly visible. If false, the note being submitted will be a new proposed note on the product."
+    successful_kills: int = Field(
+        description="Number of connections successfully terminated."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateNoteResponseData(BaseModel):
-    """Nested model for CreateNoteResponseData"""
-
-    id: Optional["NoteId"] = Field(
-        default=None, description="The unique identifier of this Community Note."
+    results: Optional[List["DeleteConnectionsByUuidsResponseDataResults"]] = Field(
+        default=None
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class CreateNoteResponse(BaseModel):
-    """Model for CreateNoteResponse"""
+class DeleteConnectionsByUuidsResponseDataResults(BaseModel):
+    """Model for DeleteConnectionsByUuidsResponseDataResults"""
 
-    data: Optional["CreateNoteResponseData"] = Field(default=None)
+    success: bool
+    uuid: str
+    error_message: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteDirectMessagesEventsResponse(BaseModel):
+    """Model for DeleteDirectMessagesEventsResponse"""
+
+    data: Optional["DeleteDirectMessagesEventsResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class CreateTextMessageRequest(BaseModel):
-    """Model for CreateTextMessageRequest"""
+class DeleteDirectMessagesEventsResponseData(BaseModel):
+    """Model for DeleteDirectMessagesEventsResponseData"""
 
-    text: str = Field(description="Text of the message.")
-    attachments: Optional["DmAttachments"] = Field(
-        default=None, description="Attachments to a DM Event."
-    )
+    deleted: bool = Field(description="Whether the event was deleted.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteDmResponseData(BaseModel):
-    """Nested model for DeleteDmResponseData"""
+class DeleteListsResponse(BaseModel):
+    """Model for DeleteListsResponse"""
 
-    deleted: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DeleteDmResponse(BaseModel):
-    """Model for DeleteDmResponse"""
-
-    data: Optional["DeleteDmResponseData"] = Field(default=None)
+    data: Optional["DeleteListsResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteNoteResponseData(BaseModel):
-    """Nested model for DeleteNoteResponseData"""
+class DeleteListsResponseData(BaseModel):
+    """Model for DeleteListsResponseData"""
 
-    deleted: bool
+    deleted: bool = Field(description="Indicates whether the List was deleted.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteNoteResponse(BaseModel):
-    """Model for DeleteNoteResponse"""
+class DeleteMediaSubtitlesRequest(BaseModel):
+    """Model for DeleteMediaSubtitlesRequest"""
 
-    data: Optional["DeleteNoteResponseData"] = Field(default=None)
+    id: str = Field(description="The media id of the video the subtitles belong to.")
+    language_code: str = Field(
+        description="The language code of the subtitles to delete."
+    )
+    media_category: str = Field(description="The media category of the target media.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteMediaSubtitlesResponse(BaseModel):
+    """Model for DeleteMediaSubtitlesResponse"""
+
+    data: Optional["DeleteMediaSubtitlesResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteRulesRequestDelete(BaseModel):
-    """Nested model for DeleteRulesRequestDelete"""
+class DeleteMediaSubtitlesResponseData(BaseModel):
+    """Model for DeleteMediaSubtitlesResponseData"""
 
-    ids: Optional[List["RuleId"]] = Field(
-        default=None,
-        description="IDs of all deleted user-specified stream filtering rules.",
-    )
-    values: Optional[List["RuleValue"]] = Field(
-        default=None,
-        description="Values of all deleted user-specified stream filtering rules.",
+    deleted: bool = Field(description="Indicates whether the subtitles were deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeletePostsResponse(BaseModel):
+    """Model for DeletePostsResponse"""
+
+    data: Optional["DeletePostsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeletePostsResponseData(BaseModel):
+    """Model for DeletePostsResponseData"""
+
+    deleted: bool = Field(description="Whether the Post was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteScheduledBroadcastResponse(BaseModel):
+    """Model for DeleteScheduledBroadcastResponse"""
+
+    data: Optional["DeleteScheduledBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteScheduledBroadcastResponseData(BaseModel):
+    """Model for DeleteScheduledBroadcastResponseData"""
+
+    deleted: bool = Field(description="Whether the scheduled broadcast was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteUsersBookmarkResponse(BaseModel):
+    """Model for DeleteUsersBookmarkResponse"""
+
+    data: Optional["DeleteUsersBookmarkResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteUsersBookmarkResponseData(BaseModel):
+    """Model for DeleteUsersBookmarkResponseData"""
+
+    bookmarked: bool = Field(description="Whether the Post is bookmarked.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteWebhooksResponse(BaseModel):
+    """Model for DeleteWebhooksResponse"""
+
+    data: Optional["DeleteWebhooksResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteWebhooksResponseData(BaseModel):
+    """Model for DeleteWebhooksResponseData"""
+
+    deleted: bool = Field(
+        description="Indicates whether the webhook configuration was deleted."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DeleteRulesRequest(BaseModel):
-    """A response from deleting user-specified stream filtering rules."""
+class DeleteWebhooksStreamLinkResponse(BaseModel):
+    """Model for DeleteWebhooksStreamLinkResponse"""
 
-    delete: "DeleteRulesRequestDelete" = Field(
-        description="IDs and values of all deleted user-specified stream filtering rules."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DmEventReferencedTweetsItem(BaseModel):
-    """Nested model for DmEventReferencedTweetsItem"""
-
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    data: Optional["DeleteWebhooksStreamLinkResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DmEventAttachments(BaseModel):
-    """Nested model for DmEventAttachments"""
+class DeleteWebhooksStreamLinkResponseData(BaseModel):
+    """Model for DeleteWebhooksStreamLinkResponseData"""
 
-    card_ids: Optional[List[str]] = Field(
-        default=None, description="A list of card IDs (if cards are attached)."
-    )
-    media_keys: Optional[List["MediaKey"]] = Field(
-        default=None,
-        description="A list of Media Keys for each one of the media attachments (if media are attached).",
-    )
+    deleted: bool = Field(description="Indicates whether the stream link was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DisallowedResourceProblem(BaseModel):
+    """Model for DisallowedResourceProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/disallowed-resource"]
+    resource_id: Optional[str] = Field(default=None)
+    resource_type: Optional[str] = Field(default=None)
+    section: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1667,173 +2544,100 @@ class DmEventAttachments(BaseModel):
 class DmEvent(BaseModel):
     """Model for DmEvent"""
 
-    event_type: str
-    id: "DmEventId" = Field(description="Unique identifier of a DM Event.")
     attachments: Optional["DmEventAttachments"] = Field(
         default=None,
-        description="Specifies the type of attachments (if any) present in this DM.",
+        description="Media and card attachments present in this Direct Message event.",
     )
-    cashtags: Optional[List["CashtagEntity"]] = Field(default=None)
     created_at: Optional[str] = Field(default=None)
-    dm_conversation_id: Optional["DmConversationId"] = Field(
+    dm_conversation_id: Optional[str] = Field(default=None)
+    entities: Optional["DmEventEntities"] = Field(
         default=None,
-        description="Unique identifier of a DM conversation. This can either be a numeric string, or a pair of numeric strings separated by a '-' character in the case of one-on-one DM Conversations.",
+        description="A list of metadata entities (hashtags, cashtags, mentions, URLs) found in the Direct Message text.",
     )
-    hashtags: Optional[List["HashtagEntity"]] = Field(default=None)
-    mentions: Optional[List["MentionEntity"]] = Field(default=None)
-    participant_ids: Optional[List["UserId"]] = Field(
-        default=None,
-        description="A list of participants for a ParticipantsJoin or ParticipantsLeave event_type.",
-    )
-    referenced_tweets: Optional[List["DmEventReferencedTweetsItem"]] = Field(
-        default=None, description="A list of Posts this DM refers to."
-    )
-    sender_id: Optional["UserId"] = Field(
-        default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
+    event_type: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    participant_ids: Optional[List[str]] = Field(default=None)
+    referenced_posts: Optional["DmEventReferencedPosts"] = Field(default=None)
+    sender_id: Optional[str] = Field(default=None)
     text: Optional[str] = Field(default=None)
-    urls: Optional[List["UrlEntityDm"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class DmMediaAttachment(BaseModel):
-    """Model for DmMediaAttachment"""
+class DmEventAttachments(BaseModel):
+    """Media and card attachments present in this Direct Message event."""
 
-    media_id: "MediaId" = Field(description="The unique identifier of this Media.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class DomainRestrictions(BaseModel):
-    """Model for DomainRestrictions"""
-
-    whitelist: List[str] = Field(description="List of whitelisted domains")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurementMetricsTimeSeriesItemValueTimestamp(BaseModel):
-    """Nested model for EngagementMeasurementMetricsTimeSeriesItemValueTimestamp"""
-
-    iso8601_time: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurementMetricsTimeSeriesItemValueMetricValuesItem(BaseModel):
-    """Nested model for EngagementMeasurementMetricsTimeSeriesItemValueMetricValuesItem"""
-
-    metric_type: Optional[str] = Field(default=None)
-    metric_value: Optional[float] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurementMetricsTotalItemValueItem(BaseModel):
-    """Nested model for EngagementMeasurementMetricsTotalItemValueItem"""
-
-    metric_type: Optional[str] = Field(default=None)
-    metric_value: Optional[float] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurementMetricsTimeSeriesItemValue(BaseModel):
-    """Nested model for EngagementMeasurementMetricsTimeSeriesItemValue"""
-
-    metric_values: Optional[
-        List["EngagementMeasurementMetricsTimeSeriesItemValueMetricValuesItem"]
-    ] = Field(default=None)
-    timestamp: Optional["EngagementMeasurementMetricsTimeSeriesItemValueTimestamp"] = (
-        Field(default=None)
+    card_ids: Optional[Optional[List[str]]] = Field(
+        default=None, description="IDs of cards attached to this Direct Message."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurementMetricsTotalItem(BaseModel):
-    """Nested model for EngagementMeasurementMetricsTotalItem"""
-
-    tweet_id: Optional["TweetId"] = Field(
+    media_keys: Optional[Optional[List[str]]] = Field(
         default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="Media keys of media (including audio) attached to this Direct Message.",
     )
-    value: Optional[List["EngagementMeasurementMetricsTotalItemValueItem"]] = Field(
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmEventEntitiesUrlsItem(BaseModel):
+    """Nested model for DmEventEntitiesUrlsItem"""
+
+    end: int
+    start: int
+    url: str = Field(description="The t.co shortened URL.")
+    display_url: Optional[Optional[str]] = Field(
+        default=None, description="The URL as displayed in the Direct Message text."
+    )
+    expanded_url: Optional[Optional[str]] = Field(
+        default=None, description="The fully resolved URL."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmEventEntitiesMentionsItem(BaseModel):
+    """Nested model for DmEventEntitiesMentionsItem"""
+
+    end: int
+    start: int
+    username: str
+    id: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmEventEntitiesHashtagsItem(BaseModel):
+    """Nested model for DmEventEntitiesHashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmEventEntitiesCashtagsItem(BaseModel):
+    """Nested model for DmEventEntitiesCashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmEventEntities(BaseModel):
+    """A list of metadata entities (hashtags, cashtags, mentions, URLs) found in the Direct Message text."""
+
+    cashtags: Optional[Optional[List["DmEventEntitiesCashtagsItem"]]] = Field(
         default=None
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurementMetricsTimeSeriesItem(BaseModel):
-    """Nested model for EngagementMeasurementMetricsTimeSeriesItem"""
-
-    tweet_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    value: Optional["EngagementMeasurementMetricsTimeSeriesItemValue"] = Field(
+    hashtags: Optional[Optional[List["DmEventEntitiesHashtagsItem"]]] = Field(
         default=None
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementMeasurement(BaseModel):
-    """Nested model for EngagementMeasurement"""
-
-    metrics_time_series: Optional[
-        List["EngagementMeasurementMetricsTimeSeriesItem"]
-    ] = Field(default=None)
-    metrics_total: Optional[List["EngagementMeasurementMetricsTotalItem"]] = Field(
+    mentions: Optional[Optional[List["DmEventEntitiesMentionsItem"]]] = Field(
         default=None
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EngagementErrorsItem(BaseModel):
-    """Nested model for EngagementErrorsItem"""
-
-    error: Optional[str] = Field(default=None)
-    tweets: Optional[List[str]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Engagement(BaseModel):
-    """An Engagement Api Response."""
-
-    errors: Optional[List["EngagementErrorsItem"]] = Field(default=None)
-    measurement: Optional["EngagementMeasurement"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EntityIndicesInclusiveExclusive(BaseModel):
-    """Represent a boundary range (start and end index) for a recognized entity (for example a hashtag or a mention). `start` must be smaller than `end`.  The start index is inclusive, the end index is exclusive."""
-
-    end: int = Field(
-        description="Index (zero-based) at which position this entity ends.  The index is exclusive."
-    )
-    start: int = Field(
-        description="Index (zero-based) at which position this entity starts.  The index is inclusive."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EntityIndicesInclusiveInclusive(BaseModel):
-    """Represent a boundary range (start and end index) for a recognized entity (for example a hashtag or a mention). `start` must be smaller than `end`.  The start index is inclusive, the end index is inclusive."""
-
-    end: int = Field(
-        description="Index (zero-based) at which position this entity ends.  The index is inclusive."
-    )
-    start: int = Field(
-        description="Index (zero-based) at which position this entity starts.  The index is inclusive."
-    )
+    urls: Optional[Optional[List["DmEventEntitiesUrlsItem"]]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1847,32 +2651,30 @@ class Error(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class EvaluateNoteRequest(BaseModel):
-    """Model for EvaluateNoteRequest"""
+class EvaluateCommunityNotesRequest(BaseModel):
+    """Model for EvaluateCommunityNotesRequest"""
 
-    note_text: str = Field(description="Text for the community note.")
-    post_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    note_text: str = Field(description="Text of the community note to evaluate.")
+    post_id: str = Field(description="ID of the Post the note evaluates.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class EvaluateNoteResponseData(BaseModel):
-    """Nested model for EvaluateNoteResponseData"""
+class EvaluateCommunityNotesResponse(BaseModel):
+    """Model for EvaluateCommunityNotesResponse"""
+
+    data: Optional["EvaluateCommunityNotesResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EvaluateCommunityNotesResponseData(BaseModel):
+    """Model for EvaluateCommunityNotesResponseData"""
 
     claim_opinion_score: Optional[float] = Field(
-        default=None, description="Claim opinion model score for the note."
+        default=None, description="The evaluated claim-opinion score for the note."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class EvaluateNoteResponse(BaseModel):
-    """Model for EvaluateNoteResponse"""
-
-    data: Optional["EvaluateNoteResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1883,33 +2685,107 @@ class Expansions(BaseModel):
     media: Optional[List["Media"]] = Field(default=None)
     places: Optional[List["Place"]] = Field(default=None)
     polls: Optional[List["Poll"]] = Field(default=None)
+    posts: Optional[List["Post"]] = Field(default=None)
     topics: Optional[List["Topic"]] = Field(default=None)
-    tweets: Optional[List["Tweet"]] = Field(default=None)
     users: Optional[List["User"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class FilteredStreamingTweetResponseMatchingRulesItem(BaseModel):
-    """Nested model for FilteredStreamingTweetResponseMatchingRulesItem"""
+class FieldHydrationFailureProblem(BaseModel):
+    """Model for FieldHydrationFailureProblem"""
 
-    id: "RuleId" = Field(description="Unique identifier of this rule.")
-    tag: Optional["RuleTag"] = Field(
-        default=None, description="A tag meant for the labeling of user provided rules."
+    detail: str
+    field: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/field-hydration-failure"]
+    resource_type: Optional[str] = Field(default=None)
+    section: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FieldUnauthorizedProblem(BaseModel):
+    """Model for FieldUnauthorizedProblem"""
+
+    detail: str
+    field: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/field-unauthorized"]
+    resource_type: Optional[str] = Field(default=None)
+    section: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FinalizeMediaUploadResponse(BaseModel):
+    """Model for FinalizeMediaUploadResponse"""
+
+    data: Optional["FinalizeMediaUploadResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FinalizeMediaUploadResponseData(BaseModel):
+    """Model for FinalizeMediaUploadResponseData"""
+
+    id: str = Field(description="Unique identifier of the media.")
+    expires_after_secs: Optional[int] = Field(
+        default=None, description="Seconds until the upload session expires."
+    )
+    image: Optional["FinalizeMediaUploadResponseDataImage"] = Field(default=None)
+    media_key: Optional[str] = Field(
+        default=None, description="The media key for the uploaded media."
+    )
+    processing_info: Optional["FinalizeMediaUploadResponseDataProcessingInfo"] = Field(
+        default=None
+    )
+    size: Optional[int] = Field(
+        default=None, description="Total size of the media in bytes."
+    )
+    video: Optional["FinalizeMediaUploadResponseDataVideo"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FinalizeMediaUploadResponseDataImage(BaseModel):
+    """Model for FinalizeMediaUploadResponseDataImage"""
+
+    h: Optional[int] = Field(default=None, description="Height in pixels.")
+    image_type: Optional[str] = Field(
+        default=None, description="MIME type of the uploaded image."
+    )
+    w: Optional[int] = Field(default=None, description="Width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FinalizeMediaUploadResponseDataProcessingInfo(BaseModel):
+    """Model for FinalizeMediaUploadResponseDataProcessingInfo"""
+
+    check_after_secs: Optional[int] = Field(
+        default=None, description="Seconds to wait before polling status again."
+    )
+    progress_percent: Optional[int] = Field(
+        default=None, description="Processing completion percentage."
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="Processing state (pending, in_progress, failed, succeeded).",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class FilteredStreamingTweetResponse(BaseModel):
-    """A Tweet or error that can be returned by the streaming Tweet API. The values returned with a successful streamed Tweet includes the user provided rules that the Tweet matched."""
+class FinalizeMediaUploadResponseDataVideo(BaseModel):
+    """Model for FinalizeMediaUploadResponseDataVideo"""
 
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    matching_rules: Optional[
-        List["FilteredStreamingTweetResponseMatchingRulesItem"]
-    ] = Field(default=None, description="The list of rules which matched the Tweet")
+    video_type: Optional[str] = Field(
+        default=None, description="MIME type of the processed video."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1917,144 +2793,254 @@ class FilteredStreamingTweetResponse(BaseModel):
 class FollowActivityResponsePayload(BaseModel):
     """Model for FollowActivityResponsePayload"""
 
-    source: Optional["User"] = Field(default=None, description="The X User object.")
-    target: Optional["User"] = Field(default=None, description="The X User object.")
+    source: Optional["User"] = Field(default=None)
+    target: Optional["User"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class FoundMediaOrigin(BaseModel):
-    """Model for FoundMediaOrigin"""
+class FollowListRequest(BaseModel):
+    """Model for FollowListRequest"""
 
-    id: str = Field(
-        description="Unique Identifier of media within provider ( <= 24 characters ))"
+    list_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FollowListResponse(BaseModel):
+    """Model for FollowListResponse"""
+
+    data: Optional["FollowListResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FollowListResponseData(BaseModel):
+    """Model for FollowListResponseData"""
+
+    following: bool = Field(description="Whether the user is following the List.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FollowUserRequest(BaseModel):
+    """Model for FollowUserRequest"""
+
+    target_user_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FollowUserResponse(BaseModel):
+    """Model for FollowUserResponse"""
+
+    data: Optional["FollowUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class FollowUserResponseData(BaseModel):
+    """Model for FollowUserResponseData"""
+
+    following: bool = Field(
+        description="Whether the source User is following the target User."
     )
-    provider: str = Field(
-        description="The media provider (e.g., 'giphy') that sourced the media ( <= 8 Characters )"
+    pending_follow: bool = Field(
+        description="Whether the follow request is pending the target User's approval."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class FullTextEntities(BaseModel):
-    """Model for FullTextEntities"""
+class GetAccountActivitySubscriptionCountResponse(BaseModel):
+    """Model for GetAccountActivitySubscriptionCountResponse"""
 
-    annotations: Optional[List["EntityIndicesInclusiveInclusive"]] = Field(default=None)
-    cashtags: Optional[List["CashtagEntity"]] = Field(default=None)
-    hashtags: Optional[List["HashtagEntity"]] = Field(default=None)
-    mentions: Optional[List["MentionEntity"]] = Field(default=None)
-    urls: Optional[List["UrlEntity"]] = Field(default=None)
+    data: Optional["GetAccountActivitySubscriptionCountResponseData"] = Field(
+        default=None
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Geo(BaseModel):
-    """Model for Geo"""
+class GetAccountActivitySubscriptionCountResponseData(BaseModel):
+    """Model for GetAccountActivitySubscriptionCountResponseData"""
 
-    bbox: List[float]
-    properties: Dict[str, Any]
-    type: Literal["Feature"]
-    geometry: Optional["Point"] = Field(
+    account_name: Optional[str] = Field(
+        default=None, description="Name of the subscribing account."
+    )
+    provisioned_count: Optional[str] = Field(
+        default=None, description="Number of subscriptions provisioned for the app."
+    )
+    subscriptions_count_all: Optional[str] = Field(
         default=None,
-        description="A [GeoJson Point](https://tools.ietf.org/html/rfc7946#section-3.1.2) geometry object.",
+        description="Number of active subscriptions across all event types.",
+    )
+    subscriptions_count_direct_messages: Optional[str] = Field(
+        default=None, description="Number of active Direct Message subscriptions."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ChatConversationsIdEventsResponseMeta(BaseModel):
-    """Nested model for Get2ChatConversationsIdEventsResponseMeta"""
+class GetAccountActivitySubscriptionsResponse(BaseModel):
+    """Model for GetAccountActivitySubscriptionsResponse"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    data: Optional["GetAccountActivitySubscriptionsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAccountActivitySubscriptionsResponseData(BaseModel):
+    """Model for GetAccountActivitySubscriptionsResponseData"""
+
+    application_id: Optional[str] = Field(
+        default=None, description="App the subscriptions belong to."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    subscriptions: Optional[
+        List["GetAccountActivitySubscriptionsResponseDataSubscriptions"]
+    ] = Field(default=None)
+    webhook_id: Optional[str] = Field(
+        default=None, description="Webhook receiving the subscription events."
+    )
+    webhook_url: Optional[str] = Field(
+        default=None, description="URL the webhook delivers events to."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ChatConversationsIdEventsResponse(BaseModel):
-    """Model for Get2ChatConversationsIdEventsResponse"""
+class GetAccountActivitySubscriptionsResponseDataSubscriptions(BaseModel):
+    """Model for GetAccountActivitySubscriptionsResponseDataSubscriptions"""
+
+    user_id: Optional[str] = Field(default=None, description="Subscribed user.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetActivitySubscriptionsResponse(BaseModel):
+    """Model for GetActivitySubscriptionsResponse"""
+
+    data: Optional[List["GetActivitySubscriptionsResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetActivitySubscriptionsResponseData(BaseModel):
+    """Model for GetActivitySubscriptionsResponseData"""
+
+    created_at: Optional[str] = Field(
+        default=None, description="Subscription creation time."
+    )
+    event_type: Optional[str] = Field(
+        default=None, description="Activity event type in dot notation."
+    )
+    filter: Optional["GetActivitySubscriptionsResponseDataFilter"] = Field(default=None)
+    subscription_id: Optional[str] = Field(
+        default=None, description="Unique identifier of the subscription."
+    )
+    tag: Optional[str] = Field(default=None, description="Optional caller-defined tag.")
+    updated_at: Optional[str] = Field(
+        default=None, description="Subscription last-update time."
+    )
+    webhook_id: Optional[str] = Field(
+        default=None, description="Webhook receiving the subscription events."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetActivitySubscriptionsResponseDataFilter(BaseModel):
+    """Model for GetActivitySubscriptionsResponseDataFilter"""
+
+    direction: Optional[str] = Field(
+        default=None,
+        description="Optional direction filter for directional events. Not present for mute.* or block.* events.",
+    )
+    keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    user_id: Optional[str] = Field(
+        default=None, description="User the subscription is scoped to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatConversationEventsResponseMeta(BaseModel):
+    """Nested model for GetChatConversationEventsResponseMeta"""
+
+    conversation_key_events: Optional[List[str]] = Field(default=None)
+    has_more: Optional[bool] = Field(default=None)
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatConversationEventsResponse(BaseModel):
+    """Model for GetChatConversationEventsResponse"""
 
     data: Optional[List["ChatMessageEvent"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2ChatConversationsIdEventsResponseMeta"] = Field(default=None)
+    meta: Optional["GetChatConversationEventsResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ChatConversationsIdResponse(BaseModel):
-    """Model for Get2ChatConversationsIdResponse"""
+class GetChatConversationResponse(BaseModel):
+    """Model for GetChatConversationResponse"""
 
-    data: Optional["ChatConversation"] = Field(
-        default=None,
-        description="A Chat conversation resource representing either a direct or group conversation.",
-    )
+    data: Optional["ChatConversation"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ChatConversationsResponseMeta(BaseModel):
-    """Nested model for Get2ChatConversationsResponseMeta"""
+class GetChatConversationsResponseMeta(BaseModel):
+    """Nested model for GetChatConversationsResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    has_message_requests: Optional[bool] = Field(default=None)
+    has_more: Optional[bool] = Field(default=None)
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ChatConversationsResponse(BaseModel):
-    """Model for Get2ChatConversationsResponse"""
+class GetChatConversationsResponse(BaseModel):
+    """Model for GetChatConversationsResponse"""
 
     data: Optional[List["ChatConversation"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2ChatConversationsResponseMeta"] = Field(default=None)
+    meta: Optional["GetChatConversationsResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2CommunitiesIdResponse(BaseModel):
-    """Model for Get2CommunitiesIdResponse"""
+class GetCommunitiesByIdResponse(BaseModel):
+    """Model for GetCommunitiesByIdResponse"""
 
-    data: Optional["Community"] = Field(
-        default=None, description="A X Community is a curated group of Posts."
-    )
+    data: Optional["Community"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2CommunitiesSearchResponseMeta(BaseModel):
-    """Nested model for Get2CommunitiesSearchResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2CommunitiesSearchResponse(BaseModel):
-    """Model for Get2CommunitiesSearchResponse"""
-
-    data: Optional[List["Community"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2CommunitiesSearchResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2ComplianceJobsIdResponse(BaseModel):
-    """Model for Get2ComplianceJobsIdResponse"""
+class GetComplianceJobsByIdResponse(BaseModel):
+    """Model for GetComplianceJobsByIdResponse"""
 
     data: Optional["ComplianceJob"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -2062,107 +3048,80 @@ class Get2ComplianceJobsIdResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ComplianceJobsResponseMeta(BaseModel):
-    """Nested model for Get2ComplianceJobsResponseMeta"""
+class GetComplianceJobsResponseMeta(BaseModel):
+    """Nested model for GetComplianceJobsResponseMeta"""
 
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ComplianceJobsResponse(BaseModel):
-    """Model for Get2ComplianceJobsResponse"""
+class GetComplianceJobsResponse(BaseModel):
+    """Model for GetComplianceJobsResponse"""
 
     data: Optional[List["ComplianceJob"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2ComplianceJobsResponseMeta"] = Field(default=None)
+    meta: Optional["GetComplianceJobsResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ConnectionsResponseMeta(BaseModel):
-    """Nested model for Get2ConnectionsResponseMeta"""
+class GetConnectionHistoryResponseMeta(BaseModel):
+    """Nested model for GetConnectionHistoryResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ConnectionsResponse(BaseModel):
-    """Model for Get2ConnectionsResponse"""
+class GetConnectionHistoryResponse(BaseModel):
+    """Model for GetConnectionHistoryResponse"""
 
     data: Optional[List["Connection"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2ConnectionsResponseMeta"] = Field(default=None)
+    meta: Optional["GetConnectionHistoryResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2DmConversationsIdDmEventsResponseMeta(BaseModel):
-    """Nested model for Get2DmConversationsIdDmEventsResponseMeta"""
+class GetDirectMessagesEventsByConversationIdResponseMeta(BaseModel):
+    """Nested model for GetDirectMessagesEventsByConversationIdResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2DmConversationsIdDmEventsResponse(BaseModel):
-    """Model for Get2DmConversationsIdDmEventsResponse"""
+class GetDirectMessagesEventsByConversationIdResponse(BaseModel):
+    """Model for GetDirectMessagesEventsByConversationIdResponse"""
 
     data: Optional[List["DmEvent"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2DmConversationsIdDmEventsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2DmConversationsWithParticipantIdDmEventsResponseMeta(BaseModel):
-    """Nested model for Get2DmConversationsWithParticipantIdDmEventsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2DmConversationsWithParticipantIdDmEventsResponse(BaseModel):
-    """Model for Get2DmConversationsWithParticipantIdDmEventsResponse"""
-
-    data: Optional[List["DmEvent"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2DmConversationsWithParticipantIdDmEventsResponseMeta"] = Field(
+    meta: Optional["GetDirectMessagesEventsByConversationIdResponseMeta"] = Field(
         default=None
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2DmEventsEventIdResponse(BaseModel):
-    """Model for Get2DmEventsEventIdResponse"""
+class GetDirectMessagesEventsByIdResponse(BaseModel):
+    """Model for GetDirectMessagesEventsByIdResponse"""
 
     data: Optional["DmEvent"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -2171,241 +3130,164 @@ class Get2DmEventsEventIdResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2DmEventsResponseMeta(BaseModel):
-    """Nested model for Get2DmEventsResponseMeta"""
+class GetDirectMessagesEventsByParticipantIdResponseMeta(BaseModel):
+    """Nested model for GetDirectMessagesEventsByParticipantIdResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2DmEventsResponse(BaseModel):
-    """Model for Get2DmEventsResponse"""
+class GetDirectMessagesEventsByParticipantIdResponse(BaseModel):
+    """Model for GetDirectMessagesEventsByParticipantIdResponse"""
 
     data: Optional[List["DmEvent"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2DmEventsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2FdxAccountsAccountidContactResponse(BaseModel):
-    """Model for Get2FdxAccountsAccountidContactResponse"""
-
-    data: Optional["PlaidAccountContact"] = Field(
-        default=None, description="Contact information associated with a Plaid account."
+    meta: Optional["GetDirectMessagesEventsByParticipantIdResponseMeta"] = Field(
+        default=None
     )
-    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2FdxAccountsAccountidPayment_networksResponse(BaseModel):
-    """Model for Get2FdxAccountsAccountidPayment-networksResponse"""
+class GetDirectMessagesEventsResponseMeta(BaseModel):
+    """Nested model for GetDirectMessagesEventsResponseMeta"""
 
-    data: Optional[List["PlaidAccountPaymentNetwork"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2FdxAccountsAccountidResponse(BaseModel):
-    """Model for Get2FdxAccountsAccountidResponse"""
-
-    data: Optional["PlaidAccount"] = Field(
-        default=None, description="Descriptor for a Plaid account."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2FdxAccountsAccountidTransactionsResponse(BaseModel):
-    """Model for Get2FdxAccountsAccountidTransactionsResponse"""
-
-    data: Optional[List["PlaidAccountTransaction"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2FdxCustomersCurrentResponse(BaseModel):
-    """Model for Get2FdxCustomersCurrentResponse"""
-
-    data: Optional["PlaidCustomer"] = Field(
-        default=None, description="A user id for the plaid customer"
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
     )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2Insights28hrResponse(BaseModel):
-    """Model for Get2Insights28hrResponse"""
-
-    data: Optional[List["Engagement"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2InsightsHistoricalResponse(BaseModel):
-    """Model for Get2InsightsHistoricalResponse"""
-
-    data: Optional[List["Engagement"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2LikesFirehoseStreamResponse(BaseModel):
-    """Model for Get2LikesFirehoseStreamResponse"""
-
-    data: Optional["LikeWithTweetAuthor"] = Field(
-        default=None,
-        description="A Like event, with the tweet author user and the tweet being liked",
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetDirectMessagesEventsResponse(BaseModel):
+    """Model for GetDirectMessagesEventsResponse"""
+
+    data: Optional[List["DmEvent"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetDirectMessagesEventsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetListsByIdResponse(BaseModel):
+    """Model for GetListsByIdResponse"""
+
+    data: Optional["XList"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2LikesSample10StreamResponse(BaseModel):
-    """Model for Get2LikesSample10StreamResponse"""
+class GetListsFollowersResponseMeta(BaseModel):
+    """Nested model for GetListsFollowersResponseMeta"""
 
-    data: Optional["LikeWithTweetAuthor"] = Field(
-        default=None,
-        description="A Like event, with the tweet author user and the tweet being liked",
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2ListsIdFollowersResponseMeta(BaseModel):
-    """Nested model for Get2ListsIdFollowersResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
     )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ListsIdFollowersResponse(BaseModel):
-    """Model for Get2ListsIdFollowersResponse"""
+class GetListsFollowersResponse(BaseModel):
+    """Model for GetListsFollowersResponse"""
 
     data: Optional[List["User"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2ListsIdFollowersResponseMeta"] = Field(default=None)
+    meta: Optional["GetListsFollowersResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ListsIdMembersResponseMeta(BaseModel):
-    """Nested model for Get2ListsIdMembersResponseMeta"""
+class GetListsMembersResponseMeta(BaseModel):
+    """Nested model for GetListsMembersResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ListsIdMembersResponse(BaseModel):
-    """Model for Get2ListsIdMembersResponse"""
+class GetListsMembersResponse(BaseModel):
+    """Model for GetListsMembersResponse"""
 
     data: Optional[List["User"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2ListsIdMembersResponseMeta"] = Field(default=None)
+    meta: Optional["GetListsMembersResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ListsIdResponse(BaseModel):
-    """Model for Get2ListsIdResponse"""
+class GetListsPostsResponseMeta(BaseModel):
+    """Nested model for GetListsPostsResponseMeta"""
 
-    data: Optional["XList"] = Field(
-        default=None, description="A X List is a curated group of accounts."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetListsPostsResponse(BaseModel):
+    """Model for GetListsPostsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetListsPostsResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2ListsIdTweetsResponseMeta(BaseModel):
-    """Nested model for Get2ListsIdTweetsResponseMeta"""
+class GetMediaAnalyticsResponse(BaseModel):
+    """Model for GetMediaAnalyticsResponse"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2ListsIdTweetsResponse(BaseModel):
-    """Model for Get2ListsIdTweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2ListsIdTweetsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2MarketplaceHandlesHandleAvailabilityResponse(BaseModel):
-    """Model for Get2MarketplaceHandlesHandleAvailabilityResponse"""
-
-    data: Optional["MarketplaceHandleAvailability"] = Field(default=None)
+    data: Optional[List["MediaAnalytics"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2MediaAnalyticsResponse(BaseModel):
-    """Model for Get2MediaAnalyticsResponse"""
-
-    data: Optional["MediaAnalytics"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2MediaMediaKeyResponse(BaseModel):
-    """Model for Get2MediaMediaKeyResponse"""
+class GetMediaByMediaKeyResponse(BaseModel):
+    """Model for GetMediaByMediaKeyResponse"""
 
     data: Optional["Media"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -2413,8 +3295,8 @@ class Get2MediaMediaKeyResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2MediaResponse(BaseModel):
-    """Model for Get2MediaResponse"""
+class GetMediaByMediaKeysResponse(BaseModel):
+    """Model for GetMediaByMediaKeysResponse"""
 
     data: Optional[List["Media"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -2422,173 +3304,512 @@ class Get2MediaResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2NewsIdResponse(BaseModel):
-    """Model for Get2NewsIdResponse"""
+class GetMediaUploadStatusResponse(BaseModel):
+    """Model for GetMediaUploadStatusResponse"""
 
-    data: Optional["News"] = Field(
-        default=None, description="An AI generated news story."
-    )
+    data: Optional["GetMediaUploadStatusResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2NewsSearchResponseMeta(BaseModel):
-    """Nested model for Get2NewsSearchResponseMeta"""
+class GetMediaUploadStatusResponseData(BaseModel):
+    """Model for GetMediaUploadStatusResponseData"""
 
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    id: str = Field(description="Unique identifier of the media.")
+    expires_after_secs: Optional[int] = Field(
+        default=None, description="Seconds until the upload session expires."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2NewsSearchResponse(BaseModel):
-    """Model for Get2NewsSearchResponse"""
-
-    data: Optional[List["News"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2NewsSearchResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2NotesSearchNotesWrittenResponseMeta(BaseModel):
-    """Nested model for Get2NotesSearchNotesWrittenResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    image: Optional["GetMediaUploadStatusResponseDataImage"] = Field(default=None)
+    media_key: Optional[str] = Field(
+        default=None, description="The media key for the uploaded media."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2NotesSearchNotesWrittenResponse(BaseModel):
-    """Model for Get2NotesSearchNotesWrittenResponse"""
-
-    data: Optional[List["Note"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2NotesSearchNotesWrittenResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2NotesSearchPostsEligibleForNotesResponseMeta(BaseModel):
-    """Nested model for Get2NotesSearchPostsEligibleForNotesResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2NotesSearchPostsEligibleForNotesResponse(BaseModel):
-    """Model for Get2NotesSearchPostsEligibleForNotesResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2NotesSearchPostsEligibleForNotesResponseMeta"] = Field(
+    processing_info: Optional["GetMediaUploadStatusResponseDataProcessingInfo"] = Field(
         default=None
     )
+    size: Optional[int] = Field(
+        default=None, description="Total size of the media in bytes."
+    )
+    video: Optional["GetMediaUploadStatusResponseDataVideo"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesByCreatorIdsResponseMeta(BaseModel):
-    """Nested model for Get2SpacesByCreatorIdsResponseMeta"""
+class GetMediaUploadStatusResponseDataImage(BaseModel):
+    """Model for GetMediaUploadStatusResponseDataImage"""
 
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    h: Optional[int] = Field(default=None, description="Height in pixels.")
+    image_type: Optional[str] = Field(
+        default=None, description="MIME type of the uploaded image."
+    )
+    w: Optional[int] = Field(default=None, description="Width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetMediaUploadStatusResponseDataProcessingInfo(BaseModel):
+    """Model for GetMediaUploadStatusResponseDataProcessingInfo"""
+
+    check_after_secs: Optional[int] = Field(
+        default=None, description="Seconds to wait before polling status again."
+    )
+    progress_percent: Optional[int] = Field(
+        default=None, description="Processing completion percentage."
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="Processing state (pending, in_progress, failed, succeeded).",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesByCreatorIdsResponse(BaseModel):
-    """Model for Get2SpacesByCreatorIdsResponse"""
+class GetMediaUploadStatusResponseDataVideo(BaseModel):
+    """Model for GetMediaUploadStatusResponseDataVideo"""
 
-    data: Optional[List["Space"]] = Field(default=None)
+    video_type: Optional[str] = Field(
+        default=None, description="MIME type of the processed video."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetNewsResponse(BaseModel):
+    """Model for GetNewsResponse"""
+
+    data: Optional["News"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsAnalyticsResponse(BaseModel):
+    """Model for GetPostsAnalyticsResponse"""
+
+    data: Optional[List["Analytics"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsByIdResponse(BaseModel):
+    """Model for GetPostsByIdResponse"""
+
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2SpacesByCreatorIdsResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesIdBuyersResponseMeta(BaseModel):
-    """Nested model for Get2SpacesIdBuyersResponseMeta"""
+class GetPostsByIdsResponseMeta(BaseModel):
+    """Nested model for GetPostsByIdsResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesIdBuyersResponse(BaseModel):
-    """Model for Get2SpacesIdBuyersResponse"""
+class GetPostsByIdsResponse(BaseModel):
+    """Model for GetPostsByIdsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetPostsByIdsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsCountsAllResponseMeta(BaseModel):
+    """Nested model for GetPostsCountsAllResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    total_post_count: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsCountsAllResponse(BaseModel):
+    """Model for GetPostsCountsAllResponse"""
+
+    data: Optional[List["GetPostsCountsAllResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetPostsCountsAllResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsCountsAllResponseData(BaseModel):
+    """Model for GetPostsCountsAllResponseData"""
+
+    end: str = Field(description="End of the count bucket (exclusive), RFC 3339.")
+    post_count: int = Field(description="Number of Posts in the bucket.")
+    start: str = Field(description="Start of the count bucket (inclusive), RFC 3339.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsCountsRecentResponseMeta(BaseModel):
+    """Nested model for GetPostsCountsRecentResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    total_post_count: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsCountsRecentResponse(BaseModel):
+    """Model for GetPostsCountsRecentResponse"""
+
+    data: Optional[List["GetPostsCountsRecentResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetPostsCountsRecentResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsCountsRecentResponseData(BaseModel):
+    """Model for GetPostsCountsRecentResponseData"""
+
+    end: str = Field(description="End of the count bucket (exclusive), RFC 3339.")
+    post_count: int = Field(description="Number of Posts in the bucket.")
+    start: str = Field(description="Start of the count bucket (inclusive), RFC 3339.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsLikingUsersResponseMeta(BaseModel):
+    """Nested model for GetPostsLikingUsersResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsLikingUsersResponse(BaseModel):
+    """Model for GetPostsLikingUsersResponse"""
 
     data: Optional[List["User"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2SpacesIdBuyersResponseMeta"] = Field(default=None)
+    meta: Optional["GetPostsLikingUsersResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesIdResponse(BaseModel):
-    """Model for Get2SpacesIdResponse"""
+class GetPostsQuotedPostsResponseMeta(BaseModel):
+    """Nested model for GetPostsQuotedPostsResponseMeta"""
 
-    data: Optional["Space"] = Field(default=None, description="")
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsQuotedPostsResponse(BaseModel):
+    """Model for GetPostsQuotedPostsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetPostsQuotedPostsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsRepostedByResponseMeta(BaseModel):
+    """Nested model for GetPostsRepostedByResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsRepostedByResponse(BaseModel):
+    """Model for GetPostsRepostedByResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetPostsRepostedByResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsRepostsResponseMeta(BaseModel):
+    """Nested model for GetPostsRepostsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostsRepostsResponse(BaseModel):
+    """Model for GetPostsRepostsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetPostsRepostsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRuleCountsResponse(BaseModel):
+    """Model for GetRuleCountsResponse"""
+
+    data: Optional["GetRuleCountsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRuleCountsResponseData(BaseModel):
+    """Model for GetRuleCountsResponseData"""
+
+    cap_per_client_app: str = Field(
+        description="Maximum number of rules allowed per client application."
+    )
+    cap_per_project: str = Field(
+        description="Maximum number of rules allowed across the project."
+    )
+    client_app_rules_count: "GetRuleCountsResponseDataClientAppRulesCount"
+    project_rules_count: str = Field(
+        description="Number of rules across every client application in the project."
+    )
+    all_project_client_apps: Optional[
+        List["GetRuleCountsResponseDataAllProjectClientApps"]
+    ] = Field(
+        default=None, description="Per-client-app rule counts across the project."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRuleCountsResponseDataAllProjectClientApps(BaseModel):
+    """Model for GetRuleCountsResponseDataAllProjectClientApps"""
+
+    rule_count: int = Field(
+        description="Number of rules configured for the client application."
+    )
+    client_app_id: Optional[str] = Field(
+        default=None, description="Unique identifier of the client application."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRuleCountsResponseDataClientAppRulesCount(BaseModel):
+    """Model for GetRuleCountsResponseDataClientAppRulesCount"""
+
+    rule_count: int = Field(
+        description="Number of rules configured for the client application."
+    )
+    client_app_id: Optional[str] = Field(
+        default=None, description="Unique identifier of the client application."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRulesResponseMeta(BaseModel):
+    """Nested model for GetRulesResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRulesResponse(BaseModel):
+    """Model for GetRulesResponse"""
+
+    data: Optional[List["GetRulesResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetRulesResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetRulesResponseData(BaseModel):
+    """Model for GetRulesResponseData"""
+
+    id: Optional[str] = Field(
+        default=None, description="Unique identifier of the rule."
+    )
+    tag: Optional[str] = Field(
+        default=None, description="Optional caller-defined label for the rule."
+    )
+    value: Optional[str] = Field(
+        default=None, description="The rule's filter expression."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetScheduledBroadcastResponse(BaseModel):
+    """Model for GetScheduledBroadcastResponse"""
+
+    data: Optional["GetScheduledBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetScheduledBroadcastResponseData(BaseModel):
+    """Model for GetScheduledBroadcastResponseData"""
+
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether replay is enabled."
+    )
+    broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+    )
+    chat_option: Optional[str] = Field(
+        default=None, description="Optional chat permission option."
+    )
+    description: Optional[str] = Field(
+        default=None, description="Optional description."
+    )
+    locale: Optional[str] = Field(default=None, description="Optional locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="When true, coordinator will not auto-publish; call POST .../live when ready.",
+    )
+    recurring_schedule_id: Optional[str] = Field(
+        default=None, description="Set when this occurrence belongs to a recurrence."
+    )
+    scheduled_broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Numeric scheduler id. Required in the update request body.",
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start, milliseconds since Unix epoch (decimal string).",
+    )
+    source_id: Optional[str] = Field(
+        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+    )
+    state: Optional[str] = Field(
+        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+    )
+    telecast_id: Optional[str] = Field(
+        default=None, description="Optional telecast association."
+    )
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Optional pre-live slate media id."
+    )
+    title: Optional[str] = Field(
+        default=None, description="Broadcast title / status text."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSpacesBuyersResponseMeta(BaseModel):
+    """Nested model for GetSpacesBuyersResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSpacesBuyersResponse(BaseModel):
+    """Model for GetSpacesBuyersResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetSpacesBuyersResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSpacesByCreatorIdsResponseMeta(BaseModel):
+    """Nested model for GetSpacesByCreatorIdsResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSpacesByCreatorIdsResponse(BaseModel):
+    """Model for GetSpacesByCreatorIdsResponse"""
+
+    data: Optional[List["Space"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetSpacesByCreatorIdsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSpacesByIdResponse(BaseModel):
+    """Model for GetSpacesByIdResponse"""
+
+    data: Optional["Space"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesIdTweetsResponseMeta(BaseModel):
-    """Nested model for Get2SpacesIdTweetsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2SpacesIdTweetsResponse(BaseModel):
-    """Model for Get2SpacesIdTweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2SpacesIdTweetsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2SpacesResponse(BaseModel):
-    """Model for Get2SpacesResponse"""
+class GetSpacesByIdsResponse(BaseModel):
+    """Model for GetSpacesByIdsResponse"""
 
     data: Optional[List["Space"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -2597,29 +3818,35 @@ class Get2SpacesResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesSearchResponseMeta(BaseModel):
-    """Nested model for Get2SpacesSearchResponseMeta"""
+class GetSpacesPostsResponseMeta(BaseModel):
+    """Nested model for GetSpacesPostsResponseMeta"""
 
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2SpacesSearchResponse(BaseModel):
-    """Model for Get2SpacesSearchResponse"""
+class GetSpacesPostsResponse(BaseModel):
+    """Model for GetSpacesPostsResponse"""
 
-    data: Optional[List["Space"]] = Field(default=None)
+    data: Optional[List["Post"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2SpacesSearchResponseMeta"] = Field(default=None)
+    meta: Optional["GetSpacesPostsResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2TrendsByWoeidWoeidResponse(BaseModel):
-    """Model for Get2TrendsByWoeidWoeidResponse"""
+class GetTrendsByWoeidResponse(BaseModel):
+    """Model for GetTrendsByWoeidResponse"""
 
     data: Optional[List["Trend"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -2627,802 +3854,8 @@ class Get2TrendsByWoeidWoeidResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2TweetsAnalyticsResponse(BaseModel):
-    """Model for Get2TweetsAnalyticsResponse"""
-
-    data: Optional["Analytics"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsCountsAllResponseMeta(BaseModel):
-    """Nested model for Get2TweetsCountsAllResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    total_tweet_count: Optional["Aggregate"] = Field(
-        default=None, description="The sum of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsCountsAllResponse(BaseModel):
-    """Model for Get2TweetsCountsAllResponse"""
-
-    data: Optional[List["SearchCount"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2TweetsCountsAllResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsCountsRecentResponseMeta(BaseModel):
-    """Nested model for Get2TweetsCountsRecentResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    total_tweet_count: Optional["Aggregate"] = Field(
-        default=None, description="The sum of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsCountsRecentResponse(BaseModel):
-    """Model for Get2TweetsCountsRecentResponse"""
-
-    data: Optional[List["SearchCount"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2TweetsCountsRecentResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsFirehoseStreamLangEnResponse(BaseModel):
-    """Model for Get2TweetsFirehoseStreamLangEnResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsFirehoseStreamLangJaResponse(BaseModel):
-    """Model for Get2TweetsFirehoseStreamLangJaResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsFirehoseStreamLangKoResponse(BaseModel):
-    """Model for Get2TweetsFirehoseStreamLangKoResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsFirehoseStreamLangPtResponse(BaseModel):
-    """Model for Get2TweetsFirehoseStreamLangPtResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsFirehoseStreamResponse(BaseModel):
-    """Model for Get2TweetsFirehoseStreamResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdLikingUsersResponseMeta(BaseModel):
-    """Nested model for Get2TweetsIdLikingUsersResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdLikingUsersResponse(BaseModel):
-    """Model for Get2TweetsIdLikingUsersResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2TweetsIdLikingUsersResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdQuoteTweetsResponseMeta(BaseModel):
-    """Nested model for Get2TweetsIdQuoteTweetsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdQuoteTweetsResponse(BaseModel):
-    """Model for Get2TweetsIdQuoteTweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2TweetsIdQuoteTweetsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdResponse(BaseModel):
-    """Model for Get2TweetsIdResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdRetweetedByResponseMeta(BaseModel):
-    """Nested model for Get2TweetsIdRetweetedByResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdRetweetedByResponse(BaseModel):
-    """Model for Get2TweetsIdRetweetedByResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2TweetsIdRetweetedByResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdRetweetsResponseMeta(BaseModel):
-    """Nested model for Get2TweetsIdRetweetsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsIdRetweetsResponse(BaseModel):
-    """Model for Get2TweetsIdRetweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2TweetsIdRetweetsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsResponse(BaseModel):
-    """Model for Get2TweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSample10StreamResponse(BaseModel):
-    """Model for Get2TweetsSample10StreamResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSampleStreamResponse(BaseModel):
-    """Model for Get2TweetsSampleStreamResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSearchAllResponseMeta(BaseModel):
-    """Nested model for Get2TweetsSearchAllResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSearchAllResponse(BaseModel):
-    """Model for Get2TweetsSearchAllResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2TweetsSearchAllResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSearchRecentResponseMeta(BaseModel):
-    """Nested model for Get2TweetsSearchRecentResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSearchRecentResponse(BaseModel):
-    """Model for Get2TweetsSearchRecentResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2TweetsSearchRecentResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSearchStreamResponse(BaseModel):
-    """Model for Get2TweetsSearchStreamResponse"""
-
-    data: Optional["Tweet"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2TweetsSearchStreamRulesCountsResponse(BaseModel):
-    """Model for Get2TweetsSearchStreamRulesCountsResponse"""
-
-    data: Optional["RulesCount"] = Field(
-        default=None,
-        description="A count of user-provided stream filtering rules at the application and project levels.",
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsageTweetsResponse(BaseModel):
-    """Model for Get2UsageTweetsResponse"""
-
-    data: Optional["Usage"] = Field(default=None, description="Usage per client app")
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersByResponse(BaseModel):
-    """Model for Get2UsersByResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersByUsernameUsernameResponse(BaseModel):
-    """Model for Get2UsersByUsernameUsernameResponse"""
-
-    data: Optional["User"] = Field(default=None, description="The X User object.")
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdAffiliatesResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdAffiliatesResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdAffiliatesResponse(BaseModel):
-    """Model for Get2UsersIdAffiliatesResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdAffiliatesResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdBlockingResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdBlockingResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdBlockingResponse(BaseModel):
-    """Model for Get2UsersIdBlockingResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdBlockingResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdBookmarksResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdBookmarksResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdBookmarksResponse(BaseModel):
-    """Model for Get2UsersIdBookmarksResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdBookmarksResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdFollowedListsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdFollowedListsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdFollowedListsResponse(BaseModel):
-    """Model for Get2UsersIdFollowedListsResponse"""
-
-    data: Optional[List["XList"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdFollowedListsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdFollowersResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdFollowersResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdFollowersResponse(BaseModel):
-    """Model for Get2UsersIdFollowersResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdFollowersResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdFollowingResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdFollowingResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdFollowingResponse(BaseModel):
-    """Model for Get2UsersIdFollowingResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdFollowingResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdLikedTweetsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdLikedTweetsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdLikedTweetsResponse(BaseModel):
-    """Model for Get2UsersIdLikedTweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdLikedTweetsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdListMembershipsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdListMembershipsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdListMembershipsResponse(BaseModel):
-    """Model for Get2UsersIdListMembershipsResponse"""
-
-    data: Optional[List["XList"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdListMembershipsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdMentionsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdMentionsResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdMentionsResponse(BaseModel):
-    """Model for Get2UsersIdMentionsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdMentionsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdMutingResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdMutingResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdMutingResponse(BaseModel):
-    """Model for Get2UsersIdMutingResponse"""
-
-    data: Optional[List["User"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdMutingResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdOwnedListsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdOwnedListsResponseMeta"""
-
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdOwnedListsResponse(BaseModel):
-    """Model for Get2UsersIdOwnedListsResponse"""
-
-    data: Optional[List["XList"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdOwnedListsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdPinnedListsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdPinnedListsResponseMeta"""
-
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdPinnedListsResponse(BaseModel):
-    """Model for Get2UsersIdPinnedListsResponse"""
-
-    data: Optional[List["XList"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdPinnedListsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdPublicKeysResponse(BaseModel):
-    """Model for Get2UsersIdPublicKeysResponse"""
-
-    data: Optional[List["PublicKey"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdResponse(BaseModel):
-    """Model for Get2UsersIdResponse"""
-
-    data: Optional["User"] = Field(default=None, description="The X User object.")
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdTimelinesReverseChronologicalResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdTimelinesReverseChronologicalResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdTimelinesReverseChronologicalResponse(BaseModel):
-    """Model for Get2UsersIdTimelinesReverseChronologicalResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdTimelinesReverseChronologicalResponseMeta"] = Field(
-        default=None
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdTweetsResponseMeta(BaseModel):
-    """Nested model for Get2UsersIdTweetsResponseMeta"""
-
-    newest_id: Optional["NewestId"] = Field(
-        default=None, description="The newest id in this response."
-    )
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    oldest_id: Optional["OldestId"] = Field(
-        default=None, description="The oldest id in this response."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersIdTweetsResponse(BaseModel):
-    """Model for Get2UsersIdTweetsResponse"""
-
-    data: Optional[List["Tweet"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersIdTweetsResponseMeta"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersMeResponse(BaseModel):
-    """Model for Get2UsersMeResponse"""
-
-    data: Optional["User"] = Field(default=None, description="The X User object.")
-    errors: Optional[List["Problem"]] = Field(default=None)
-    includes: Optional["Expansions"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Get2UsersPersonalizedTrendsResponse(BaseModel):
-    """Model for Get2UsersPersonalizedTrendsResponse"""
+class GetTrendsPersonalizedTrendsResponse(BaseModel):
+    """Model for GetTrendsPersonalizedTrendsResponse"""
 
     data: Optional[List["PersonalizedTrend"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -3430,47 +3863,145 @@ class Get2UsersPersonalizedTrendsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2UsersPublicKeysResponse(BaseModel):
-    """Model for Get2UsersPublicKeysResponse"""
+class GetUsageResponse(BaseModel):
+    """Model for GetUsageResponse"""
 
-    data: Optional["PublicKey"] = Field(
-        default=None,
-        description="A user's public key with associated key recovery configuration.",
-    )
+    data: Optional["Usage"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2UsersRepostsOfMeResponseMeta(BaseModel):
-    """Nested model for Get2UsersRepostsOfMeResponseMeta"""
+class GetUsersAffiliatesResponseMeta(BaseModel):
+    """Nested model for GetUsersAffiliatesResponseMeta"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
     )
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2UsersRepostsOfMeResponse(BaseModel):
-    """Model for Get2UsersRepostsOfMeResponse"""
+class GetUsersAffiliatesResponse(BaseModel):
+    """Model for GetUsersAffiliatesResponse"""
 
-    data: Optional[List["Tweet"]] = Field(default=None)
+    data: Optional[List["User"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersRepostsOfMeResponseMeta"] = Field(default=None)
+    meta: Optional["GetUsersAffiliatesResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2UsersResponse(BaseModel):
-    """Model for Get2UsersResponse"""
+class GetUsersBlockingResponseMeta(BaseModel):
+    """Nested model for GetUsersBlockingResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBlockingResponse(BaseModel):
+    """Model for GetUsersBlockingResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersBlockingResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBookmarkFoldersResponse(BaseModel):
+    """Model for GetUsersBookmarkFoldersResponse"""
+
+    data: Optional[List["GetUsersBookmarkFoldersResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBookmarkFoldersResponseData(BaseModel):
+    """Model for GetUsersBookmarkFoldersResponseData"""
+
+    id: str = Field(description="Unique identifier of the bookmark folder.")
+    name: str = Field(description="Display name of the bookmark folder.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBookmarksByFolderIdResponseDataItem(BaseModel):
+    """Nested model for GetUsersBookmarksByFolderIdResponseDataItem"""
+
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBookmarksByFolderIdResponse(BaseModel):
+    """Model for GetUsersBookmarksByFolderIdResponse"""
+
+    data: Optional[List["GetUsersBookmarksByFolderIdResponseDataItem"]] = Field(
+        default=None, description="The Posts in this bookmark folder, by ID."
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBookmarksResponseMeta(BaseModel):
+    """Nested model for GetUsersBookmarksResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersBookmarksResponse(BaseModel):
+    """Model for GetUsersBookmarksResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersBookmarksResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersByIdResponse(BaseModel):
+    """Model for GetUsersByIdResponse"""
+
+    data: Optional["User"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersByIdsResponse(BaseModel):
+    """Model for GetUsersByIdsResponse"""
 
     data: Optional[List["User"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -3479,523 +4010,571 @@ class Get2UsersResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2UsersSearchResponseMeta(BaseModel):
-    """Nested model for Get2UsersSearchResponseMeta"""
+class GetUsersByUsernameResponse(BaseModel):
+    """Model for GetUsersByUsernameResponse"""
 
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
-    )
-    previous_token: Optional["PreviousToken"] = Field(
-        default=None, description="The previous token."
-    )
+    data: Optional["User"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2UsersSearchResponse(BaseModel):
-    """Model for Get2UsersSearchResponse"""
+class GetUsersByUsernamesResponse(BaseModel):
+    """Model for GetUsersByUsernamesResponse"""
 
     data: Optional[List["User"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
-    meta: Optional["Get2UsersSearchResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2WebhooksResponseMeta(BaseModel):
-    """Nested model for Get2WebhooksResponseMeta"""
+class GetUsersFollowedListsResponseMeta(BaseModel):
+    """Nested model for GetUsersFollowedListsResponseMeta"""
 
-    result_count: Optional["ResultCount"] = Field(
-        default=None, description="The number of results returned in this response."
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Get2WebhooksResponse(BaseModel):
-    """Model for Get2WebhooksResponse"""
+class GetUsersFollowedListsResponse(BaseModel):
+    """Model for GetUsersFollowedListsResponse"""
+
+    data: Optional[List["XList"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersFollowedListsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersFollowersResponseMeta(BaseModel):
+    """Nested model for GetUsersFollowersResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersFollowersResponse(BaseModel):
+    """Model for GetUsersFollowersResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersFollowersResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersFollowingResponseMeta(BaseModel):
+    """Nested model for GetUsersFollowingResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersFollowingResponse(BaseModel):
+    """Model for GetUsersFollowingResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersFollowingResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersLikedPostsResponseMeta(BaseModel):
+    """Nested model for GetUsersLikedPostsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersLikedPostsResponse(BaseModel):
+    """Model for GetUsersLikedPostsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersLikedPostsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersListMembershipsResponseMeta(BaseModel):
+    """Nested model for GetUsersListMembershipsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersListMembershipsResponse(BaseModel):
+    """Model for GetUsersListMembershipsResponse"""
+
+    data: Optional[List["XList"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersListMembershipsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMeResponse(BaseModel):
+    """Model for GetUsersMeResponse"""
+
+    data: Optional["User"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMentionsResponseMeta(BaseModel):
+    """Nested model for GetUsersMentionsResponseMeta"""
+
+    newest_id: Optional[str] = Field(
+        default=None, description="Most recent ID in the data array."
+    )
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    oldest_id: Optional[str] = Field(
+        default=None, description="Oldest ID in the data array."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMentionsResponse(BaseModel):
+    """Model for GetUsersMentionsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersMentionsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMutingResponseMeta(BaseModel):
+    """Nested model for GetUsersMutingResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMutingResponse(BaseModel):
+    """Model for GetUsersMutingResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersMutingResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersOwnedListsResponseMeta(BaseModel):
+    """Nested model for GetUsersOwnedListsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersOwnedListsResponse(BaseModel):
+    """Model for GetUsersOwnedListsResponse"""
+
+    data: Optional[List["XList"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersOwnedListsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersPinnedListsResponseMeta(BaseModel):
+    """Nested model for GetUsersPinnedListsResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersPinnedListsResponse(BaseModel):
+    """Model for GetUsersPinnedListsResponse"""
+
+    data: Optional[List["XList"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersPinnedListsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersPostsResponseMeta(BaseModel):
+    """Nested model for GetUsersPostsResponseMeta"""
+
+    newest_id: Optional[str] = Field(
+        default=None, description="Most recent ID in the data array."
+    )
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    oldest_id: Optional[str] = Field(
+        default=None, description="Oldest ID in the data array."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersPostsResponse(BaseModel):
+    """Model for GetUsersPostsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersPostsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersPublicKeyResponse(BaseModel):
+    """Model for GetUsersPublicKeyResponse"""
+
+    data: Optional[List["PublicKey"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersPublicKeysResponse(BaseModel):
+    """Model for GetUsersPublicKeysResponse"""
+
+    data: Optional[List["PublicKey"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersRepostsOfMeResponseMeta(BaseModel):
+    """Nested model for GetUsersRepostsOfMeResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersRepostsOfMeResponse(BaseModel):
+    """Model for GetUsersRepostsOfMeResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersRepostsOfMeResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersTimelineResponseMeta(BaseModel):
+    """Nested model for GetUsersTimelineResponseMeta"""
+
+    newest_id: Optional[str] = Field(
+        default=None, description="Most recent ID in the data array."
+    )
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    oldest_id: Optional[str] = Field(
+        default=None, description="Oldest ID in the data array."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersTimelineResponse(BaseModel):
+    """Model for GetUsersTimelineResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersTimelineResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetWebhooksResponseMeta(BaseModel):
+    """Nested model for GetWebhooksResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetWebhooksResponse(BaseModel):
+    """Model for GetWebhooksResponse"""
 
     data: Optional[List["WebhookConfig"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
-    meta: Optional["Get2WebhooksResponseMeta"] = Field(default=None)
+    meta: Optional["GetWebhooksResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class HashtagFields(BaseModel):
-    """Represent the portion of text recognized as a Hashtag, and its start and end position within the text."""
+class GetWebhooksStreamLinksResponse(BaseModel):
+    """Model for GetWebhooksStreamLinksResponse"""
 
-    tag: str = Field(description="The text of the Hashtag.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillAllConnectionsResponseDataResultsItem(BaseModel):
-    """Nested model for KillAllConnectionsResponseDataResultsItem"""
-
-    error_message: Optional[str] = Field(default=None)
-    success: Optional[bool] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillAllConnectionsResponseData(BaseModel):
-    """Nested model for KillAllConnectionsResponseData"""
-
-    failed_kills: Optional[int] = Field(default=None)
-    results: Optional[List["KillAllConnectionsResponseDataResultsItem"]] = Field(
-        default=None
-    )
-    successful_kills: Optional[int] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillAllConnectionsResponse(BaseModel):
-    """Model for KillAllConnectionsResponse"""
-
-    data: Optional["KillAllConnectionsResponseData"] = Field(default=None)
+    data: Optional[List["GetWebhooksStreamLinksResponseData"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class KillConnectionsByEndpointResponseDataResultsItem(BaseModel):
-    """Nested model for KillConnectionsByEndpointResponseDataResultsItem"""
+class GetWebhooksStreamLinksResponseData(BaseModel):
+    """Model for GetWebhooksStreamLinksResponseData"""
 
-    error_message: Optional[str] = Field(default=None)
-    success: Optional[bool] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillConnectionsByEndpointResponseData(BaseModel):
-    """Nested model for KillConnectionsByEndpointResponseData"""
-
-    failed_kills: Optional[int] = Field(default=None)
-    results: Optional[List["KillConnectionsByEndpointResponseDataResultsItem"]] = Field(
-        default=None
+    application_id: Optional[str] = Field(
+        default=None, description="The application ID"
     )
-    successful_kills: Optional[int] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillConnectionsByEndpointResponse(BaseModel):
-    """Model for KillConnectionsByEndpointResponse"""
-
-    data: Optional["KillConnectionsByEndpointResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillConnectionsByUuidsRequest(BaseModel):
-    """Model for KillConnectionsByUuidsRequest"""
-
-    uuids: List[str] = Field(description="Array of connection UUIDs to terminate")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillConnectionsByUuidsResponseDataResultsItem(BaseModel):
-    """Nested model for KillConnectionsByUuidsResponseDataResultsItem"""
-
-    error_message: Optional[str] = Field(default=None)
-    success: Optional[bool] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillConnectionsByUuidsResponseData(BaseModel):
-    """Nested model for KillConnectionsByUuidsResponseData"""
-
-    failed_kills: Optional[int] = Field(default=None)
-    results: Optional[List["KillConnectionsByUuidsResponseDataResultsItem"]] = Field(
-        default=None
-    )
-    successful_kills: Optional[int] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class KillConnectionsByUuidsResponse(BaseModel):
-    """Model for KillConnectionsByUuidsResponse"""
-
-    data: Optional["KillConnectionsByUuidsResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class LikeComplianceSchema(BaseModel):
-    """Model for LikeComplianceSchema"""
-
-    delete: "UnlikeComplianceSchema"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class LikeWithTweetAuthor(BaseModel):
-    """A Like event, with the tweet author user and the tweet being liked"""
-
+    business_user_id: Optional[str] = Field(default=None, description="The user ID")
     created_at: Optional[str] = Field(
-        default=None, description="Creation time of the Tweet."
+        default=None, description="The datetime the webhook was linked to the stream"
     )
-    id: Optional["LikeId"] = Field(
-        default=None, description="The unique identifier of this Like."
+    fields: Optional[List[str]] = Field(
+        default=None, description="Requested fields to be rendered"
     )
-    liked_tweet_id: Optional["TweetId"] = Field(
+    instance_id: Optional[str] = Field(
         default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="The stream ID associated with the FilteredStream instance",
     )
-    timestamp_ms: Optional[int] = Field(
-        default=None, description="Timestamp in milliseconds of creation."
-    )
-    tweet_author_id: Optional["UserId"] = Field(
-        default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+    webhook_id: Optional[str] = Field(
+        default=None, description="The unique identifier for the webhook"
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class XList(BaseModel):
-    """A X List is a curated group of accounts."""
+class GoLiveScheduledBroadcastResponse(BaseModel):
+    """Model for GoLiveScheduledBroadcastResponse"""
 
-    id: "ListId" = Field(description="The unique identifier of this List.")
-    name: str = Field(description="The name of this List.")
-    created_at: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
-    follower_count: Optional[int] = Field(default=None)
-    member_count: Optional[int] = Field(default=None)
-    owner_id: Optional["UserId"] = Field(
-        default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    private: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListAddUserRequest(BaseModel):
-    """Model for ListAddUserRequest"""
-
-    user_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListCreateRequest(BaseModel):
-    """Model for ListCreateRequest"""
-
-    name: str
-    description: Optional[str] = Field(default=None)
-    private: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListCreateResponseData(BaseModel):
-    """Nested model for ListCreateResponseData"""
-
-    id: "ListId" = Field(description="The unique identifier of this List.")
-    name: str = Field(description="The name of this List.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListCreateResponse(BaseModel):
-    """Model for ListCreateResponse"""
-
-    data: Optional["ListCreateResponseData"] = Field(
-        default=None, description="A X List is a curated group of accounts."
-    )
+    data: Optional["GoLiveScheduledBroadcastResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ListDeleteResponseData(BaseModel):
-    """Nested model for ListDeleteResponseData"""
+class GoLiveScheduledBroadcastResponseData(BaseModel):
+    """Model for GoLiveScheduledBroadcastResponseData"""
 
-    deleted: Optional[bool] = Field(default=None)
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether replay is enabled."
+    )
+    broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+    )
+    chat_option: Optional[str] = Field(
+        default=None, description="Optional chat permission option."
+    )
+    description: Optional[str] = Field(
+        default=None, description="Optional description."
+    )
+    locale: Optional[str] = Field(default=None, description="Optional locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="When true, coordinator will not auto-publish; call POST .../live when ready.",
+    )
+    recurring_schedule_id: Optional[str] = Field(
+        default=None, description="Set when this occurrence belongs to a recurrence."
+    )
+    scheduled_broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Numeric scheduler id. Required in the update request body.",
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start, milliseconds since Unix epoch (decimal string).",
+    )
+    source_id: Optional[str] = Field(
+        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+    )
+    state: Optional[str] = Field(
+        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+    )
+    telecast_id: Optional[str] = Field(
+        default=None, description="Optional telecast association."
+    )
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Optional pre-live slate media id."
+    )
+    title: Optional[str] = Field(
+        default=None, description="Broadcast title / status text."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ListDeleteResponse(BaseModel):
-    """Model for ListDeleteResponse"""
+class HidePostsReplyRequest(BaseModel):
+    """Model for HidePostsReplyRequest"""
 
-    data: Optional["ListDeleteResponseData"] = Field(default=None)
+    hidden: bool = Field(description="Whether the reply should be hidden.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class HidePostsReplyResponse(BaseModel):
+    """Model for HidePostsReplyResponse"""
+
+    data: Optional["HidePostsReplyResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ListFollowedRequest(BaseModel):
-    """Model for ListFollowedRequest"""
+class HidePostsReplyResponseData(BaseModel):
+    """Model for HidePostsReplyResponseData"""
 
-    list_id: "ListId" = Field(description="The unique identifier of this List.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListFollowedResponseData(BaseModel):
-    """Nested model for ListFollowedResponseData"""
-
-    following: Optional[bool] = Field(default=None)
+    hidden: Optional[bool] = Field(
+        default=None, description="Whether the reply is hidden."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ListFollowedResponse(BaseModel):
-    """Model for ListFollowedResponse"""
+class InitializeChatGroupResponse(BaseModel):
+    """Model for InitializeChatGroupResponse"""
 
-    data: Optional["ListFollowedResponseData"] = Field(default=None)
+    data: Optional["InitializeChatGroupResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ListMutateResponseData(BaseModel):
-    """Nested model for ListMutateResponseData"""
+class InitializeChatGroupResponseData(BaseModel):
+    """Model for InitializeChatGroupResponseData"""
 
-    is_member: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListMutateResponse(BaseModel):
-    """Model for ListMutateResponse"""
-
-    data: Optional["ListMutateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListPinnedRequest(BaseModel):
-    """Model for ListPinnedRequest"""
-
-    list_id: "ListId" = Field(description="The unique identifier of this List.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListPinnedResponseData(BaseModel):
-    """Nested model for ListPinnedResponseData"""
-
-    pinned: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListPinnedResponse(BaseModel):
-    """Model for ListPinnedResponse"""
-
-    data: Optional["ListPinnedResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListUnpinResponseData(BaseModel):
-    """Nested model for ListUnpinResponseData"""
-
-    pinned: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListUnpinResponse(BaseModel):
-    """Model for ListUnpinResponse"""
-
-    data: Optional["ListUnpinResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListUpdateRequest(BaseModel):
-    """Model for ListUpdateRequest"""
-
-    description: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    private: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListUpdateResponseData(BaseModel):
-    """Nested model for ListUpdateResponseData"""
-
-    updated: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ListUpdateResponse(BaseModel):
-    """Model for ListUpdateResponse"""
-
-    data: Optional["ListUpdateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class ManagementInfo(BaseModel):
-    """Model for ManagementInfo"""
-
-    managed: bool = Field(
-        description="Indicates if the media is managed by Media Studio"
+    conversation_id: str = Field(
+        description="Unique ID for the new group conversation."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class MarketplaceHandleAvailability(BaseModel):
-    """Model for MarketplaceHandleAvailability"""
+class InitializeMediaUploadRequest(BaseModel):
+    """Model for InitializeMediaUploadRequest"""
 
-    availability_state: str = Field(description="Availability state of the handle.")
-    product_tier: Optional[str] = Field(
-        default=None, description="Product tier of the handle."
+    additional_owners: Optional[List[str]] = Field(
+        default=None, description="User ids granted access to the uploaded media."
     )
-    redirect_url: Optional[str] = Field(
-        default=None, description="Redirect URL for marketplace handle search."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Media(BaseModel):
-    """Model for Media"""
-
-    type: str
-    height: Optional["MediaHeight"] = Field(
-        default=None, description="The height of the media in pixels."
-    )
-    media_key: Optional["MediaKey"] = Field(
-        default=None, description="The Media Key identifier for this attachment."
-    )
-    width: Optional["MediaWidth"] = Field(
-        default=None, description="The width of the media in pixels."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaAnalyticsDataItem(BaseModel):
-    """Nested model for MediaAnalyticsDataItem"""
-
-    media_key: Optional["MediaKey"] = Field(
-        default=None, description="The Media Key identifier for this attachment."
-    )
-    timestamped_metrics: Optional[List["MediaTimestampedMetrics"]] = Field(
-        default=None,
-        description="Array containing metrics data along with the timestamps of their recording.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaAnalytics(BaseModel):
-    """Model for MediaAnalytics"""
-
-    data: Optional[List["MediaAnalyticsDataItem"]] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaMetrics(BaseModel):
-    """Model for MediaMetrics"""
-
-    cta_url_clicks: Optional[int] = Field(
-        default=None, description="Tracks the number of clicks on a call-to-action URL"
-    )
-    cta_watch_clicks: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of clicks to watch a video or media content",
-    )
-    play_from_tap: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of times a video or media is played from a user tap",
-    )
-    playback25: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of times a video reaches 25% of its duration",
-    )
-    playback50: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of times a video reaches 50% of its duration",
-    )
-    playback75: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of times a video reaches 75% of its duration",
-    )
-    playback_complete: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of times a video is played to completion",
-    )
-    playback_start: Optional[int] = Field(
-        default=None,
-        description="Tracks the number of times a video playback is initiated",
-    )
-    video_views: Optional[int] = Field(
-        default=None, description="Tracks the number of times a video is viewed"
-    )
-    watch_time_ms: Optional[int] = Field(
-        default=None,
-        description="Tracks the total time spent watching a video, measured in milliseconds",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaTimestampedMetrics(BaseModel):
-    """Model for MediaTimestampedMetrics"""
-
-    metrics: Optional["MediaMetrics"] = Field(default=None)
-    timestamp: Optional[str] = Field(default=None, description="ISO8601 Time")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaUploadAppendResponseData(BaseModel):
-    """Nested model for MediaUploadAppendResponseData"""
-
-    expires_at: Optional[int] = Field(
-        default=None,
-        description="Unix epoch time in seconds after when the upload session expires.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaUploadAppendResponse(BaseModel):
-    """A response from getting a media upload request status."""
-
-    data: Optional["MediaUploadAppendResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaUploadConfigRequest(BaseModel):
-    """Model for MediaUploadConfigRequest"""
-
-    additional_owners: Optional[List["UserId"]] = Field(default=None)
-    media_category: Optional["MediaCategory"] = Field(
-        default=None,
-        description="A string enum value which identifies a media use-case. This identifier is used to enforce use-case specific constraints (e.g. file size, video duration) and enable advanced features.",
-    )
+    media_category: Optional[
+        Literal[
+            "amplify_video",
+            "tweet_gif",
+            "tweet_image",
+            "tweet_video",
+            "dm_gif",
+            "dm_image",
+            "dm_video",
+            "subtitles",
+        ]
+    ] = Field(default=None, description="The media category of the upload.")
     media_type: Optional[
         Literal[
             "video/mp4",
@@ -4025,54 +4604,400 @@ class MediaUploadConfigRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class MediaUploadRequestOneShot(BaseModel):
-    """Model for MediaUploadRequestOneShot"""
+class InitializeMediaUploadResponse(BaseModel):
+    """Model for InitializeMediaUploadResponse"""
 
-    media: Union["MediaPayloadBinary", "MediaPayloadByte"]
-    media_category: "MediaCategoryOneShot" = Field(
-        description="A string enum value which identifies a media use-case. This identifier is used to enforce use-case specific constraints (e.g. file size) and enable advanced features."
+    data: Optional["InitializeMediaUploadResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class InitializeMediaUploadResponseData(BaseModel):
+    """Model for InitializeMediaUploadResponseData"""
+
+    id: str = Field(description="Unique identifier of the upload session.")
+    expires_after_secs: Optional[int] = Field(
+        default=None, description="Seconds until the upload session expires."
     )
-    additional_owners: Optional[List["UserId"]] = Field(default=None)
-    media_type: Optional[
-        Literal[
-            "text/srt",
-            "text/vtt",
-            "image/jpeg",
-            "image/bmp",
-            "image/png",
-            "image/webp",
-            "image/pjpeg",
-            "image/tiff",
-        ]
-    ] = Field(default=None, description="The type of image or subtitle.")
-    shared: Optional[bool] = Field(
-        default=None, description="Whether this media is shared or not."
+    media_key: Optional[str] = Field(
+        default=None, description="The media key for the uploaded media."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class MediaUploadResponseData(BaseModel):
-    """Nested model for MediaUploadResponseData"""
+class InternalErrorProblem(BaseModel):
+    """Model for InternalErrorProblem"""
 
-    expires_after_secs: Optional[int] = Field(
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/internal-error"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class InvalidRequestProblem(BaseModel):
+    """Model for InvalidRequestProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/invalid-request"]
+    parameter: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+    value: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LikeComplianceSchema(BaseModel):
+    """Model for LikeComplianceSchema"""
+
+    delete: "UnlikeComplianceSchema"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LikePostRequest(BaseModel):
+    """Model for LikePostRequest"""
+
+    tweet_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LikePostResponse(BaseModel):
+    """Model for LikePostResponse"""
+
+    data: Optional["LikePostResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LikePostResponseData(BaseModel):
+    """Model for LikePostResponseData"""
+
+    liked: bool = Field(description="Whether the User likes the Post.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LikeWithPostAuthor(BaseModel):
+    """A Like event, with the tweet author user and the tweet being liked"""
+
+    created_at: Optional[str] = Field(
+        default=None, description="Creation time of the Tweet."
+    )
+    id: Optional["LikeId"] = Field(
+        default=None, description="The unique identifier of this Like."
+    )
+    liked_tweet_id: Optional["PostId"] = Field(
+        default=None, description="Unique identifier of a Post"
+    )
+    timestamp_ms: Optional[int] = Field(
+        default=None, description="Timestamp in milliseconds of creation."
+    )
+    tweet_author_id: Optional["UserId"] = Field(
+        default=None, description="Unique identifier of a User"
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class XList(BaseModel):
+    """Model for List"""
+
+    created_at: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    follower_count: Optional["ListFollowerCount"] = Field(
+        default=None, description="The number of users who follow this List."
+    )
+    id: Optional[str] = Field(default=None)
+    member_count: Optional["ListMemberCount"] = Field(
+        default=None, description="The number of members in this List."
+    )
+    name: Optional[str] = Field(default=None)
+    owner_id: Optional[str] = Field(default=None)
+    private: Optional[bool] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListScheduledBroadcastsResponse(BaseModel):
+    """Model for ListScheduledBroadcastsResponse"""
+
+    data: Optional[List["ListScheduledBroadcastsResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListScheduledBroadcastsResponseData(BaseModel):
+    """Model for ListScheduledBroadcastsResponseData"""
+
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether replay is enabled."
+    )
+    broadcast_id: Optional[str] = Field(
         default=None,
-        description="Number of seconds after which upload session expires.",
+        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
     )
-    id: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
+    chat_option: Optional[str] = Field(
+        default=None, description="Optional chat permission option."
     )
-    media_key: Optional["MediaKey"] = Field(
-        default=None, description="The Media Key identifier for this attachment."
+    description: Optional[str] = Field(
+        default=None, description="Optional description."
     )
-    processing_info: Optional["ProcessingInfo"] = Field(default=None)
-    size: Optional[int] = Field(default=None, description="Size of the upload")
+    locale: Optional[str] = Field(default=None, description="Optional locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="When true, coordinator will not auto-publish; call POST .../live when ready.",
+    )
+    recurring_schedule_id: Optional[str] = Field(
+        default=None, description="Set when this occurrence belongs to a recurrence."
+    )
+    scheduled_broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Numeric scheduler id. Required in the update request body.",
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start, milliseconds since Unix epoch (decimal string).",
+    )
+    source_id: Optional[str] = Field(
+        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+    )
+    state: Optional[str] = Field(
+        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+    )
+    telecast_id: Optional[str] = Field(
+        default=None, description="Optional telecast association."
+    )
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Optional pre-live slate media id."
+    )
+    title: Optional[str] = Field(
+        default=None, description="Broadcast title / status text."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationReadRequest(BaseModel):
+    """Model for MarkChatConversationReadRequest"""
+
+    seen_until_sequence_id: str = Field(
+        description="The sequence ID of the last message to mark as read up to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationReadResponse(BaseModel):
+    """Model for MarkChatConversationReadResponse"""
+
+    data: Optional["MarkChatConversationReadResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationReadResponseData(BaseModel):
+    """Model for MarkChatConversationReadResponseData"""
+
+    success: bool = Field(description="Whether the conversation was marked read.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Media(BaseModel):
+    """Model for Media"""
+
+    alt_text: Optional[str] = Field(default=None)
+    duration_ms: Optional[int] = Field(default=None)
+    height: Optional[int] = Field(default=None)
+    media_key: Optional[str] = Field(default=None)
+    non_public_metrics: Optional["MediaNonPublicMetrics"] = Field(
+        default=None,
+        description="Nonpublic engagement metrics for the media at the time of the request.",
+    )
+    organic_metrics: Optional["MediaOrganicMetrics"] = Field(
+        default=None,
+        description="Organic nonpublic engagement metrics for the media at the time of the request.",
+    )
+    preview_image_url: Optional[str] = Field(default=None)
+    promoted_metrics: Optional["MediaPromotedMetrics"] = Field(
+        default=None,
+        description="Promoted nonpublic engagement metrics for the media at the time of the request.",
+    )
+    public_metrics: Optional["MediaPublicMetrics"] = Field(
+        default=None,
+        description="Public engagement metrics for the media at the time of the request.",
+    )
+    type: Optional[str] = Field(default=None)
+    url: Optional[str] = Field(default=None)
+    variants: Optional["MediaVariants"] = Field(
+        default=None,
+        description="Each media object may have multiple display or playback variants, with different resolutions or formats.",
+    )
+    width: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaAnalytics(BaseModel):
+    """Model for MediaAnalytics"""
+
+    cta_url_clicks: Optional[int] = Field(default=None)
+    cta_watch_clicks: Optional[int] = Field(default=None)
+    media_key: Optional[str] = Field(default=None)
+    play_from_tap: Optional[int] = Field(default=None)
+    playback25: Optional[int] = Field(default=None)
+    playback50: Optional[int] = Field(default=None)
+    playback75: Optional[int] = Field(default=None)
+    playback_complete: Optional[int] = Field(default=None)
+    playback_start: Optional[int] = Field(default=None)
+    timestamp: Optional[str] = Field(default=None)
+    timestamped_metrics: Optional["MediaAnalyticsTimestampedMetrics"] = Field(
+        default=None,
+        description="Time-bucketed video metrics for the media, one entry per granularity bucket.",
+    )
+    video_views: Optional[int] = Field(default=None)
+    watch_time_ms: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaNonPublicMetrics(BaseModel):
+    """Nonpublic engagement metrics for the media at the time of the request."""
+
+    playback_0_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who started playback (0% quartile) of this video.",
+    )
+    playback_100_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who completed playback (100% quartile) of this video.",
+    )
+    playback_25_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 25% of this video.",
+    )
+    playback_50_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 50% of this video.",
+    )
+    playback_75_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 75% of this video.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaOrganicMetrics(BaseModel):
+    """Organic nonpublic engagement metrics for the media at the time of the request."""
+
+    playback_0_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who started playback (0% quartile) of this video.",
+    )
+    playback_100_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who completed playback (100% quartile) of this video.",
+    )
+    playback_25_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 25% of this video.",
+    )
+    playback_50_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 50% of this video.",
+    )
+    playback_75_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 75% of this video.",
+    )
+    view_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="The number of organic views of this video. Null when the backend returns quartile data without a view count.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaPromotedMetrics(BaseModel):
+    """Promoted nonpublic engagement metrics for the media at the time of the request."""
+
+    playback_0_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who started playback (0% quartile) of this video.",
+    )
+    playback_100_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who completed playback (100% quartile) of this video.",
+    )
+    playback_25_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 25% of this video.",
+    )
+    playback_50_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 50% of this video.",
+    )
+    playback_75_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="Number of users who watched at least 75% of this video.",
+    )
+    view_count: Optional[Optional[int]] = Field(
+        default=None,
+        description="The number of promoted views of this video. Null when the backend returns quartile data without a view count.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaPublicMetrics(BaseModel):
+    """Public engagement metrics for the media at the time of the request."""
+
+    view_count: int = Field(
+        description="The number of times this video has been viewed."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaUploadRequest(BaseModel):
+    """Model for MediaUploadRequest"""
+
+    media: str = Field(
+        description="The media file to upload: base64-encoded in JSON bodies, raw bytes in multipart bodies."
+    )
+    media_category: Literal[
+        "tweet_image",
+        "tweet_video",
+        "tweet_gif",
+        "dm_image",
+        "dm_video",
+        "dm_gif",
+        "subtitles",
+    ] = Field(description="The category of the media being uploaded.")
+    additional_owners: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of user IDs who can use this media.",
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class MediaUploadResponse(BaseModel):
-    """A response from getting a media upload request status."""
+    """Model for MediaUploadResponse"""
 
     data: Optional["MediaUploadResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
@@ -4080,160 +5005,63 @@ class MediaUploadResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class MentionFields(BaseModel):
-    """Represent the portion of text recognized as a User mention, and its start and end position within the text."""
+class MediaUploadResponseData(BaseModel):
+    """Model for MediaUploadResponseData"""
 
-    username: "UserName" = Field(description="The X handle (screen name) of this user.")
-    id: Optional["UserId"] = Field(
+    id: str = Field(description="Unique identifier of the media.")
+    expires_after_secs: Optional[int] = Field(
+        default=None, description="Seconds until the upload session expires."
+    )
+    image: Optional["MediaUploadResponseDataImage"] = Field(default=None)
+    media_key: Optional[str] = Field(
+        default=None, description="The media key for the uploaded media."
+    )
+    processing_info: Optional["MediaUploadResponseDataProcessingInfo"] = Field(
+        default=None
+    )
+    size: Optional[int] = Field(
+        default=None, description="Total size of the media in bytes."
+    )
+    video: Optional["MediaUploadResponseDataVideo"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaUploadResponseDataImage(BaseModel):
+    """Model for MediaUploadResponseDataImage"""
+
+    h: Optional[int] = Field(default=None, description="Height in pixels.")
+    image_type: Optional[str] = Field(
+        default=None, description="MIME type of the uploaded image."
+    )
+    w: Optional[int] = Field(default=None, description="Width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaUploadResponseDataProcessingInfo(BaseModel):
+    """Model for MediaUploadResponseDataProcessingInfo"""
+
+    check_after_secs: Optional[int] = Field(
+        default=None, description="Seconds to wait before polling status again."
+    )
+    progress_percent: Optional[int] = Field(
+        default=None, description="Processing completion percentage."
+    )
+    state: Optional[str] = Field(
         default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="Processing state (pending, in_progress, failed, succeeded).",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class MetadataCreateRequestMetadata(BaseModel):
-    """Nested model for MetadataCreateRequestMetadata"""
+class MediaUploadResponseDataVideo(BaseModel):
+    """Model for MediaUploadResponseDataVideo"""
 
-    allow_download_status: Optional["AllowDownloadStatus"] = Field(default=None)
-    alt_text: Optional["AltText"] = Field(default=None)
-    audience_policy: Optional["AudiencePolicy"] = Field(default=None)
-    content_expiration: Optional["ContentExpiration"] = Field(default=None)
-    domain_restrictions: Optional["DomainRestrictions"] = Field(default=None)
-    found_media_origin: Optional["FoundMediaOrigin"] = Field(default=None)
-    geo_restrictions: Optional["GeoRestrictions"] = Field(default=None)
-    management_info: Optional["ManagementInfo"] = Field(default=None)
-    preview_image: Optional["PreviewImage"] = Field(default=None)
-    sensitive_media_warning: Optional["SensitiveMediaWarning"] = Field(default=None)
-    shared_info: Optional["SharedInfo"] = Field(default=None)
-    sticker_info: Optional["StickerInfo"] = Field(default=None)
-    upload_source: Optional["UploadSource"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MetadataCreateRequest(BaseModel):
-    """Model for MetadataCreateRequest"""
-
-    id: "MediaId" = Field(description="The unique identifier of this Media.")
-    metadata: Optional["MetadataCreateRequestMetadata"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MetadataCreateResponseDataAssociatedMetadata(BaseModel):
-    """Nested model for MetadataCreateResponseDataAssociatedMetadata"""
-
-    allow_download_status: Optional["AllowDownloadStatus"] = Field(default=None)
-    alt_text: Optional["AltText"] = Field(default=None)
-    audience_policy: Optional["AudiencePolicy"] = Field(default=None)
-    content_expiration: Optional["ContentExpiration"] = Field(default=None)
-    domain_restrictions: Optional["DomainRestrictions"] = Field(default=None)
-    found_media_origin: Optional["FoundMediaOrigin"] = Field(default=None)
-    geo_restrictions: Optional["GeoRestrictions"] = Field(default=None)
-    management_info: Optional["ManagementInfo"] = Field(default=None)
-    preview_image: Optional["PreviewImage"] = Field(default=None)
-    sensitive_media_warning: Optional["SensitiveMediaWarning"] = Field(default=None)
-    shared_info: Optional["SharedInfo"] = Field(default=None)
-    sticker_info: Optional["StickerInfo"] = Field(default=None)
-    upload_source: Optional["UploadSource"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MetadataCreateResponseData(BaseModel):
-    """Nested model for MetadataCreateResponseData"""
-
-    associated_metadata: Optional["MetadataCreateResponseDataAssociatedMetadata"] = (
-        Field(default=None)
+    video_type: Optional[str] = Field(
+        default=None, description="MIME type of the processed video."
     )
-    id: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MetadataCreateResponse(BaseModel):
-    """Model for MetadataCreateResponse"""
-
-    data: Optional["MetadataCreateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Metrics(BaseModel):
-    """Model for Metrics"""
-
-    app_install_attempts: Optional[int] = Field(
-        default=None, description="Tracks number of App Install Attempts"
-    )
-    app_opens: Optional[int] = Field(
-        default=None, description="Tracks number of App opens"
-    )
-    detail_expands: Optional[int] = Field(
-        default=None, description="Tracks number of Detail expands"
-    )
-    email_tweet: Optional[int] = Field(
-        default=None, description="Tracks number of Email Tweet actions"
-    )
-    engagements: Optional[int] = Field(
-        default=None, description="Tracks total Engagements"
-    )
-    follows: Optional[int] = Field(default=None, description="Tracks number of Follows")
-    hashtag_clicks: Optional[int] = Field(
-        default=None, description="Tracks number of Hashtag clicks"
-    )
-    impressions: Optional[int] = Field(
-        default=None, description="Tracks number of Impressions"
-    )
-    likes: Optional[int] = Field(default=None, description="Tracks number of Likes")
-    link_clicks: Optional[int] = Field(
-        default=None, description="Tracks number of Link clicks"
-    )
-    media_engagements: Optional[int] = Field(
-        default=None, description="Tracks number of Media engagements"
-    )
-    media_views: Optional[int] = Field(
-        default=None, description="Tracks number of Media views"
-    )
-    permalink_clicks: Optional[int] = Field(
-        default=None, description="Tracks number of Permalink clicks"
-    )
-    profile_visits: Optional[int] = Field(
-        default=None, description="Tracks number of Profile visits"
-    )
-    quote_tweets: Optional[int] = Field(
-        default=None, description="Tracks number of Quote Tweets"
-    )
-    replies: Optional[int] = Field(default=None, description="Tracks number of Replies")
-    retweets: Optional[int] = Field(
-        default=None, description="Tracks number of Retweets"
-    )
-    url_clicks: Optional[int] = Field(
-        default=None, description="Tracks number of URL clicks"
-    )
-    user_profile_clicks: Optional[int] = Field(
-        default=None, description="Tracks number of User Profile clicks"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MuteUserMutationResponseData(BaseModel):
-    """Nested model for MuteUserMutationResponseData"""
-
-    muting: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MuteUserMutationResponse(BaseModel):
-    """Model for MuteUserMutationResponse"""
-
-    data: Optional["MuteUserMutationResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -4241,78 +5069,43 @@ class MuteUserMutationResponse(BaseModel):
 class MuteUserRequest(BaseModel):
     """Model for MuteUserRequest"""
 
-    target_user_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    target_user_id: str
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class NewsContextsSports(BaseModel):
-    """Nested model for NewsContextsSports"""
+class MuteUserResponse(BaseModel):
+    """Model for MuteUserResponse"""
 
-    teams: Optional[List[str]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NewsContextsFinance(BaseModel):
-    """Nested model for NewsContextsFinance"""
-
-    tickers: Optional[List[str]] = Field(default=None)
+    data: Optional["MuteUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class NewsContextsEntities(BaseModel):
-    """Nested model for NewsContextsEntities"""
+class MuteUserResponseData(BaseModel):
+    """Model for MuteUserResponseData"""
 
-    events: Optional[List[str]] = Field(default=None)
-    organizations: Optional[List[str]] = Field(default=None)
-    people: Optional[List[str]] = Field(default=None)
-    places: Optional[List[str]] = Field(default=None)
-    products: Optional[List[str]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NewsContexts(BaseModel):
-    """Nested model for NewsContexts"""
-
-    entities: Optional["NewsContextsEntities"] = Field(default=None)
-    finance: Optional["NewsContextsFinance"] = Field(default=None)
-    sports: Optional["NewsContextsSports"] = Field(default=None)
-    topics: Optional[List[str]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NewsClusterPostsResultsItem(BaseModel):
-    """Nested model for NewsClusterPostsResultsItem"""
-
-    post_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+    muting: bool = Field(
+        description="Whether the source User is muting the target User."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class News(BaseModel):
-    """An AI generated news story."""
+    """Model for News"""
 
-    rest_id: "NewsId" = Field(description="Unique identifier of news story.")
-    category: Optional[str] = Field(default=None, description="The news category.")
-    cluster_posts_results: Optional[List["NewsClusterPostsResultsItem"]] = Field(
-        default=None
-    )
-    contexts: Optional["NewsContexts"] = Field(default=None)
+    category: Optional[str] = Field(default=None)
+    cluster_posts_results: Optional["NewsClusterPostsResults"] = Field(default=None)
+    contexts: Optional[Dict[str, Any]] = Field(default=None)
     disclaimer: Optional[str] = Field(default=None)
-    hook: Optional[str] = Field(default=None, description="The news hook.")
-    keywords: Optional[List[str]] = Field(default=None)
-    last_updated_at_ms: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None, description="The headline.")
-    summary: Optional[str] = Field(default=None, description="The news summary.")
+    hook: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    keywords: Optional[Dict[str, Any]] = Field(default=None)
+    name: Optional[str] = Field(default=None)
+    summary: Optional[str] = Field(default=None)
+    updated_at: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -4328,153 +5121,340 @@ class NewsActivityResponsePayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Note(BaseModel):
-    """A X Community Note is a note on a Post."""
+class NotAuthorizedForFieldProblem(BaseModel):
+    """Model for NotAuthorizedForFieldProblem"""
 
-    id: "NoteId" = Field(description="The unique identifier of this Community Note.")
-    post_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    detail: str
+    field: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/not-authorized-for-field"]
+    parameter: Optional[str] = Field(default=None)
+    resource_id: Optional[str] = Field(default=None)
+    resource_type: Optional[str] = Field(default=None)
+    section: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+    value: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NotAuthorizedForResourceProblem(BaseModel):
+    """Model for NotAuthorizedForResourceProblem"""
+
+    detail: str
+    resource_type: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/not-authorized-for-resource"]
+    parameter: Optional[str] = Field(default=None)
+    resource_id: Optional[str] = Field(default=None)
+    section: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+    value: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Note(BaseModel):
+    """Model for Note"""
+
+    id: Optional[str] = Field(default=None)
     info: Optional["NoteInfo"] = Field(
-        default=None, description="A X Community Note is a note on a Post."
+        default=None,
+        description="Details about the Community Note's content, classification and source.",
     )
     scoring_status: Optional["NoteScoringStatus"] = Field(
-        default=None, description="The scoring status of a Community Note."
+        default=None, description="Per-model scoring breakdown for the Community Note."
     )
-    status: Optional["NoteRatingStatus"] = Field(
-        default=None, description="Community Note rating status"
-    )
+    status: Optional[str] = Field(default=None)
     test_result: Optional["NoteTestResult"] = Field(
-        default=None, description="The evaluation result of a community note."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NoteFactorBucketCountsNotHelpfulTagCounts(BaseModel):
-    """Nested model for NoteFactorBucketCountsNotHelpfulTagCounts"""
-
-    tag_count: Optional[int] = Field(default=None, description="The count of the tag.")
-    tag_name: Optional[str] = Field(default=None, description="The name of the tag.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NoteFactorBucketCountsHelpfulTagCounts(BaseModel):
-    """Nested model for NoteFactorBucketCountsHelpfulTagCounts"""
-
-    tag_count: Optional[int] = Field(default=None, description="The count of the tag.")
-    tag_name: Optional[str] = Field(default=None, description="The name of the tag.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NoteFactorBucketCounts(BaseModel):
-    """Rating counts for a rater factor bucket."""
-
-    helpful_count: Optional[int] = Field(
-        default=None, description="The count of helpful ratings."
-    )
-    helpful_tag_counts: Optional["NoteFactorBucketCountsHelpfulTagCounts"] = Field(
-        default=None, description="Helpful tag counts."
-    )
-    not_helpful_count: Optional[int] = Field(
-        default=None, description="The count of not helpful ratings."
-    )
-    not_helpful_tag_counts: Optional["NoteFactorBucketCountsNotHelpfulTagCounts"] = (
-        Field(default=None, description="Not helpful tag counts.")
-    )
-    somewhat_helpful_count: Optional[int] = Field(
-        default=None, description="The count of somewhat helpful ratings."
+        default=None,
+        description="AI evaluation results for the Community Note (returned in test mode).",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class NoteInfo(BaseModel):
-    """A X Community Note is a note on a Post."""
+    """Details about the Community Note's content, classification and source."""
 
-    classification: "NoteClassification" = Field(
-        description="Community Note classification type."
+    classification: Optional[Optional[str]] = Field(
+        default=None, description="How the noted Post was classified (snake_case)."
     )
-    misleading_tags: List["MisleadingTags"]
-    text: str = Field(description="The text summary in the Community Note.")
-    trustworthy_sources: bool = Field(
-        description="Whether the note provided trustworthy links."
+    misleading_tags: Optional[Optional[List[str]]] = Field(
+        default=None,
+        description="Reasons the noted Post may be misleading (snake_case).",
     )
-    is_media_note: Optional[bool] = Field(
-        default=None, description="Whether the note is a media note."
+    post_id: Optional[Optional[str]] = Field(
+        default=None, description="Unique identifier of the Post this note is about."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class NoteRatingCountsPerModel(BaseModel):
-    """The rating counts of a Community Note per model."""
-
-    negative_factor_bucket_counts: Optional["NoteFactorBucketCounts"] = Field(
-        default=None, description="Rating counts for a rater factor bucket."
+    rating_status: Optional[Optional[str]] = Field(
+        default=None, description="Current rating status of the note."
     )
-    neutral_factor_bucket_counts: Optional["NoteFactorBucketCounts"] = Field(
-        default=None, description="Rating counts for a rater factor bucket."
+    text: Optional[Optional[str]] = Field(
+        default=None, description="The text of the Community Note."
     )
-    positive_factor_bucket_counts: Optional["NoteFactorBucketCounts"] = Field(
-        default=None, description="Rating counts for a rater factor bucket."
+    trustworthy_sources: Optional[Optional[bool]] = Field(
+        default=None, description="Whether the note cites trustworthy sources."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class NoteScoringStatusRatingCountsPerModel(BaseModel):
-    """Nested model for NoteScoringStatusRatingCountsPerModel"""
+class NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCountsNotHelpfulTagCountsItem(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCountsNotHelpfulTagCountsItem"""
 
-    model_name: Optional[str] = Field(
-        default=None, description="The name of the model."
+    tag_count: Optional[Optional[int]] = Field(default=None)
+    tag_name: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCountsHelpfulTagCountsItem(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCountsHelpfulTagCountsItem"""
+
+    tag_count: Optional[Optional[int]] = Field(default=None)
+    tag_name: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCountsNotHelpfulTagCountsItem(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCountsNotHelpfulTagCountsItem"""
+
+    tag_count: Optional[Optional[int]] = Field(default=None)
+    tag_name: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCountsHelpfulTagCountsItem(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCountsHelpfulTagCountsItem"""
+
+    tag_count: Optional[Optional[int]] = Field(default=None)
+    tag_name: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCountsNotHelpfulTagCountsItem(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCountsNotHelpfulTagCountsItem"""
+
+    tag_count: Optional[Optional[int]] = Field(default=None)
+    tag_name: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCountsHelpfulTagCountsItem(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCountsHelpfulTagCountsItem"""
+
+    tag_count: Optional[Optional[int]] = Field(default=None)
+    tag_name: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCounts(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCounts"""
+
+    helpful_count: Optional[Optional[int]] = Field(default=None)
+    helpful_tag_counts: Optional[
+        Optional[
+            List[
+                "NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCountsHelpfulTagCountsItem"
+            ]
+        ]
+    ] = Field(default=None)
+    not_helpful_count: Optional[Optional[int]] = Field(default=None)
+    not_helpful_tag_counts: Optional[
+        Optional[
+            List[
+                "NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCountsNotHelpfulTagCountsItem"
+            ]
+        ]
+    ] = Field(default=None)
+    somewhat_helpful_count: Optional[Optional[int]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCounts(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCounts"""
+
+    helpful_count: Optional[Optional[int]] = Field(default=None)
+    helpful_tag_counts: Optional[
+        Optional[
+            List[
+                "NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCountsHelpfulTagCountsItem"
+            ]
+        ]
+    ] = Field(default=None)
+    not_helpful_count: Optional[Optional[int]] = Field(default=None)
+    not_helpful_tag_counts: Optional[
+        Optional[
+            List[
+                "NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCountsNotHelpfulTagCountsItem"
+            ]
+        ]
+    ] = Field(default=None)
+    somewhat_helpful_count: Optional[Optional[int]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCounts(
+    BaseModel
+):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCounts"""
+
+    helpful_count: Optional[Optional[int]] = Field(default=None)
+    helpful_tag_counts: Optional[
+        Optional[
+            List[
+                "NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCountsHelpfulTagCountsItem"
+            ]
+        ]
+    ] = Field(default=None)
+    not_helpful_count: Optional[Optional[int]] = Field(default=None)
+    not_helpful_tag_counts: Optional[
+        Optional[
+            List[
+                "NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCountsNotHelpfulTagCountsItem"
+            ]
+        ]
+    ] = Field(default=None)
+    somewhat_helpful_count: Optional[Optional[int]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItemValue(BaseModel):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItemValue"""
+
+    negative_factor_bucket_counts: Optional[
+        Optional[
+            "NoteScoringStatusRatingCountsPerModelItemValueNegativeFactorBucketCounts"
+        ]
+    ] = Field(
+        default=None, description="Helpfulness counts for one rating factor bucket."
     )
-    value: Optional["NoteRatingCountsPerModel"] = Field(
-        default=None, description="The rating counts of a Community Note per model."
+    neutral_factor_bucket_counts: Optional[
+        Optional[
+            "NoteScoringStatusRatingCountsPerModelItemValueNeutralFactorBucketCounts"
+        ]
+    ] = Field(
+        default=None, description="Helpfulness counts for one rating factor bucket."
+    )
+    positive_factor_bucket_counts: Optional[
+        Optional[
+            "NoteScoringStatusRatingCountsPerModelItemValuePositiveFactorBucketCounts"
+        ]
+    ] = Field(
+        default=None, description="Helpfulness counts for one rating factor bucket."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteScoringStatusRatingCountsPerModelItem(BaseModel):
+    """Nested model for NoteScoringStatusRatingCountsPerModelItem"""
+
+    model_name: Optional[Optional[str]] = Field(
+        default=None, description="Name of the scoring model."
+    )
+    value: Optional[Optional["NoteScoringStatusRatingCountsPerModelItemValue"]] = Field(
+        default=None, description="Per-factor bucket counts for a scoring model."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class NoteScoringStatus(BaseModel):
-    """The scoring status of a Community Note."""
+    """Per-model scoring breakdown for the Community Note."""
 
-    has_access: Optional[bool] = Field(
+    has_access: Optional[Optional[bool]] = Field(
         default=None,
-        description="Whether the user has access to the scoring status of the Community Note.",
+        description="Whether the caller has access to the scoring details.",
     )
-    rating_counts_per_model: Optional["NoteScoringStatusRatingCountsPerModel"] = Field(
-        default=None, description="Rating count stats per model."
+    rating_counts_per_model: Optional[
+        Optional[List["NoteScoringStatusRatingCountsPerModelItem"]]
+    ] = Field(default=None, description="Rating counts broken down per scoring model.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class NoteTestResultEvaluationOutcomeItem(BaseModel):
+    """Nested model for NoteTestResultEvaluationOutcomeItem"""
+
+    evaluator_score_bucket: str = Field(
+        description="The score bucket the evaluator assigned."
+    )
+    evaluator_type: str = Field(
+        description="The type of evaluator that produced this outcome."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class NoteTestResult(BaseModel):
-    """The evaluation result of a community note."""
+    """AI evaluation results for the Community Note (returned in test mode)."""
 
-    evaluator_score_bucket: Optional[str] = Field(
-        default=None, description="Score bucket from the evaluator result."
-    )
-    evaluator_type: Optional[str] = Field(
-        default=None, description="The type of the evaluator."
-    )
+    evaluation_outcome: Optional[
+        Optional[List["NoteTestResultEvaluationOutcomeItem"]]
+    ] = Field(default=None, description="Per-evaluator outcomes for the note.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class PersonalizedTrend(BaseModel):
-    """A trend."""
+    """Model for PersonalizedTrend"""
 
-    category: Optional[str] = Field(default=None, description="Category of this trend.")
-    post_count: Optional[int] = Field(
-        default=None, description="Number of posts pertaining to this trend."
-    )
-    trend_name: Optional[str] = Field(default=None, description="Name of the trend.")
-    trending_since: Optional[str] = Field(
-        default=None, description="Time since this is trending."
+    category: Optional[str] = Field(default=None)
+    post_count: Optional[str] = Field(default=None)
+    trend_name: Optional[str] = Field(default=None)
+    trending_since: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PinListRequest(BaseModel):
+    """Model for PinListRequest"""
+
+    list_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PinListResponse(BaseModel):
+    """Model for PinListResponse"""
+
+    data: Optional["PinListResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PinListResponseData(BaseModel):
+    """Model for PinListResponseData"""
+
+    pinned: bool = Field(
+        description="Indicates whether the List is pinned by the authenticated user."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -4483,203 +5463,218 @@ class PersonalizedTrend(BaseModel):
 class Place(BaseModel):
     """Model for Place"""
 
-    full_name: str = Field(description="The full name of this place.")
-    id: "PlaceId" = Field(description="The identifier for this place.")
-    contained_within: Optional[List["PlaceId"]] = Field(default=None)
-    country: Optional[str] = Field(
+    contained_within: Optional["PlaceContainedWithin"] = Field(
         default=None,
-        description="The full name of the county in which this place exists.",
+        description="A list of unique identifiers of the Places that contain this place.",
     )
-    country_code: Optional["CountryCode"] = Field(
-        default=None, description="A two-letter ISO 3166-1 alpha-2 country code."
-    )
-    geo: Optional["Geo"] = Field(default=None)
-    name: Optional[str] = Field(
-        default=None, description="The human readable name of this place."
-    )
-    place_type: Optional["PlaceType"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidAccount(BaseModel):
-    """Descriptor for a Plaid account."""
-
-    accountCategory: str = Field(
-        description="The category of the account (e.g., personal, business)."
-    )
-    accountId: str = Field(description="The Plaid account ID.")
-    accountNumberDisplay: str = Field(
-        description="The last 2-4 digits of the account number."
-    )
-    accountType: str = Field(
-        description="The type of the account (e.g., checking, savings)."
-    )
-    currency: "PlaidCurrency" = Field(description="Currency information.")
-    productName: str = Field(
-        description="The name of the product associated with the account."
-    )
-    status: str = Field(description="The status of the account.")
-    availableBalance: Optional[float] = Field(
-        default=None, description="The available balance of the account."
-    )
-    currentBalance: Optional[float] = Field(
-        default=None, description="The current balance of the account."
-    )
-    nickname: Optional[str] = Field(
-        default=None, description="The nickname of the account."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidAccountContact(BaseModel):
-    """Contact information associated with a Plaid account."""
-
-    addresses: List["PlaidAddress"] = Field(
-        description="List of addresses associated with the account holder."
-    )
-    emails: List[str] = Field(
-        description="List of email addresses associated with the account holder."
-    )
-    name: "PlaidName" = Field(description="Name information for the account holder.")
-    telephones: List["PlaidTelephone"] = Field(
-        description="List of telephone numbers associated with the account holder."
-    )
-    relationship: Optional[str] = Field(
-        default=None, description="Relationship of the contact to the account."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidAccountPaymentNetwork(BaseModel):
-    """Payment network details associated with the account."""
-
-    bankId: str = Field(description="The bank ID associated with the account.")
-    identifier: str = Field(description="The payment network identifier.")
-    transferIn: bool = Field(
-        description="Indicates if transfers into the account are supported."
-    )
-    transferOut: bool = Field(
-        description="Indicates if transfers out of the account are supported."
-    )
-    type: str = Field(description="The type of payment network (e.g., ACH, SEPA).")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidAccountTransaction(BaseModel):
-    """Descriptor for a Plaid account."""
-
-    accountCategory: str = Field(
-        description="The category of the account (e.g., personal, business)."
-    )
-    amount: float = Field(description="The amount transacted.")
-    debitCreditMemo: str = Field(description="Memo for transaction (e.g. CREDIT)")
-    description: str = Field(description="The transaction description")
-    status: str = Field(description="The status of the transaction.")
-    transactionId: str = Field(description="The identifier for the transaction.")
-    transactionTimestamp: str = Field(
-        description="The timestamp when the transaction occurred."
-    )
-    postedTimestamp: Optional[str] = Field(
-        default=None, description="The timestamp when the transaction was posted."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidAddress(BaseModel):
-    """Address information for the account holder."""
-
-    city: str = Field(description="The city of the address.")
-    country: str = Field(
-        description="The country of the address (ISO 3166-1 alpha-2 code)."
-    )
-    line1: str = Field(description="The first line of the address.")
-    line2: Optional[str] = Field(
-        default=None, description="The second line of the address."
-    )
-    postalCode: Optional[str] = Field(
-        default=None, description="The postal code of the address."
-    )
-    region: Optional[str] = Field(
-        default=None, description="The region or state of the address."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidCurrency(BaseModel):
-    """Currency information."""
-
-    currencyCode: str = Field(description="The ISO 4217 currency code.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidCustomer(BaseModel):
-    """A user id for the plaid customer"""
-
-    customerId: Optional["UserId"] = Field(
+    country: Optional[str] = Field(default=None)
+    country_code: Optional[str] = Field(default=None)
+    full_name: Optional[str] = Field(default=None)
+    geo: Optional["PlaceGeo"] = Field(
         default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="The geographic location of this place, expressed as a GeoJSON Feature.",
     )
+    id: Optional[str] = Field(default=None)
+    name: Optional[str] = Field(default=None)
+    place_type: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class PlaidName(BaseModel):
-    """Name information for the account holder."""
+class PlaceGeo(BaseModel):
+    """The geographic location of this place, expressed as a GeoJSON Feature."""
 
-    first: str = Field(description="The first name of the account holder.")
-    last: str = Field(description="The last name of the account holder.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class PlaidTelephone(BaseModel):
-    """Telephone information for the account holder."""
-
-    country: str = Field(
-        description="The country code for the phone number (e.g., '+1')."
+    bbox: List[float] = Field(
+        description="The bounding box as [southwest_longitude, southwest_latitude, northeast_longitude, northeast_latitude]."
     )
-    number: str = Field(description="The phone number.")
-    type: str = Field(description="The type of phone number (e.g., 'mobile').")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Point(BaseModel):
-    """A [GeoJson Point](https://tools.ietf.org/html/rfc7946#section-3.1.2) geometry object."""
-
-    coordinates: "Position" = Field(
-        description="A [GeoJson Position](https://tools.ietf.org/html/rfc7946#section-3.1.1) in the format `[longitude,latitude]`."
+    properties: Dict[str, Any] = Field(
+        description="Additional GeoJSON feature properties."
     )
-    type: Literal["Point"]
+    type: Literal["Feature"] = Field(description="The GeoJSON feature type.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class Poll(BaseModel):
-    """Represent a Poll attached to a Tweet."""
+    """Model for Poll"""
 
-    id: "PollId" = Field(description="Unique identifier of this poll.")
-    options: List["PollOption"]
     duration_minutes: Optional[int] = Field(default=None)
     end_datetime: Optional[str] = Field(default=None)
-    voting_status: Optional[Literal["open", "closed"]] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    options: Optional["PollOptions"] = Field(
+        default=None,
+        description="The list of options (choices) available in this poll.",
+    )
+    voting_status: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class PollOption(BaseModel):
-    """Describes a choice in a Poll object."""
+class Post(BaseModel):
+    """Model for Post"""
 
-    label: "PollOptionLabel" = Field(description="The text of a poll choice.")
-    position: int = Field(description="Position of this choice in the poll.")
-    votes: int = Field(description="Number of users who voted for this choice.")
+    article: Optional[Dict[str, Any]] = Field(default=None)
+    article_title: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Metadata about the long-form Article attached to this Post, if any.",
+    )
+    attachments: Optional["PostAttachments"] = Field(
+        default=None,
+        description="Specifies the type of attachments (if any) present in this Post.",
+    )
+    author_id: Optional[str] = Field(
+        default=None, description="Unique identifier of the author of this Post."
+    )
+    card_uri: Optional[str] = Field(default=None)
+    community_id: Optional[str] = Field(
+        default=None,
+        description="The unique identifier of the Community this Post belongs to, if any.",
+    )
+    context_annotations: Optional["PostContextAnnotations"] = Field(
+        default=None,
+        description="Annotations inferred about the Post (domain and entity context).",
+    )
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="The ID of the conversation this Post belongs to (matches the root Post's ID).",
+    )
+    created_at: Optional[str] = Field(
+        default=None, description="Creation time of the Post."
+    )
+    display_text_range: Optional["PostDisplayTextRange"] = Field(
+        default=None,
+        description="The inclusive start and exclusive end indices of the displayable content of the Post.",
+    )
+    edit_controls: Optional["PostEditControls"] = Field(
+        default=None,
+        description="Indicates how much longer (if at all) this Post can be edited.",
+    )
+    edit_history_post_ids: Optional[List[str]] = Field(
+        default=None,
+        description="A list of Post IDs in this Post's edit history chain.",
+    )
+    entities: Optional["PostEntities"] = Field(
+        default=None,
+        description="A list of metadata entities (hashtags, mentions, URLs) found in the Post text.",
+    )
+    geo: Optional["PostGeo"] = Field(
+        default=None,
+        description="The location tagged on the Post, if the user provided one.",
+    )
+    id: Optional[str] = Field(
+        default=None, description="Unique identifier of this Post."
+    )
+    in_reply_to_user_id: Optional[str] = Field(
+        default=None,
+        description="Unique identifier of the User this Post is replying to.",
+    )
+    lang: Optional[str] = Field(
+        default=None,
+        description="Language of the Post, if detected by X. Returned as a BCP47 language tag.",
+    )
+    matched_media_notes: Optional["PostMatchedMediaNotes"] = Field(
+        default=None, description="Community-Notes media matches for this Post."
+    )
+    media_metadata: Optional["PostMediaMetadata"] = Field(
+        default=None, description="Metadata for media attached to this Post."
+    )
+    non_public_metrics: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Nonpublic engagement metrics for the Post at the time of the request.",
+    )
+    note_post: Optional["PostNotePost"] = Field(
+        default=None,
+        description="The full content of the Post, including text beyond 280 characters.",
+    )
+    note_request_suggestions: Optional["PostNoteRequestSuggestions"] = Field(
+        default=None, description="Community-Notes request suggestions for this Post."
+    )
+    organic_metrics: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Organic nonpublic engagement metrics for the Post at the time of the request.",
+    )
+    paid_partnership: Optional[bool] = Field(
+        default=None,
+        description="Indicates if this Post is a paid partnership, i.e. it has been disclosed by the author as containing paid promotion.",
+    )
+    possibly_sensitive: Optional[bool] = Field(
+        default=None,
+        description="Indicates if this Post contains URLs marked as sensitive, for example content suitable for mature audiences.",
+    )
+    promoted_metrics: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Promoted nonpublic engagement metrics for the Post at the time of the request.",
+    )
+    public_metrics: Optional["PostPublicMetrics"] = Field(
+        default=None,
+        description="Engagement metrics for the Post at the time of the request.",
+    )
+    referenced_posts: Optional["PostReferencedPosts"] = Field(
+        default=None,
+        description="A list of Posts this Post refers to. If the Post is a Retweet, Quote or Reply, it includes the referenced Post's type and ID.",
+    )
+    reply_settings: Optional[str] = Field(
+        default=None, description="Shows who can reply to this Post."
+    )
+    scopes: Optional["PostScopes"] = Field(
+        default=None, description="The scopes for this Post."
+    )
+    source: Optional[str] = Field(
+        default=None,
+        description="The name of the app the user posted from. This is deprecated.",
+    )
+    suggested_source_links: Optional["PostSuggestedSourceLinks"] = Field(
+        default=None, description="URLs suggested as sources for this Post."
+    )
+    suggested_source_links_with_counts: Optional[
+        "PostSuggestedSourceLinksWithCounts"
+    ] = Field(
+        default=None,
+        description="Suggested source URLs for this Post, each with the number of times it was suggested.",
+    )
+    text: Optional[str] = Field(default=None, description="The content of the Post.")
+    username: Optional[str] = Field(default=None)
+    withheld: Optional["PostWithheld"] = Field(
+        default=None, description="Withholding details for withheld content."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostAttachments(BaseModel):
+    """Specifies the type of attachments (if any) present in this Post."""
+
+    media_keys: Optional[Optional[List[str]]] = Field(
+        default=None, description="Media keys of media attached to this Post."
+    )
+    media_source_tweet_id: Optional[Optional[List[str]]] = Field(
+        default=None,
+        description="IDs of the source Posts the attached media originated from.",
+    )
+    poll_ids: Optional[Optional[List[str]]] = Field(
+        default=None, description="IDs of polls attached to this Post."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostComplianceSchemaTweet(BaseModel):
+    """Nested model for PostComplianceSchemaTweet"""
+
+    author_id: "UserId" = Field(description="Unique identifier of a User")
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostComplianceSchema(BaseModel):
+    """Model for PostComplianceSchema"""
+
+    event_at: str = Field(description="Event time.")
+    tweet: "PostComplianceSchemaTweet"
+    quote_tweet_id: Optional["PostId"] = Field(
+        default=None, description="Unique identifier of a Post"
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -4687,60 +5682,399 @@ class PollOption(BaseModel):
 class PostDeleteActivityResponsePayload(BaseModel):
     """The identity of a deleted Post."""
 
-    author_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+    author_id: "UserId" = Field(description="Unique identifier of a User")
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostDeleteComplianceSchema(BaseModel):
+    """Model for PostDeleteComplianceSchema"""
+
+    delete: "PostComplianceSchema"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostDropComplianceSchema(BaseModel):
+    """Model for PostDropComplianceSchema"""
+
+    drop: "PostComplianceSchema"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEditComplianceObjectSchemaTweet(BaseModel):
+    """Nested model for PostEditComplianceObjectSchemaTweet"""
+
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEditComplianceObjectSchema(BaseModel):
+    """Model for PostEditComplianceObjectSchema"""
+
+    edit_tweet_ids: List["PostId"]
+    event_at: str = Field(description="Event time.")
+    initial_tweet_id: "PostId" = Field(description="Unique identifier of a Post")
+    tweet: "PostEditComplianceObjectSchemaTweet"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEditComplianceSchema(BaseModel):
+    """Model for PostEditComplianceSchema"""
+
+    tweet_edit: "PostEditComplianceObjectSchema"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEditControls(BaseModel):
+    """Indicates how much longer (if at all) this Post can be edited."""
+
+    editable_until: Optional[Optional[str]] = Field(
+        default=None, description="The time until which this Post can be edited."
     )
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+    edits_remaining: Optional[Optional[int]] = Field(
+        default=None, description="Number of edits still allowed for this Post."
+    )
+    is_edit_eligible: Optional[Optional[bool]] = Field(
+        default=None,
+        description="Indicates whether this Post is eligible to be edited.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class PreviewImageMediaKey(BaseModel):
-    """Nested model for PreviewImageMediaKey"""
+class PostEntitiesUrlsItemImagesItem(BaseModel):
+    """Nested model for PostEntitiesUrlsItemImagesItem"""
 
-    media: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
+    height: Optional[Optional[int]] = Field(default=None)
+    url: Optional[Optional[str]] = Field(default=None)
+    width: Optional[Optional[int]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEntitiesUrlsItem(BaseModel):
+    """Nested model for PostEntitiesUrlsItem"""
+
+    end: int
+    start: int
+    description: Optional[Optional[str]] = Field(
+        default=None, description="Description of the linked page, when available."
     )
-    media_category: Optional[Literal["TweetImage"]] = Field(
-        default=None, description="The media category of media"
+    display_url: Optional[Optional[str]] = Field(
+        default=None, description="The URL as displayed in the Post text."
+    )
+    expanded_url: Optional[Optional[str]] = Field(
+        default=None, description="The fully resolved URL."
+    )
+    images: Optional[Optional[List["PostEntitiesUrlsItemImagesItem"]]] = Field(
+        default=None
+    )
+    media_key: Optional[Optional[str]] = Field(default=None)
+    status: Optional[Optional[int]] = Field(
+        default=None, description="HTTP status from resolving the URL."
+    )
+    title: Optional[Optional[str]] = Field(
+        default=None, description="Title of the linked page, when available."
+    )
+    unwound_url: Optional[Optional[str]] = Field(
+        default=None, description="The final destination after following redirects."
+    )
+    url: Optional[Optional[str]] = Field(
+        default=None, description="The t.co shortened URL."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class PreviewImage(BaseModel):
-    """Model for PreviewImage"""
+class PostEntitiesMentionsItem(BaseModel):
+    """Nested model for PostEntitiesMentionsItem"""
 
-    media_key: "PreviewImageMediaKey"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Problem(BaseModel):
-    """An HTTP Problem Details object, as defined in IETF RFC 7807 (https://tools.ietf.org/html/rfc7807)."""
-
-    title: str
-    type: str
-    detail: Optional[str] = Field(default=None)
-    status: Optional[int] = Field(default=None)
+    end: int
+    start: int
+    id: Optional[Optional[str]] = Field(default=None)
+    username: Optional[Optional[str]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ProcessingInfo(BaseModel):
-    """Model for ProcessingInfo"""
+class PostEntitiesHashtagsItem(BaseModel):
+    """Nested model for PostEntitiesHashtagsItem"""
 
-    check_after_secs: Optional[int] = Field(
-        default=None, description="Number of seconds to check again for status"
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEntitiesCashtagsItem(BaseModel):
+    """Nested model for PostEntitiesCashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostEntities(BaseModel):
+    """A list of metadata entities (hashtags, mentions, URLs) found in the Post text."""
+
+    cashtags: Optional[Optional[List["PostEntitiesCashtagsItem"]]] = Field(default=None)
+    hashtags: Optional[Optional[List["PostEntitiesHashtagsItem"]]] = Field(default=None)
+    mentions: Optional[Optional[List["PostEntitiesMentionsItem"]]] = Field(default=None)
+    urls: Optional[Optional[List["PostEntitiesUrlsItem"]]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostGeoCoordinates(BaseModel):
+    """Nested model for PostGeoCoordinates"""
+
+    coordinates: List[float] = Field(description="[longitude, latitude].")
+    type: Literal["Point"] = Field(description="The GeoJSON geometry type.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostGeo(BaseModel):
+    """The location tagged on the Post, if the user provided one."""
+
+    coordinates: Optional[Optional["PostGeoCoordinates"]] = Field(
+        default=None, description="A GeoJSON Point geometry."
     )
-    progress_percent: Optional[int] = Field(
-        default=None, description="Percent of upload progress"
+    place_id: Optional[Optional[str]] = Field(
+        default=None, description="The unique identifier of the tagged place."
     )
-    state: Optional[Literal["succeeded", "in_progress", "pending", "failed"]] = Field(
-        default=None, description="State of upload"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotePostEntitiesUrlsItem(BaseModel):
+    """Nested model for PostNotePostEntitiesUrlsItem"""
+
+    end: int
+    start: int
+    display_url: Optional[Optional[str]] = Field(default=None)
+    expanded_url: Optional[Optional[str]] = Field(default=None)
+    url: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotePostEntitiesMentionsItem(BaseModel):
+    """Nested model for PostNotePostEntitiesMentionsItem"""
+
+    end: int
+    start: int
+    id: Optional[Optional[str]] = Field(default=None)
+    username: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotePostEntitiesHashtagsItem(BaseModel):
+    """Nested model for PostNotePostEntitiesHashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotePostEntitiesCashtagsItem(BaseModel):
+    """Nested model for PostNotePostEntitiesCashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotePostEntities(BaseModel):
+    """Nested model for PostNotePostEntities"""
+
+    cashtags: Optional[Optional[List["PostNotePostEntitiesCashtagsItem"]]] = Field(
+        default=None
     )
+    hashtags: Optional[Optional[List["PostNotePostEntitiesHashtagsItem"]]] = Field(
+        default=None
+    )
+    mentions: Optional[Optional[List["PostNotePostEntitiesMentionsItem"]]] = Field(
+        default=None
+    )
+    urls: Optional[Optional[List["PostNotePostEntitiesUrlsItem"]]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotePost(BaseModel):
+    """The full content of the Post, including text beyond 280 characters."""
+
+    text: str = Field(description="The full note text of the Post.")
+    entities: Optional[Optional["PostNotePostEntities"]] = Field(
+        default=None,
+        description="Metadata entities (hashtags, cashtags, mentions, URLs) found in the note Post text.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNoticeTweet(BaseModel):
+    """Nested model for PostNoticeTweet"""
+
+    author_id: "UserId" = Field(description="Unique identifier of a User")
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNotice(BaseModel):
+    """Model for PostNotice"""
+
+    application: str = Field(
+        description="If the label is being applied or removed. Possible values are ‘apply’ or ‘remove’."
+    )
+    event_at: str = Field(description="Event time.")
+    event_type: str = Field(description="The type of label on the Tweet")
+    tweet: "PostNoticeTweet"
+    details: Optional[str] = Field(
+        default=None, description="Information shown on the Tweet label"
+    )
+    extended_details_url: Optional[str] = Field(
+        default=None, description="Link to more information about this kind of label"
+    )
+    label_title: Optional[str] = Field(
+        default=None, description="Title/header of the Tweet label"
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostNoticeSchema(BaseModel):
+    """Model for PostNoticeSchema"""
+
+    public_tweet_notice: "PostNotice"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostPublicMetrics(BaseModel):
+    """Engagement metrics for the Post at the time of the request."""
+
+    bookmark_count: int = Field(
+        description="Number of times this Post has been bookmarked."
+    )
+    impression_count: int = Field(
+        description="Number of times this Post has been viewed."
+    )
+    like_count: int = Field(description="Number of likes on this Post.")
+    quote_count: int = Field(description="Number of quote Posts of this Post.")
+    reply_count: int = Field(description="Number of replies to this Post.")
+    repost_count: int = Field(
+        description="Number of times this Post has been reposted."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostScopes(BaseModel):
+    """The scopes for this Post."""
+
+    followers: bool = Field(
+        description="Indicates whether visibility of this Post is limited to the author's followers."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostTakedownComplianceSchemaTweet(BaseModel):
+    """Nested model for PostTakedownComplianceSchemaTweet"""
+
+    author_id: "UserId" = Field(description="Unique identifier of a User")
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostTakedownComplianceSchema(BaseModel):
+    """Model for PostTakedownComplianceSchema"""
+
+    event_at: str = Field(description="Event time.")
+    tweet: "PostTakedownComplianceSchemaTweet"
+    withheld_in_countries: List["CountryCode"]
+    quote_tweet_id: Optional["PostId"] = Field(
+        default=None, description="Unique identifier of a Post"
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostUndropComplianceSchema(BaseModel):
+    """Model for PostUndropComplianceSchema"""
+
+    undrop: "PostComplianceSchema"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostUnviewableTweet(BaseModel):
+    """Nested model for PostUnviewableTweet"""
+
+    author_id: "UserId" = Field(description="Unique identifier of a User")
+    id: "PostId" = Field(description="Unique identifier of a Post")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostUnviewable(BaseModel):
+    """Model for PostUnviewable"""
+
+    application: str = Field(
+        description="If the label is being applied or removed. Possible values are ‘apply’ or ‘remove’."
+    )
+    event_at: str = Field(description="Event time.")
+    tweet: "PostUnviewableTweet"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostUnviewableSchema(BaseModel):
+    """Model for PostUnviewableSchema"""
+
+    public_tweet_unviewable: "PostUnviewable"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostWithheld(BaseModel):
+    """Withholding details for withheld content."""
+
+    copyright: bool = Field(
+        description="Indicates whether this content is withheld due to a copyright claim."
+    )
+    country_codes: List[str] = Field(
+        description="Uppercase ISO 3166-1 alpha-2 country codes where this content is withheld."
+    )
+    scope: Optional[Optional[Literal["post", "user"]]] = Field(
+        default=None, description="Whether the withholding applies to a Post or a User."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class PostWithheldComplianceSchema(BaseModel):
+    """Model for PostWithheldComplianceSchema"""
+
+    withheld: "PostTakedownComplianceSchema"
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -4755,271 +6089,440 @@ class ProfileUpdateActivityResponsePayload(BaseModel):
 
 
 class PublicKey(BaseModel):
-    """A user's public key with associated key recovery configuration."""
+    """Model for PublicKey"""
 
-    identity_public_key_signature: Optional[str] = Field(
-        default=None,
-        description="DER-encoded signature proving the signing key is bound to the identity key (base64 encoded).",
-    )
-    juicebox_config: Optional["ChatJuiceboxConfig"] = Field(
-        default=None,
-        description="Key recovery configuration for Juicebox-based key storage.",
-    )
-    public_key: Optional[str] = Field(
-        default=None, description="Identity public key (base64 encoded)."
-    )
-    public_key_version: Optional[str] = Field(
-        default=None, description="Public key version."
-    )
-    signing_public_key: Optional[str] = Field(
-        default=None, description="Signing public key (base64 encoded)."
+    identity_public_key_signature: Optional[str] = Field(default=None)
+    juicebox_config: Optional[Dict[str, Any]] = Field(default=None)
+    public_key: Optional[str] = Field(default=None)
+    public_key_version: Optional[str] = Field(default=None)
+    signing_public_key: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveListsMemberByUserIdResponse(BaseModel):
+    """Model for RemoveListsMemberByUserIdResponse"""
+
+    data: Optional["RemoveListsMemberByUserIdResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveListsMemberByUserIdResponseData(BaseModel):
+    """Model for RemoveListsMemberByUserIdResponseData"""
+
+    is_member: bool = Field(
+        description="Indicates whether the user is a member of the List."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ReplayJobCreateResponse(BaseModel):
-    """Confirmation that the replay job request was accepted."""
+class RepostPostRequest(BaseModel):
+    """Model for RepostPostRequest"""
 
-    created_at: str = Field(
-        description="The UTC timestamp indicating when the replay job was created."
-    )
-    job_id: str = Field(
-        description="The unique identifier for the initiated replay job."
-    )
+    tweet_id: str
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Rule(BaseModel):
-    """A user-provided stream filtering rule."""
+class RepostPostResponse(BaseModel):
+    """Model for RepostPostResponse"""
 
-    value: "RuleValue" = Field(description="The filterlang value of the rule.")
-    id: Optional["RuleId"] = Field(
-        default=None, description="Unique identifier of this rule."
-    )
-    tag: Optional["RuleTag"] = Field(
-        default=None, description="A tag meant for the labeling of user provided rules."
-    )
+    data: Optional["RepostPostResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class RuleNoId(BaseModel):
-    """A user-provided stream filtering rule."""
+class RepostPostResponseData(BaseModel):
+    """Model for RepostPostResponseData"""
 
-    value: "RuleValue" = Field(description="The filterlang value of the rule.")
-    tag: Optional["RuleTag"] = Field(
-        default=None, description="A tag meant for the labeling of user provided rules."
-    )
+    rest_id: str = Field(description="The ID of the reposted Post.")
+    retweeted: bool = Field(description="Indicates whether the user reposted the Post.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ResourceNotFoundProblem(BaseModel):
+    """Model for ResourceNotFoundProblem"""
+
+    detail: str
+    resource_type: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/resource-not-found"]
+    parameter: Optional[str] = Field(default=None)
+    resource_id: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+    value: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ResourceUnavailableProblem(BaseModel):
+    """Model for ResourceUnavailableProblem"""
+
+    detail: str
+    resource_type: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/resource-unavailable"]
+    resource_id: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class RulesCount(BaseModel):
-    """A count of user-provided stream filtering rules at the application and project levels."""
+    """Model for RulesCount"""
 
-    all_project_client_apps: Optional["AllProjectClientApps"] = Field(
+    all_project_client_apps: Optional["RulesCountAllProjectClientApps"] = Field(
+        default=None
+    )
+    cap_per_client_app: Optional[str] = Field(default=None)
+    cap_per_project: Optional[str] = Field(default=None)
+    client_app_rules_count: Optional["RulesCountClientAppRulesCount"] = Field(
         default=None,
-        description="Client App Rule Counts for all applications in the project",
+        description="A count of filtered-stream rules for a single client application.",
     )
-    cap_per_client_app: Optional[int] = Field(
-        default=None,
-        description="Cap of number of rules allowed per client application",
+    project_rules_count: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RulesCountClientAppRulesCount(BaseModel):
+    """A count of filtered-stream rules for a single client application."""
+
+    rule_count: int = Field(
+        description="Number of rules configured for the client application."
     )
-    cap_per_project: Optional[int] = Field(
-        default=None, description="Cap of number of rules allowed per project"
-    )
-    client_app_rules_count: Optional["AppRulesCount"] = Field(
-        default=None,
-        description="A count of user-provided stream filtering rules at the client application level.",
-    )
-    project_rules_count: Optional[int] = Field(
-        default=None, description="Number of rules for project"
+    client_app_id: Optional[Optional[str]] = Field(
+        default=None, description="Unique identifier of the client application."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class RulesLookupResponse(BaseModel):
-    """Model for RulesLookupResponse"""
+class SearchCommunitiesResponseMeta(BaseModel):
+    """Nested model for SearchCommunitiesResponseMeta"""
 
-    meta: "RulesResponseMetadata"
-    data: Optional[List["Rule"]] = Field(default=None)
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class RulesResponseMetadata(BaseModel):
-    """Model for RulesResponseMetadata"""
+class SearchCommunitiesResponse(BaseModel):
+    """Model for SearchCommunitiesResponse"""
 
-    sent: str
-    next_token: Optional["NextToken"] = Field(
-        default=None, description="The next token."
+    data: Optional[List["Community"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["SearchCommunitiesResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchCommunityNotesWrittenResponseMeta(BaseModel):
+    """Nested model for SearchCommunityNotesWrittenResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
     result_count: Optional[int] = Field(
-        default=None, description="Number of Rules in result set."
+        default=None, description="Number of items in the data array."
     )
-    summary: Optional["RulesRequestSummary"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SearchCount(BaseModel):
-    """Represent a Search Count Result."""
+class SearchCommunityNotesWrittenResponse(BaseModel):
+    """Model for SearchCommunityNotesWrittenResponse"""
 
-    end: "End" = Field(description="The end time of the bucket.")
-    start: "Start" = Field(description="The start time of the bucket.")
-    tweet_count: "TweetCount" = Field(description="The count for the bucket.")
+    data: Optional[List["Note"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["SearchCommunityNotesWrittenResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SensitiveMediaWarning(BaseModel):
-    """Model for SensitiveMediaWarning"""
+class SearchEligiblePostsResponseMeta(BaseModel):
+    """Nested model for SearchEligiblePostsResponseMeta"""
 
-    adult_content: Optional[bool] = Field(
-        default=None, description="Indicates if the content contains adult material"
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
     )
-    graphic_violence: Optional[bool] = Field(
-        default=None, description="Indicates if the content depicts graphic violence"
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
     )
-    other: Optional[bool] = Field(
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchEligiblePostsResponse(BaseModel):
+    """Model for SearchEligiblePostsResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["SearchEligiblePostsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchNewsResponseMeta(BaseModel):
+    """Nested model for SearchNewsResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchNewsResponse(BaseModel):
+    """Model for SearchNewsResponse"""
+
+    data: Optional[List["News"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["SearchNewsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchPostsAllResponseMeta(BaseModel):
+    """Nested model for SearchPostsAllResponseMeta"""
+
+    newest_id: Optional[str] = Field(
+        default=None, description="Most recent ID in the data array."
+    )
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    oldest_id: Optional[str] = Field(
+        default=None, description="Oldest ID in the data array."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchPostsAllResponse(BaseModel):
+    """Model for SearchPostsAllResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["SearchPostsAllResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchPostsRecentResponseMeta(BaseModel):
+    """Nested model for SearchPostsRecentResponseMeta"""
+
+    newest_id: Optional[str] = Field(
+        default=None, description="Most recent ID in the data array."
+    )
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    oldest_id: Optional[str] = Field(
+        default=None, description="Oldest ID in the data array."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchPostsRecentResponse(BaseModel):
+    """Model for SearchPostsRecentResponse"""
+
+    data: Optional[List["Post"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["SearchPostsRecentResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchSpacesResponseMeta(BaseModel):
+    """Nested model for SearchSpacesResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchSpacesResponse(BaseModel):
+    """Model for SearchSpacesResponse"""
+
+    data: Optional[List["Space"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["SearchSpacesResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchUsersResponseMeta(BaseModel):
+    """Nested model for SearchUsersResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SearchUsersResponse(BaseModel):
+    """Model for SearchUsersResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["SearchUsersResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendBroadcastChatRequest(BaseModel):
+    """Model for SendBroadcastChatRequest"""
+
+    text: str = Field(description="The chat message text.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendBroadcastChatResponse(BaseModel):
+    """Model for SendBroadcastChatResponse"""
+
+    data: Optional["SendBroadcastChatResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendBroadcastChatResponseData(BaseModel):
+    """Model for SendBroadcastChatResponseData"""
+
+    success: bool = Field(description="Whether the chat message was sent.")
+    timestamp: str = Field(
+        description="Server timestamp of the message, in nanoseconds."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatMessageRequest(BaseModel):
+    """Model for SendChatMessageRequest"""
+
+    encoded_message_create_event: str = Field(
+        description="Base64-encoded Thrift MessageCreateEvent containing encrypted message contents."
+    )
+    message_id: str = Field(description="Unique identifier for this message.")
+    conversation_token: Optional[str] = Field(
+        default=None, description="Optional conversation token."
+    )
+    encoded_message_event_signature: Optional[str] = Field(
         default=None,
-        description="Indicates if the content has other sensitive characteristics",
+        description="Base64-encoded Thrift MessageEventSignature for message verification.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SharedInfo(BaseModel):
-    """Model for SharedInfo"""
+class SendChatMessageResponse(BaseModel):
+    """Model for SendChatMessageResponse"""
 
-    shared: bool = Field(
-        description="Indicates if the media is shared in direct messages"
+    data: Optional["SendChatMessageResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatMessageResponseData(BaseModel):
+    """Model for SendChatMessageResponseData"""
+
+    encoded_message_event: str = Field(
+        description="Base64-encoded Thrift message event for the sent message."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SpaceTopicsItem(BaseModel):
-    """Nested model for SpaceTopicsItem"""
+class SendChatTypingIndicatorResponse(BaseModel):
+    """Model for SendChatTypingIndicatorResponse"""
 
-    id: str = Field(description="An ID suitable for use in the REST API.")
-    name: str = Field(description="The name of the given topic.")
-    description: Optional[str] = Field(
-        default=None, description="The description of the given topic."
-    )
+    data: Optional["SendChatTypingIndicatorResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatTypingIndicatorResponseData(BaseModel):
+    """Model for SendChatTypingIndicatorResponseData"""
+
+    success: bool = Field(description="Whether the typing indicator was sent.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class Space(BaseModel):
-    """"""
+    """Model for Space"""
 
-    id: "SpaceId" = Field(description="The unique identifier of this Space.")
-    state: Literal["live", "scheduled", "ended"] = Field(
-        description="The current state of the Space."
-    )
-    created_at: Optional[str] = Field(
-        default=None, description="Creation time of the Space."
-    )
-    creator_id: Optional["UserId"] = Field(
+    created_at: Optional[str] = Field(default=None)
+    creator_id: Optional[str] = Field(default=None)
+    ended_at: Optional[str] = Field(default=None)
+    host_ids: Optional["SpaceHostIds"] = Field(
         default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="A list of unique identifiers of the Users who host this Space.",
     )
-    ended_at: Optional[str] = Field(default=None, description="End time of the Space.")
-    host_ids: Optional[List["UserId"]] = Field(
-        default=None, description="The user ids for the hosts of the Space."
-    )
-    invited_user_ids: Optional[List["UserId"]] = Field(
+    id: Optional[str] = Field(default=None)
+    invited_user_ids: Optional["SpaceInvitedUserIds"] = Field(
         default=None,
-        description="An array of user ids for people who were invited to a Space.",
+        description="A list of unique identifiers of the Users invited to this Space.",
     )
-    is_ticketed: Optional[bool] = Field(
-        default=None, description="Denotes if the Space is a ticketed Space."
-    )
-    lang: Optional[str] = Field(default=None, description="The language of the Space.")
-    participant_count: Optional[int] = Field(
-        default=None, description="The number of participants in a Space."
-    )
-    scheduled_start: Optional[str] = Field(
+    is_ticketed: Optional[bool] = Field(default=None)
+    lang: Optional[str] = Field(default=None)
+    participant_count: Optional[int] = Field(default=None)
+    scheduled_start: Optional[str] = Field(default=None)
+    speaker_ids: Optional["SpaceSpeakerIds"] = Field(
         default=None,
-        description="A date time stamp for when a Space is scheduled to begin.",
+        description="A list of unique identifiers of the Users who are speakers in this Space.",
     )
-    speaker_ids: Optional[List["UserId"]] = Field(
+    started_at: Optional[str] = Field(default=None)
+    state: Optional[str] = Field(default=None)
+    subscriber_count: Optional[int] = Field(default=None)
+    title: Optional[str] = Field(default=None)
+    topic_ids: Optional["SpaceTopicIds"] = Field(
         default=None,
-        description="An array of user ids for people who were speakers in a Space.",
+        description="A list of unique identifiers of the Topics associated with this Space.",
     )
-    started_at: Optional[str] = Field(
-        default=None, description="When the Space was started as a date string."
-    )
-    subscriber_count: Optional[int] = Field(
-        default=None,
-        description="The number of people who have either purchased a ticket or set a reminder for this Space.",
-    )
-    title: Optional[str] = Field(default=None, description="The title of the Space.")
-    topics: Optional[List["SpaceTopicsItem"]] = Field(
-        default=None, description="The topics of a Space, as selected by its creator."
-    )
-    updated_at: Optional[str] = Field(
-        default=None, description="When the Space was last updated."
-    )
+    updated_at: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Sticker(BaseModel):
-    """Model for Sticker"""
+class StreamLikesFirehoseResponse(BaseModel):
+    """Model for StreamLikesFirehoseResponse"""
 
-    aspect_ratio: Optional[float] = Field(
-        default=None, description="width-to-height ratio of the media"
-    )
-    group_annotation_id: Optional[float] = Field(
-        default=None,
-        description="A unique identifier for the group of annotations associated with the media",
-    )
-    id: Optional[str] = Field(default=None, description="Unique identifier for sticker")
-    sticker_set_annotation_id: Optional[float] = Field(
-        default=None,
-        description="A unique identifier for the sticker set associated with the media",
-    )
-    transform_a: Optional[float] = Field(
-        default=None, description="Scale or rotate the media on the x-axis"
-    )
-    transform_b: Optional[float] = Field(
-        default=None, description="Skew the media on the x-axis"
-    )
-    transform_c: Optional[float] = Field(
-        default=None, description="Skew the media on the y-axis"
-    )
-    transform_d: Optional[float] = Field(
-        default=None, description="Scale or rotate the media on the y-axis"
-    )
-    transform_tx: Optional[float] = Field(
-        default=None, description="Scale or rotate the media on the x-axis"
-    )
-    transform_ty: Optional[float] = Field(
-        default=None, description="The vertical translation (shift) value for the media"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class StickerInfo(BaseModel):
-    """Model for StickerInfo"""
-
-    stickers: List["Sticker"] = Field(
-        description="Stickers list must not be empty and should not exceed 25"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class StreamingLikeResponseV2(BaseModel):
-    """Model for StreamingLikeResponseV2"""
-
-    data: Optional["LikeWithTweetAuthor"] = Field(
+    data: Optional["LikeWithPostAuthor"] = Field(
         default=None,
         description="A Like event, with the tweet author user and the tweet being liked",
     )
@@ -5029,1035 +6532,183 @@ class StreamingLikeResponseV2(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class StreamingTweetResponse(BaseModel):
-    """Model for StreamingTweetResponse"""
+class StreamLikesSample10Response(BaseModel):
+    """Model for StreamLikesSample10Response"""
 
-    data: Optional["Tweet"] = Field(default=None)
+    data: Optional["LikeWithPostAuthor"] = Field(
+        default=None,
+        description="A Like event, with the tweet author user and the tweet being liked",
+    )
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubscriptionsCountGetResponseData(BaseModel):
-    """Nested model for SubscriptionsCountGetResponseData"""
+class StreamPostsFirehoseEnResponse(BaseModel):
+    """Model for StreamPostsFirehoseEnResponse"""
 
-    account_name: str = Field(description="The account name")
-    provisioned_count: str = Field(
-        description="The limit for subscriptions for this app"
-    )
-    subscriptions_count_all: str = Field(
-        description="The number of active subscriptions across all webhooks"
-    )
-    subscriptions_count_direct_messages: str = Field(
-        description="The number of active direct message subscriptions"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubscriptionsCountGetResponse(BaseModel):
-    """Model for SubscriptionsCountGetResponse"""
-
-    data: Optional["SubscriptionsCountGetResponseData"] = Field(
-        default=None,
-        description="The count of active subscriptions across all webhooks",
-    )
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubscriptionsCreateResponseData(BaseModel):
-    """Nested model for SubscriptionsCreateResponseData"""
+class StreamPostsFirehoseJaResponse(BaseModel):
+    """Model for StreamPostsFirehoseJaResponse"""
 
-    subscribed: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubscriptionsCreateResponse(BaseModel):
-    """Model for SubscriptionsCreateResponse"""
-
-    data: Optional["SubscriptionsCreateResponseData"] = Field(default=None)
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubscriptionsDeleteResponseData(BaseModel):
-    """Nested model for SubscriptionsDeleteResponseData"""
+class StreamPostsFirehoseKoResponse(BaseModel):
+    """Model for StreamPostsFirehoseKoResponse"""
 
-    subscribed: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubscriptionsDeleteResponse(BaseModel):
-    """Model for SubscriptionsDeleteResponse"""
-
-    data: Optional["SubscriptionsDeleteResponseData"] = Field(default=None)
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubscriptionsGetResponseData(BaseModel):
-    """Nested model for SubscriptionsGetResponseData"""
+class StreamPostsFirehosePtResponse(BaseModel):
+    """Model for StreamPostsFirehosePtResponse"""
 
-    subscribed: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubscriptionsGetResponse(BaseModel):
-    """Model for SubscriptionsGetResponse"""
-
-    data: Optional["SubscriptionsGetResponseData"] = Field(default=None)
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubscriptionsListGetResponseDataSubscriptionsItem(BaseModel):
-    """Nested model for SubscriptionsListGetResponseDataSubscriptionsItem"""
+class StreamPostsFirehoseResponse(BaseModel):
+    """Model for StreamPostsFirehoseResponse"""
 
-    user_id: Optional[str] = Field(
-        default=None, description="The ID of the user the webhook is subscribed to"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubscriptionsListGetResponseData(BaseModel):
-    """Nested model for SubscriptionsListGetResponseData"""
-
-    application_id: str = Field(description="The application ID")
-    subscriptions: List["SubscriptionsListGetResponseDataSubscriptionsItem"] = Field(
-        description="List of active subscriptions for the webhook"
-    )
-    webhook_id: str = Field(description="The associated webhook ID")
-    webhook_url: str = Field(description="The url for the associated webhook")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubscriptionsListGetResponse(BaseModel):
-    """Model for SubscriptionsListGetResponse"""
-
-    data: Optional["SubscriptionsListGetResponseData"] = Field(
-        default=None,
-        description="The list of active subscriptions for a specified webhook",
-    )
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class Subtitles(BaseModel):
-    """Model for Subtitles"""
+class StreamPostsResponseMatchingRulesItem(BaseModel):
+    """Nested model for StreamPostsResponseMatchingRulesItem"""
 
-    display_name: Optional[str] = Field(
-        default=None, description="Language name in a human readable form"
-    )
-    id: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
-    )
-    language_code: Optional["SubtitleLanguageCode"] = Field(
-        default=None,
-        description='The language code should be a BCP47 code (e.g. \'EN", "SP")',
+    id: "RuleId" = Field(description="Unique identifier of this rule.")
+    tag: Optional["RuleTag"] = Field(
+        default=None, description="A tag meant for the labeling of user provided rules."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubtitlesCreateRequest(BaseModel):
-    """Model for SubtitlesCreateRequest"""
+class StreamPostsResponse(BaseModel):
+    """A Tweet or error that can be returned by the streaming Tweet API. The values returned with a successful streamed Tweet includes the user provided rules that the Tweet matched."""
 
-    id: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
-    )
-    media_category: Optional["MediaCategorySubtitles"] = Field(
-        default=None,
-        description="The media category of uploaded media to which subtitles should be added/deleted",
-    )
-    subtitles: Optional["Subtitles"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubtitlesCreateResponseData(BaseModel):
-    """Nested model for SubtitlesCreateResponseData"""
-
-    associated_subtitles: List["Subtitles"]
-    id: "MediaId" = Field(description="The unique identifier of this Media.")
-    media_category: "MediaCategorySubtitles" = Field(
-        description="The media category of uploaded media to which subtitles should be added/deleted"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubtitlesCreateResponse(BaseModel):
-    """Model for SubtitlesCreateResponse"""
-
-    data: Optional["SubtitlesCreateResponseData"] = Field(default=None)
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubtitlesDeleteRequest(BaseModel):
-    """Model for SubtitlesDeleteRequest"""
-
-    id: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
-    )
-    language_code: Optional["SubtitleLanguageCode"] = Field(
-        default=None,
-        description='The language code should be a BCP47 code (e.g. \'EN", "SP")',
-    )
-    media_category: Optional["MediaCategorySubtitles"] = Field(
-        default=None,
-        description="The media category of uploaded media to which subtitles should be added/deleted",
+    includes: Optional["Expansions"] = Field(default=None)
+    matching_rules: Optional[List["StreamPostsResponseMatchingRulesItem"]] = Field(
+        default=None, description="The list of rules which matched the Tweet"
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SubtitlesDeleteResponseData(BaseModel):
-    """Nested model for SubtitlesDeleteResponseData"""
+class StreamPostsSample10Response(BaseModel):
+    """Model for StreamPostsSample10Response"""
 
-    deleted: bool
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class SubtitlesDeleteResponse(BaseModel):
-    """Model for SubtitlesDeleteResponse"""
-
-    data: Optional["SubtitlesDeleteResponseData"] = Field(default=None)
+    data: Optional["Post"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TimestampedMetrics(BaseModel):
-    """Model for TimestampedMetrics"""
+class StreamPostsSampleResponse(BaseModel):
+    """Model for StreamPostsSampleResponse"""
 
-    metrics: Optional["Metrics"] = Field(default=None)
-    timestamp: Optional[str] = Field(default=None, description="ISO8601 Time")
+    data: Optional["Post"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class Topic(BaseModel):
-    """The topic of a Space, as selected by its creator."""
+    """Model for Topic"""
 
-    id: "TopicId" = Field(description="Unique identifier of this Topic.")
-    name: str = Field(description="The name of the given topic.")
-    description: Optional[str] = Field(
-        default=None, description="The description of the given topic."
-    )
+    description: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    name: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class Trend(BaseModel):
-    """A trend."""
+    """Model for Trend"""
 
-    trend_name: Optional[str] = Field(default=None, description="Name of the trend.")
-    tweet_count: Optional[int] = Field(
-        default=None, description="Number of Posts in this trend."
-    )
+    trend_name: Optional[str] = Field(default=None)
+    tweet_count: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetNoteTweetEntities(BaseModel):
-    """Nested model for TweetNoteTweetEntities"""
+class UnblockUsersDmsResponse(BaseModel):
+    """Model for UnblockUsersDmsResponse"""
 
-    cashtags: Optional[List["CashtagEntity"]] = Field(default=None)
-    hashtags: Optional[List["HashtagEntity"]] = Field(default=None)
-    mentions: Optional[List["MentionEntity"]] = Field(default=None)
-    urls: Optional[List["UrlEntity"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetSuggestedSourceLinksWithCounts(BaseModel):
-    """Nested model for TweetSuggestedSourceLinksWithCounts"""
-
-    count: Optional[int] = Field(
-        default=None,
-        description="Number of note requests that included the source link.",
-    )
-    url: Optional["UrlEntity"] = Field(
-        default=None,
-        description="Represent the portion of text recognized as a URL, and its start and end position within the text.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetScopes(BaseModel):
-    """Nested model for TweetScopes"""
-
-    followers: Optional[bool] = Field(
-        default=None,
-        description="Indicates if this Tweet is viewable by followers without the Tweet ID",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetReferencedTweetsItem(BaseModel):
-    """Nested model for TweetReferencedTweetsItem"""
-
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    type: Literal["retweeted", "quoted", "replied_to"]
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetPublicMetrics(BaseModel):
-    """Nested model for TweetPublicMetrics"""
-
-    bookmark_count: int = Field(
-        description="Number of times this Tweet has been bookmarked."
-    )
-    impression_count: int = Field(
-        description="Number of times this Tweet has been viewed."
-    )
-    like_count: int = Field(description="Number of times this Tweet has been liked.")
-    reply_count: int = Field(
-        description="Number of times this Tweet has been replied to."
-    )
-    retweet_count: int = Field(
-        description="Number of times this Tweet has been Retweeted."
-    )
-    quote_count: Optional[int] = Field(
-        default=None, description="Number of times this Tweet has been quoted."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetPromotedMetrics(BaseModel):
-    """Nested model for TweetPromotedMetrics"""
-
-    impression_count: Optional[int] = Field(
-        default=None, description="Number of times this Tweet has been viewed."
-    )
-    like_count: Optional[int] = Field(
-        default=None, description="Number of times this Tweet has been liked."
-    )
-    reply_count: Optional[int] = Field(
-        default=None, description="Number of times this Tweet has been replied to."
-    )
-    retweet_count: Optional[int] = Field(
-        default=None, description="Number of times this Tweet has been Retweeted."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetOrganicMetrics(BaseModel):
-    """Nested model for TweetOrganicMetrics"""
-
-    impression_count: int = Field(
-        description="Number of times this Tweet has been viewed."
-    )
-    like_count: int = Field(description="Number of times this Tweet has been liked.")
-    reply_count: int = Field(
-        description="Number of times this Tweet has been replied to."
-    )
-    retweet_count: int = Field(
-        description="Number of times this Tweet has been Retweeted."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetNoteTweet(BaseModel):
-    """Nested model for TweetNoteTweet"""
-
-    entities: Optional["TweetNoteTweetEntities"] = Field(default=None)
-    text: Optional["NoteTweetText"] = Field(
-        default=None, description="The note content of the Tweet."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetNoteRequestSuggestions(BaseModel):
-    """Nested model for TweetNoteRequestSuggestions"""
-
-    source_link: Optional["UrlEntity"] = Field(
-        default=None,
-        description="Represent the portion of text recognized as a URL, and its start and end position within the text.",
-    )
-    suggestion: Optional[str] = Field(
-        default=None, description="The text of the note request suggestion."
-    )
-    suggestion_id: Optional[str] = Field(
-        default=None,
-        description="The unique identifier of the note request suggestion.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetNonPublicMetrics(BaseModel):
-    """Nested model for TweetNonPublicMetrics"""
-
-    impression_count: Optional[int] = Field(
-        default=None, description="Number of times this Tweet has been viewed."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetMatchedMediaNotes(BaseModel):
-    """Nested model for TweetMatchedMediaNotes"""
-
-    match_status: Optional[str] = Field(
-        default=None, description="The status of the media note match."
-    )
-    note_id: Optional["NoteId"] = Field(
-        default=None, description="The unique identifier of this Community Note."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetGeo(BaseModel):
-    """Nested model for TweetGeo"""
-
-    coordinates: Optional["Point"] = Field(
-        default=None,
-        description="A [GeoJson Point](https://tools.ietf.org/html/rfc7946#section-3.1.2) geometry object.",
-    )
-    place_id: Optional["PlaceId"] = Field(
-        default=None, description="The identifier for this place."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetEditControls(BaseModel):
-    """Nested model for TweetEditControls"""
-
-    editable_until: str = Field(description="Time when Tweet is no longer editable.")
-    edits_remaining: int = Field(
-        description="Number of times this Tweet can be edited."
-    )
-    is_edit_eligible: bool = Field(
-        description="Indicates if this Tweet is eligible to be edited."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetAttachments(BaseModel):
-    """Nested model for TweetAttachments"""
-
-    media_keys: Optional[List["MediaKey"]] = Field(
-        default=None,
-        description="A list of Media Keys for each one of the media attachments (if media are attached).",
-    )
-    media_source_tweet_id: Optional[List["TweetId"]] = Field(
-        default=None,
-        description="A list of Posts the media on this Tweet was originally posted in. For example, if the media on a tweet is re-used in another Tweet, this refers to the original, source Tweet..",
-    )
-    poll_ids: Optional[List["PollId"]] = Field(
-        default=None, description="A list of poll IDs (if polls are attached)."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Tweet(BaseModel):
-    """Model for Tweet"""
-
-    attachments: Optional["TweetAttachments"] = Field(
-        default=None,
-        description="Specifies the type of attachments (if any) present in this Tweet.",
-    )
-    author_id: Optional["UserId"] = Field(
-        default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    community_id: Optional["CommunityId"] = Field(
-        default=None, description="The unique identifier of this Community."
-    )
-    context_annotations: Optional[List["ContextAnnotation"]] = Field(default=None)
-    conversation_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    created_at: Optional[str] = Field(
-        default=None, description="Creation time of the Tweet."
-    )
-    display_text_range: Optional["DisplayTextRange"] = Field(
-        default=None,
-        description="Represent a boundary range (start and end zero-based indices) for the portion of text that is displayed for a post. `start` must be smaller than `end`. The start index is inclusive, the end index is exclusive.",
-    )
-    edit_controls: Optional["TweetEditControls"] = Field(default=None)
-    edit_history_tweet_ids: Optional[List["TweetId"]] = Field(
-        default=None, description="A list of Tweet Ids in this Tweet chain."
-    )
-    entities: Optional["FullTextEntities"] = Field(default=None)
-    geo: Optional["TweetGeo"] = Field(
-        default=None,
-        description="The location tagged on the Tweet, if the user provided one.",
-    )
-    id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    in_reply_to_user_id: Optional["UserId"] = Field(
-        default=None,
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    lang: Optional[str] = Field(
-        default=None,
-        description="Language of the Tweet, if detected by X. Returned as a BCP47 language tag.",
-    )
-    matched_media_notes: Optional["TweetMatchedMediaNotes"] = Field(
-        default=None, description="The matched media notes for the post."
-    )
-    non_public_metrics: Optional["TweetNonPublicMetrics"] = Field(
-        default=None,
-        description="Nonpublic engagement metrics for the Tweet at the time of the request.",
-    )
-    note_request_suggestions: Optional["TweetNoteRequestSuggestions"] = Field(
-        default=None, description="The note request suggestions for the post."
-    )
-    note_tweet: Optional["TweetNoteTweet"] = Field(
-        default=None,
-        description="The full-content of the Tweet, including text beyond 280 characters.",
-    )
-    organic_metrics: Optional["TweetOrganicMetrics"] = Field(
-        default=None,
-        description="Organic nonpublic engagement metrics for the Tweet at the time of the request.",
-    )
-    paid_partnership: Optional[bool] = Field(
-        default=None,
-        description="Indicates if this Post is a paid partnership, i.e. it has been disclosed by the author as containing paid promotion.",
-    )
-    possibly_sensitive: Optional[bool] = Field(
-        default=None,
-        description="Indicates if this Tweet contains URLs marked as sensitive, for example content suitable for mature audiences.",
-    )
-    promoted_metrics: Optional["TweetPromotedMetrics"] = Field(
-        default=None,
-        description="Promoted nonpublic engagement metrics for the Tweet at the time of the request.",
-    )
-    public_metrics: Optional["TweetPublicMetrics"] = Field(
-        default=None,
-        description="Engagement metrics for the Tweet at the time of the request.",
-    )
-    referenced_tweets: Optional[List["TweetReferencedTweetsItem"]] = Field(
-        default=None,
-        description="A list of Posts this Tweet refers to. For example, if the parent Tweet is a Retweet, a Quoted Tweet or a Reply, it will include the related Tweet referenced to by its parent.",
-    )
-    reply_settings: Optional["ReplySettingsWithVerifiedUsers"] = Field(
-        default=None,
-        description="Shows who can reply a Tweet. Fields returned are everyone, mentioned_users, subscribers, verified and following.",
-    )
-    scopes: Optional["TweetScopes"] = Field(
-        default=None, description="The scopes for this tweet"
-    )
-    source: Optional[str] = Field(default=None, description="This is deprecated.")
-    suggested_source_links: Optional[List["UrlEntity"]] = Field(default=None)
-    suggested_source_links_with_counts: Optional[
-        "TweetSuggestedSourceLinksWithCounts"
-    ] = Field(
-        default=None,
-        description="Suggested source links and the number of requests that included each link.",
-    )
-    text: Optional["TweetText"] = Field(
-        default=None, description="The content of the Tweet."
-    )
-    username: Optional["UserName"] = Field(
-        default=None, description="The X handle (screen name) of this user."
-    )
-    withheld: Optional["TweetWithheld"] = Field(
-        default=None,
-        description="Indicates withholding details for [withheld content](https://help.twitter.com/en/rules-and-policies/tweet-withheld-by-country).",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetComplianceSchemaTweet(BaseModel):
-    """Nested model for TweetComplianceSchemaTweet"""
-
-    author_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetComplianceSchema(BaseModel):
-    """Model for TweetComplianceSchema"""
-
-    event_at: str = Field(description="Event time.")
-    tweet: "TweetComplianceSchemaTweet"
-    quote_tweet_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestMediaCallToActionsWatchNow(BaseModel):
-    """Nested model for TweetCreateRequestMediaCallToActionsWatchNow"""
-
-    url: str = Field(description="HTTPS URL the CTA links to.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestMediaCallToActionsVisitSite(BaseModel):
-    """Nested model for TweetCreateRequestMediaCallToActionsVisitSite"""
-
-    url: str = Field(description="HTTPS URL the CTA links to.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestMediaCallToActionsAppInstall(BaseModel):
-    """Nested model for TweetCreateRequestMediaCallToActionsAppInstall"""
-
-    app_store_id: Optional[str] = Field(
-        default=None, description="Apple App Store iPhone app id."
-    )
-    ipad_app_store_id: Optional[str] = Field(
-        default=None, description="Apple App Store iPad app id."
-    )
-    play_store_id: Optional[str] = Field(
-        default=None, description="Google Play Store app id."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestMediaCallToActions(BaseModel):
-    """Nested model for TweetCreateRequestMediaCallToActions"""
-
-    app_install: Optional["TweetCreateRequestMediaCallToActionsAppInstall"] = Field(
-        default=None,
-        description="App Install CTA. At least one store id should be provided.",
-    )
-    visit_site: Optional["TweetCreateRequestMediaCallToActionsVisitSite"] = Field(
-        default=None, description="Visit Site CTA."
-    )
-    watch_now: Optional["TweetCreateRequestMediaCallToActionsWatchNow"] = Field(
-        default=None, description="Watch Now CTA."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestReply(BaseModel):
-    """Nested model for TweetCreateRequestReply"""
-
-    in_reply_to_tweet_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    auto_populate_reply_metadata: Optional[bool] = Field(
-        default=None,
-        description="If set to true, reply metadata will be automatically populated.",
-    )
-    exclude_reply_user_ids: Optional[List["UserId"]] = Field(
-        default=None,
-        description="A list of User Ids to be excluded from the reply Tweet.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestPoll(BaseModel):
-    """Nested model for TweetCreateRequestPoll"""
-
-    duration_minutes: int = Field(description="Duration of the poll in minutes.")
-    options: List[str]
-    reply_settings: Optional[
-        Literal["following", "mentionedUsers", "subscribers", "verified"]
-    ] = Field(
-        default=None, description="Settings to indicate who can reply to the Tweet."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestMedia(BaseModel):
-    """Nested model for TweetCreateRequestMedia"""
-
-    media_ids: List["MediaId"] = Field(
-        description="A list of Media Ids to be attached to a created Tweet."
-    )
-    call_to_actions: Optional["TweetCreateRequestMediaCallToActions"] = Field(
-        default=None,
-        description="Call-to-action button rendered on the media entity. Exactly one variant should be set.",
-    )
-    description: Optional[str] = Field(
-        default=None,
-        description="Description for the media. Rendered on the Post card for video and Amplify content.",
-    )
-    embeddable: Optional[bool] = Field(
-        default=None,
-        description="When true, the media's asset URLs do not expire and external syndicated playback is allowed.",
-    )
-    preview_media_id: Optional["MediaId"] = Field(
-        default=None, description="The unique identifier of this Media."
-    )
-    tagged_user_ids: Optional[List["UserId"]] = Field(
-        default=None,
-        description="A list of User Ids to be tagged in the media for created Tweet.",
-    )
-    title: Optional[str] = Field(
-        default=None,
-        description="Title for the media. Rendered on the Post card for video and Amplify content.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestGeo(BaseModel):
-    """Nested model for TweetCreateRequestGeo"""
-
-    place_id: Optional[str] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequestEditOptions(BaseModel):
-    """Nested model for TweetCreateRequestEditOptions"""
-
-    previous_post_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateRequest(BaseModel):
-    """Model for TweetCreateRequest"""
-
-    card_uri: Optional[str] = Field(
-        default=None,
-        description="Card Uri Parameter. This is mutually exclusive from Quote Tweet Id, Poll, Media, and Direct Message Deep Link.",
-    )
-    community_id: Optional["CommunityId"] = Field(
-        default=None, description="The unique identifier of this Community."
-    )
-    direct_message_deep_link: Optional[str] = Field(
-        default=None,
-        description="Link to take the conversation from the public timeline to a private Direct Message.",
-    )
-    edit_options: Optional["TweetCreateRequestEditOptions"] = Field(
-        default=None,
-        description="Options for editing an existing Post. When provided, this request will edit the specified Post instead of creating a new one.",
-    )
-    for_super_followers_only: Optional[bool] = Field(
-        default=None, description="Exclusive Tweet for super followers."
-    )
-    geo: Optional["TweetCreateRequestGeo"] = Field(
-        default=None,
-        description="Place ID being attached to the Tweet for geo location.",
-    )
-    made_with_ai: Optional[bool] = Field(
-        default=None,
-        description="Whether this Post contains AI-generated media. When true, the Post will be labeled accordingly.",
-    )
-    media: Optional["TweetCreateRequestMedia"] = Field(
-        default=None,
-        description="Media information being attached to created Tweet. This is mutually exclusive from Quote Tweet Id, Poll, and Card URI.",
-    )
-    nullcast: Optional[bool] = Field(
-        default=None,
-        description="Nullcasted (promoted-only) Posts do not appear in the public timeline and are not served to followers.",
-    )
-    paid_partnership: Optional[bool] = Field(
-        default=None,
-        description="Whether this Post is a paid partnership. When true, the Post will be labeled as a paid promotion.",
-    )
-    poll: Optional["TweetCreateRequestPoll"] = Field(
-        default=None,
-        description="Poll options for a Tweet with a poll. This is mutually exclusive from Media, Quote Tweet Id, and Card URI.",
-    )
-    quote_tweet_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    reply: Optional["TweetCreateRequestReply"] = Field(
-        default=None, description="Tweet information of the Tweet being replied to."
-    )
-    reply_settings: Optional[
-        Literal["following", "mentionedUsers", "subscribers", "verified"]
-    ] = Field(
-        default=None, description="Settings to indicate who can reply to the Tweet."
-    )
-    share_with_followers: Optional[bool] = Field(
-        default=None, description="Share community post with followers too."
-    )
-    text: Optional["TweetText"] = Field(
-        default=None, description="The content of the Tweet."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateResponseData(BaseModel):
-    """Nested model for TweetCreateResponseData"""
-
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    text: "TweetText" = Field(description="The content of the Tweet.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetCreateResponse(BaseModel):
-    """Model for TweetCreateResponse"""
-
-    data: Optional["TweetCreateResponseData"] = Field(default=None)
+    data: Optional["UnblockUsersDmsResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetDeleteComplianceSchema(BaseModel):
-    """Model for TweetDeleteComplianceSchema"""
+class UnblockUsersDmsResponseData(BaseModel):
+    """Model for UnblockUsersDmsResponseData"""
 
-    delete: "TweetComplianceSchema"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetDeleteResponseData(BaseModel):
-    """Nested model for TweetDeleteResponseData"""
-
-    deleted: bool
+    blocked: bool = Field(
+        description="Indicates whether the target user is DM-blocked."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetDeleteResponse(BaseModel):
-    """Model for TweetDeleteResponse"""
+class UnfollowListResponse(BaseModel):
+    """Model for UnfollowListResponse"""
 
-    data: Optional["TweetDeleteResponseData"] = Field(default=None)
+    data: Optional["UnfollowListResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetDropComplianceSchema(BaseModel):
-    """Model for TweetDropComplianceSchema"""
+class UnfollowListResponseData(BaseModel):
+    """Model for UnfollowListResponseData"""
 
-    drop: "TweetComplianceSchema"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetEditComplianceObjectSchemaTweet(BaseModel):
-    """Nested model for TweetEditComplianceObjectSchemaTweet"""
-
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+    following: bool = Field(
+        description="Indicates whether the user is following the List."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetEditComplianceObjectSchema(BaseModel):
-    """Model for TweetEditComplianceObjectSchema"""
+class UnfollowUserResponse(BaseModel):
+    """Model for UnfollowUserResponse"""
 
-    edit_tweet_ids: List["TweetId"]
-    event_at: str = Field(description="Event time.")
-    initial_tweet_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    tweet: "TweetEditComplianceObjectSchemaTweet"
+    data: Optional["UnfollowUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetEditComplianceSchema(BaseModel):
-    """Model for TweetEditComplianceSchema"""
+class UnfollowUserResponseData(BaseModel):
+    """Model for UnfollowUserResponseData"""
 
-    tweet_edit: "TweetEditComplianceObjectSchema"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetHideRequest(BaseModel):
-    """Model for TweetHideRequest"""
-
-    hidden: bool
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetHideResponseData(BaseModel):
-    """Nested model for TweetHideResponseData"""
-
-    hidden: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetHideResponse(BaseModel):
-    """Model for TweetHideResponse"""
-
-    data: Optional["TweetHideResponseData"] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetNoticeTweet(BaseModel):
-    """Nested model for TweetNoticeTweet"""
-
-    author_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetNotice(BaseModel):
-    """Model for TweetNotice"""
-
-    application: str = Field(
-        description="If the label is being applied or removed. Possible values are ‘apply’ or ‘remove’."
-    )
-    event_at: str = Field(description="Event time.")
-    event_type: str = Field(description="The type of label on the Tweet")
-    tweet: "TweetNoticeTweet"
-    details: Optional[str] = Field(
-        default=None, description="Information shown on the Tweet label"
-    )
-    extended_details_url: Optional[str] = Field(
-        default=None, description="Link to more information about this kind of label"
-    )
-    label_title: Optional[str] = Field(
-        default=None, description="Title/header of the Tweet label"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetNoticeSchema(BaseModel):
-    """Model for TweetNoticeSchema"""
-
-    public_tweet_notice: "TweetNotice"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetTakedownComplianceSchemaTweet(BaseModel):
-    """Nested model for TweetTakedownComplianceSchemaTweet"""
-
-    author_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetTakedownComplianceSchema(BaseModel):
-    """Model for TweetTakedownComplianceSchema"""
-
-    event_at: str = Field(description="Event time.")
-    tweet: "TweetTakedownComplianceSchemaTweet"
-    withheld_in_countries: List["CountryCode"]
-    quote_tweet_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetUndropComplianceSchema(BaseModel):
-    """Model for TweetUndropComplianceSchema"""
-
-    undrop: "TweetComplianceSchema"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetUnviewableTweet(BaseModel):
-    """Nested model for TweetUnviewableTweet"""
-
-    author_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetUnviewable(BaseModel):
-    """Model for TweetUnviewable"""
-
-    application: str = Field(
-        description="If the label is being applied or removed. Possible values are ‘apply’ or ‘remove’."
-    )
-    event_at: str = Field(description="Event time.")
-    tweet: "TweetUnviewableTweet"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetUnviewableSchema(BaseModel):
-    """Model for TweetUnviewableSchema"""
-
-    public_tweet_unviewable: "TweetUnviewable"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetWithheld(BaseModel):
-    """Indicates withholding details for [withheld content](https://help.twitter.com/en/rules-and-policies/tweet-withheld-by-country)."""
-
-    copyright: bool = Field(
-        description="Indicates if the content is being withheld for on the basis of copyright infringement."
-    )
-    country_codes: List["CountryCode"] = Field(
-        description="Provides a list of countries where this content is not available."
-    )
-    scope: Optional[Literal["tweet", "user"]] = Field(
-        default=None,
-        description="Indicates whether the content being withheld is the `tweet` or a `user`.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetWithheldComplianceSchema(BaseModel):
-    """Model for TweetWithheldComplianceSchema"""
-
-    withheld: "TweetTakedownComplianceSchema"
+    following: bool = Field(description="Whether the user is followed.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6065,12 +6716,8 @@ class TweetWithheldComplianceSchema(BaseModel):
 class UnlikeComplianceSchemaFavorite(BaseModel):
     """Nested model for UnlikeComplianceSchemaFavorite"""
 
-    id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    user_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    id: "PostId" = Field(description="Unique identifier of a Post")
+    user_id: "UserId" = Field(description="Unique identifier of a User")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6084,190 +6731,407 @@ class UnlikeComplianceSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UploadSource(BaseModel):
-    """Model for UploadSource"""
+class UnlikePostResponse(BaseModel):
+    """Model for UnlikePostResponse"""
 
-    upload_source: str = Field(
-        description="Records the source (e.g., app, device) from which the media was uploaded"
+    data: Optional["UnlikePostResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnlikePostResponseData(BaseModel):
+    """Model for UnlikePostResponseData"""
+
+    liked: bool = Field(description="Whether the Post is liked.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteUserResponse(BaseModel):
+    """Model for UnmuteUserResponse"""
+
+    data: Optional["UnmuteUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteUserResponseData(BaseModel):
+    """Model for UnmuteUserResponseData"""
+
+    muting: bool = Field(description="Whether the user is muted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnpinListResponse(BaseModel):
+    """Model for UnpinListResponse"""
+
+    data: Optional["UnpinListResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnpinListResponseData(BaseModel):
+    """Model for UnpinListResponseData"""
+
+    pinned: bool = Field(
+        description="Indicates whether the List is pinned by the authenticated user."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UrlFields(BaseModel):
-    """Represent the portion of text recognized as a URL."""
+class UnrepostPostResponse(BaseModel):
+    """Model for UnrepostPostResponse"""
 
-    url: "Url" = Field(description="A validly formatted URL.")
+    data: Optional["UnrepostPostResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnrepostPostResponseData(BaseModel):
+    """Model for UnrepostPostResponseData"""
+
+    retweeted: bool = Field(description="Whether the Post is reposted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateActivitySubscriptionRequest(BaseModel):
+    """Model for UpdateActivitySubscriptionRequest"""
+
+    tag: Optional[str] = Field(default=None, description="Optional caller-defined tag.")
+    webhook_id: Optional[str] = Field(
+        default=None, description="Webhook to deliver the subscription events to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateActivitySubscriptionResponse(BaseModel):
+    """Model for UpdateActivitySubscriptionResponse"""
+
+    data: Optional["UpdateActivitySubscriptionResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateActivitySubscriptionResponseData(BaseModel):
+    """Model for UpdateActivitySubscriptionResponseData"""
+
+    subscription: Optional["UpdateActivitySubscriptionResponseDataSubscription"] = (
+        Field(default=None)
+    )
+    total_subscriptions: Optional[int] = Field(
+        default=None, description="Total active subscriptions for the instance."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateActivitySubscriptionResponseDataSubscription(BaseModel):
+    """Model for UpdateActivitySubscriptionResponseDataSubscription"""
+
+    created_at: Optional[str] = Field(
+        default=None, description="Subscription creation time."
+    )
+    event_type: Optional[str] = Field(
+        default=None, description="Activity event type in dot notation."
+    )
+    filter: Optional["UpdateActivitySubscriptionResponseDataSubscriptionFilter"] = (
+        Field(default=None)
+    )
+    subscription_id: Optional[str] = Field(
+        default=None, description="Unique identifier of the subscription."
+    )
+    tag: Optional[str] = Field(default=None, description="Optional caller-defined tag.")
+    updated_at: Optional[str] = Field(
+        default=None, description="Subscription last-update time."
+    )
+    webhook_id: Optional[str] = Field(
+        default=None, description="Webhook receiving the subscription events."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateActivitySubscriptionResponseDataSubscriptionFilter(BaseModel):
+    """Model for UpdateActivitySubscriptionResponseDataSubscriptionFilter"""
+
+    direction: Optional[str] = Field(
+        default=None,
+        description="Optional direction filter for directional events. Not present for mute.* or block.* events.",
+    )
+    keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    user_id: Optional[str] = Field(
+        default=None, description="User the subscription is scoped to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateListsRequest(BaseModel):
+    """Model for UpdateListsRequest"""
+
     description: Optional[str] = Field(
-        default=None, description="Description of the URL landing page."
+        default=None, description="New description for the List (up to 100 characters)."
     )
-    display_url: Optional[str] = Field(
-        default=None, description="The URL as displayed in the X client."
+    name: Optional[str] = Field(
+        default=None, description="New name for the List (1-25 characters)."
     )
-    expanded_url: Optional["Url"] = Field(
-        default=None, description="A validly formatted URL."
+    private: Optional[bool] = Field(
+        default=None, description="Whether the List is private."
     )
-    images: Optional[List["UrlImage"]] = Field(default=None)
-    media_key: Optional["MediaKey"] = Field(
-        default=None, description="The Media Key identifier for this attachment."
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateListsResponse(BaseModel):
+    """Model for UpdateListsResponse"""
+
+    data: Optional["UpdateListsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateListsResponseData(BaseModel):
+    """Model for UpdateListsResponseData"""
+
+    updated: bool = Field(description="Indicates whether the List was updated.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateRulesAdd(BaseModel):
+    """Model for UpdateRulesAdd"""
+
+    value: str = Field(description="Rule filter expression.")
+    tag: Optional[str] = Field(
+        default=None, description="Optional caller-defined label for the rule."
     )
-    status: Optional["HttpStatusCode"] = Field(
-        default=None, description="HTTP Status Code."
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateRulesDelete(BaseModel):
+    """Model for UpdateRulesDelete"""
+
+    ids: Optional[List[str]] = Field(
+        default=None, description="Rule ids (Snowflake external ids) to delete."
+    )
+    values: Optional[List[str]] = Field(
+        default=None, description="Rule values to delete."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateRulesRequest(BaseModel):
+    """Model for UpdateRulesRequest"""
+
+    add: Optional[List["UpdateRulesAdd"]] = Field(
+        default=None, description="Rules to add."
+    )
+    delete: Optional["UpdateRulesDelete"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateRulesResponseMeta(BaseModel):
+    """Nested model for UpdateRulesResponseMeta"""
+
+    sent: Optional[str] = Field(default=None)
+    summary: Optional[Dict[str, Any]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateRulesResponse(BaseModel):
+    """Model for UpdateRulesResponse"""
+
+    data: Optional[List["UpdateRulesResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["UpdateRulesResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateRulesResponseData(BaseModel):
+    """Model for UpdateRulesResponseData"""
+
+    id: Optional[str] = Field(
+        default=None, description="Unique identifier of the rule."
+    )
+    tag: Optional[str] = Field(
+        default=None, description="Optional caller-defined label for the rule."
+    )
+    value: Optional[str] = Field(
+        default=None, description="The rule's filter expression."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateScheduledBroadcastRequest(BaseModel):
+    """Model for UpdateScheduledBroadcastRequest"""
+
+    scheduled_broadcast_id: str = Field(
+        description="Numeric scheduler id from create/list/get."
+    )
+    scheduled_end_ms: str = Field(
+        description="End time, ms since Unix epoch (decimal string)."
+    )
+    scheduled_start_ms: str = Field(
+        description="Start time, ms since Unix epoch (decimal string)."
+    )
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Enable replay."
+    )
+    chat_option: Optional[str] = Field(
+        default=None, description="Chat permission option (numeric string)."
+    )
+    description: Optional[str] = Field(default=None, description="Description.")
+    is_locked: Optional[bool] = Field(default=None, description="Lock the broadcast.")
+    locale: Optional[str] = Field(default=None, description="Locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="If true, do not auto-publish at start; call POST .../live when ready.",
+    )
+    roll_forward: Optional[bool] = Field(
+        default=None, description="When true, shift the head of a recurring series."
+    )
+    source_id: Optional[str] = Field(default=None, description="Ingest / source id.")
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Pre-live slate media id (numeric string)."
+    )
+    title: Optional[str] = Field(default=None, description="Title / status text.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateScheduledBroadcastResponse(BaseModel):
+    """Model for UpdateScheduledBroadcastResponse"""
+
+    data: Optional["UpdateScheduledBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateScheduledBroadcastResponseData(BaseModel):
+    """Model for UpdateScheduledBroadcastResponseData"""
+
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether replay is enabled."
+    )
+    broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+    )
+    chat_option: Optional[str] = Field(
+        default=None, description="Optional chat permission option."
+    )
+    description: Optional[str] = Field(
+        default=None, description="Optional description."
+    )
+    locale: Optional[str] = Field(default=None, description="Optional locale.")
+    manual_publish: Optional[bool] = Field(
+        default=None,
+        description="When true, coordinator will not auto-publish; call POST .../live when ready.",
+    )
+    recurring_schedule_id: Optional[str] = Field(
+        default=None, description="Set when this occurrence belongs to a recurrence."
+    )
+    scheduled_broadcast_id: Optional[str] = Field(
+        default=None,
+        description="Numeric scheduler id. Required in the update request body.",
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start, milliseconds since Unix epoch (decimal string).",
+    )
+    source_id: Optional[str] = Field(
+        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+    )
+    state: Optional[str] = Field(
+        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+    )
+    telecast_id: Optional[str] = Field(
+        default=None, description="Optional telecast association."
+    )
+    thumbnail_media_id: Optional[str] = Field(
+        default=None, description="Optional pre-live slate media id."
     )
     title: Optional[str] = Field(
-        default=None, description="Title of the page the URL points to."
-    )
-    unwound_url: Optional[str] = Field(default=None, description="Fully resolved url.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UrlImage(BaseModel):
-    """Represent the information for the URL image."""
-
-    height: Optional["MediaHeight"] = Field(
-        default=None, description="The height of the media in pixels."
-    )
-    url: Optional["Url"] = Field(default=None, description="A validly formatted URL.")
-    width: Optional["MediaWidth"] = Field(
-        default=None, description="The width of the media in pixels."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsageDailyProjectUsage(BaseModel):
-    """Nested model for UsageDailyProjectUsage"""
-
-    project_id: Optional[int] = Field(
-        default=None, description="The unique identifier for this project"
-    )
-    usage: Optional[List["UsageFields"]] = Field(
-        default=None, description="The usage value"
+        default=None, description="Broadcast title / status text."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class Usage(BaseModel):
-    """Usage per client app"""
+    """Model for Usage"""
 
-    cap_reset_day: Optional[int] = Field(
-        default=None, description="Number of days left for the Tweet cap to reset"
-    )
-    daily_client_app_usage: Optional[List["ClientAppUsage"]] = Field(
+    cap_reset_day: Optional[int] = Field(default=None)
+    daily_client_app_usage: Optional["UsageDailyClientAppUsage"] = Field(
         default=None,
-        description="The daily usage breakdown for each Client Application a project",
+        description="Per-client-app daily Post usage for the caller's project.",
     )
     daily_project_usage: Optional["UsageDailyProjectUsage"] = Field(
-        default=None, description="The daily usage breakdown for a project"
-    )
-    project_cap: Optional[int] = Field(
         default=None,
-        description="Total number of Posts that can be read in this project per month",
+        description="Project-level daily Post usage for the caller's project.",
     )
-    project_id: Optional[str] = Field(
-        default=None, description="The unique identifier for this project"
+    project_cap: Optional[str] = Field(default=None)
+    project_id: Optional[str] = Field(default=None)
+    project_usage: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UsageDailyProjectUsageUsageItem(BaseModel):
+    """Nested model for UsageDailyProjectUsageUsageItem"""
+
+    date: str = Field(
+        description="The day of the usage entry, as an ISO 8601 date-time."
     )
-    project_usage: Optional[int] = Field(
-        default=None, description="The number of Posts read in this project"
+    usage: Optional[Optional[str]] = Field(
+        default=None, description="Number of Posts used on this day."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UsageFields(BaseModel):
-    """Represents the data for Usage"""
+class UsageDailyProjectUsage(BaseModel):
+    """Project-level daily Post usage for the caller's project."""
 
-    date: Optional[str] = Field(
-        default=None, description="The time period for the usage"
+    project_id: Optional[Optional[str]] = Field(
+        default=None, description="Unique identifier of the project."
     )
-    usage: Optional[int] = Field(default=None, description="The usage value")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UserEntitiesUrl(BaseModel):
-    """Nested model for UserEntitiesUrl"""
-
-    urls: Optional[List["UrlEntity"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UserPublicMetrics(BaseModel):
-    """Nested model for UserPublicMetrics"""
-
-    followers_count: int = Field(
-        description="Number of Users who are following this User."
+    usage: Optional[Optional[List["UsageDailyProjectUsageUsageItem"]]] = Field(
+        default=None, description="Daily usage entries for the project."
     )
-    following_count: int = Field(description="Number of Users this User is following.")
-    listed_count: int = Field(description="The number of lists that include this User.")
-    tweet_count: int = Field(
-        description="The number of Posts (including Retweets) posted by this User."
-    )
-    like_count: Optional[int] = Field(
-        default=None, description="The number of likes created by this User."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UserEntities(BaseModel):
-    """Nested model for UserEntities"""
-
-    description: Optional["FullTextEntities"] = Field(default=None)
-    url: Optional["UserEntitiesUrl"] = Field(
-        default=None,
-        description="Expanded details for the URL specified in the User's profile, with start and end indices.",
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UserAffiliation(BaseModel):
-    """Nested model for UserAffiliation"""
-
-    badge_url: Optional[str] = Field(
-        default=None, description="The badge URL corresponding to the affiliation."
-    )
-    description: Optional[str] = Field(
-        default=None, description="The description of the affiliation."
-    )
-    url: Optional[str] = Field(
-        default=None,
-        description="The URL, if available, to details about an affiliation.",
-    )
-    user_id: Optional[List["UserId"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class User(BaseModel):
-    """The X User object."""
+    """Model for User"""
 
-    id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-    name: str = Field(
-        description="The friendly name of this User, as shown on their profile."
-    )
-    username: "UserName" = Field(description="The X handle (screen name) of this user.")
     affiliation: Optional["UserAffiliation"] = Field(
         default=None, description="Metadata about a user's affiliation."
     )
-    connection_status: Optional[
-        List[
-            Literal[
-                "follow_request_received",
-                "follow_request_sent",
-                "blocking",
-                "followed_by",
-                "following",
-                "muting",
-            ]
-        ]
-    ] = Field(
+    confirmed_email: Optional[str] = Field(default=None)
+    connection_status: Optional["UserConnectionStatus"] = Field(
         default=None,
         description="Returns detailed information about the relationship between two users.",
     )
@@ -6282,17 +7146,29 @@ class User(BaseModel):
         default=None,
         description="A list of metadata found in the User's profile description.",
     )
+    id: Optional[str] = Field(
+        default=None, description="Unique identifier of this User."
+    )
+    is_identity_verified: Optional[bool] = Field(
+        default=None,
+        description="Indicates if this User has completed identity verification.",
+    )
     location: Optional[str] = Field(
         default=None,
-        description="The location specified in the User's profile, if the User provided one. As this is a freeform value, it may not indicate a valid location, but it may be fuzzily evaluated when performing searches with location queries.",
+        description="The location specified in the User's profile, if the User provided one. As this is a freeform value, it may not indicate a valid location.",
     )
-    most_recent_tweet_id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+    most_recent_post_id: Optional[str] = Field(
+        default=None, description="Unique identifier of this User's most recent Post."
     )
-    pinned_tweet_id: Optional["TweetId"] = Field(
+    name: Optional[str] = Field(
         default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
+        description="The friendly name of this User, as shown on their profile.",
+    )
+    parody: Optional[bool] = Field(
+        default=None, description="Indicates if this User is a parody account."
+    )
+    pinned_post_id: Optional[str] = Field(
+        default=None, description="Unique identifier of this User's pinned Post."
     )
     profile_banner_url: Optional[str] = Field(
         default=None, description="The URL to the profile banner for this User."
@@ -6308,27 +7184,58 @@ class User(BaseModel):
         default=None, description="A list of metrics for this User."
     )
     receives_your_dm: Optional[bool] = Field(
-        default=None, description="Indicates if you can send a DM to this User"
+        default=None, description="Indicates if you can send a DM to this User."
     )
-    subscription_type: Optional[Literal["Basic", "Premium", "PremiumPlus", "None"]] = (
-        Field(
-            default=None,
-            description="The X Blue subscription type of the user, eg: Basic, Premium, PremiumPlus or None.",
-        )
+    subscribes_to_you: Optional[bool] = Field(
+        default=None, description="Indicates if this User subscribes to you."
+    )
+    subscription: Optional["UserSubscription"] = Field(
+        default=None,
+        description="The subscription relationship between this User and you.",
+    )
+    subscription_type: Optional[str] = Field(
+        default=None,
+        description="The X Blue subscription type of the user, e.g.: Basic, Premium, PremiumPlus or None.",
     )
     url: Optional[str] = Field(
         default=None, description="The URL specified in the User's profile."
     )
-    verified: Optional[bool] = Field(
-        default=None, description="Indicate if this User is a verified X User."
+    username: Optional[str] = Field(
+        default=None, description="The X handle (screen name) of this User."
     )
-    verified_type: Optional[Literal["blue", "government", "business", "none"]] = Field(
+    verified: Optional[bool] = Field(
+        default=None, description="Indicates if this User is a verified X User."
+    )
+    verified_followers_count: Optional[int] = Field(
+        default=None, description="The number of verified followers of this User."
+    )
+    verified_type: Optional[str] = Field(
         default=None,
-        description="The X Blue verified type of the user, eg: blue, government, business or none.",
+        description="The X Blue verified type of the user, e.g.: blue, government, business or none.",
     )
     withheld: Optional["UserWithheld"] = Field(
+        default=None, description="Withholding details for withheld content."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserAffiliation(BaseModel):
+    """Metadata about a user's affiliation."""
+
+    badge_url: Optional[Optional[str]] = Field(
         default=None,
-        description="Indicates withholding details for [withheld content](https://help.twitter.com/en/rules-and-policies/tweet-withheld-by-country).",
+        description="URL of the affiliation badge image shown on the User's profile.",
+    )
+    description: Optional[Optional[str]] = Field(
+        default=None, description="Description of the affiliation."
+    )
+    url: Optional[Optional[str]] = Field(
+        default=None, description="URL associated with the affiliation."
+    )
+    user_id: Optional[Optional[List[str]]] = Field(
+        default=None,
+        description="A list of unique identifiers of the accounts this User is affiliated with.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -6337,9 +7244,7 @@ class User(BaseModel):
 class UserComplianceSchemaUser(BaseModel):
     """Nested model for UserComplianceSchemaUser"""
 
-    id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    id: "UserId" = Field(description="Unique identifier of a User")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6361,6 +7266,161 @@ class UserDeleteComplianceSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class UserEntitiesUrlUrlsItemImagesItem(BaseModel):
+    """Nested model for UserEntitiesUrlUrlsItemImagesItem"""
+
+    height: Optional[Optional[int]] = Field(default=None)
+    url: Optional[Optional[str]] = Field(default=None)
+    width: Optional[Optional[int]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesDescriptionUrlsItemImagesItem(BaseModel):
+    """Nested model for UserEntitiesDescriptionUrlsItemImagesItem"""
+
+    height: Optional[Optional[int]] = Field(default=None)
+    url: Optional[Optional[str]] = Field(default=None)
+    width: Optional[Optional[int]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesUrlUrlsItem(BaseModel):
+    """Nested model for UserEntitiesUrlUrlsItem"""
+
+    end: int
+    start: int
+    url: str = Field(description="The t.co shortened URL.")
+    description: Optional[Optional[str]] = Field(
+        default=None, description="Description of the linked page, when available."
+    )
+    display_url: Optional[Optional[str]] = Field(
+        default=None, description="The URL as displayed in the Post text."
+    )
+    expanded_url: Optional[Optional[str]] = Field(
+        default=None, description="The fully resolved URL."
+    )
+    images: Optional[Optional[List["UserEntitiesUrlUrlsItemImagesItem"]]] = Field(
+        default=None
+    )
+    media_key: Optional[Optional[str]] = Field(default=None)
+    status: Optional[Optional[int]] = Field(
+        default=None, description="HTTP status from resolving the URL."
+    )
+    title: Optional[Optional[str]] = Field(
+        default=None, description="Title of the linked page, when available."
+    )
+    unwound_url: Optional[Optional[str]] = Field(
+        default=None, description="The final destination after following redirects."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesDescriptionUrlsItem(BaseModel):
+    """Nested model for UserEntitiesDescriptionUrlsItem"""
+
+    end: int
+    start: int
+    url: str = Field(description="The t.co shortened URL.")
+    description: Optional[Optional[str]] = Field(
+        default=None, description="Description of the linked page, when available."
+    )
+    display_url: Optional[Optional[str]] = Field(
+        default=None, description="The URL as displayed in the Post text."
+    )
+    expanded_url: Optional[Optional[str]] = Field(
+        default=None, description="The fully resolved URL."
+    )
+    images: Optional[Optional[List["UserEntitiesDescriptionUrlsItemImagesItem"]]] = (
+        Field(default=None)
+    )
+    media_key: Optional[Optional[str]] = Field(default=None)
+    status: Optional[Optional[int]] = Field(
+        default=None, description="HTTP status from resolving the URL."
+    )
+    title: Optional[Optional[str]] = Field(
+        default=None, description="Title of the linked page, when available."
+    )
+    unwound_url: Optional[Optional[str]] = Field(
+        default=None, description="The final destination after following redirects."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesDescriptionMentionsItem(BaseModel):
+    """Nested model for UserEntitiesDescriptionMentionsItem"""
+
+    end: int
+    start: int
+    username: str
+    id: Optional[Optional[str]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesDescriptionHashtagsItem(BaseModel):
+    """Nested model for UserEntitiesDescriptionHashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesDescriptionCashtagsItem(BaseModel):
+    """Nested model for UserEntitiesDescriptionCashtagsItem"""
+
+    end: int = Field(description="End index in the text (exclusive).")
+    start: int = Field(description="Start index in the text (inclusive).")
+    tag: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesUrl(BaseModel):
+    """Nested model for UserEntitiesUrl"""
+
+    urls: Optional[Optional[List["UserEntitiesUrlUrlsItem"]]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntitiesDescription(BaseModel):
+    """Nested model for UserEntitiesDescription"""
+
+    cashtags: Optional[Optional[List["UserEntitiesDescriptionCashtagsItem"]]] = Field(
+        default=None
+    )
+    hashtags: Optional[Optional[List["UserEntitiesDescriptionHashtagsItem"]]] = Field(
+        default=None
+    )
+    mentions: Optional[Optional[List["UserEntitiesDescriptionMentionsItem"]]] = Field(
+        default=None
+    )
+    urls: Optional[Optional[List["UserEntitiesDescriptionUrlsItem"]]] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserEntities(BaseModel):
+    """A list of metadata found in the User's profile description."""
+
+    description: Optional[Optional["UserEntitiesDescription"]] = Field(
+        default=None, description="Entities found in the User's bio."
+    )
+    url: Optional[Optional["UserEntitiesUrl"]] = Field(
+        default=None, description="Entities for the User's profile website URL."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class UserProfileModificationComplianceSchema(BaseModel):
     """Model for UserProfileModificationComplianceSchema"""
 
@@ -6372,9 +7432,7 @@ class UserProfileModificationComplianceSchema(BaseModel):
 class UserProfileModificationObjectSchemaUser(BaseModel):
     """Nested model for UserProfileModificationObjectSchemaUser"""
 
-    id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    id: "UserId" = Field(description="Unique identifier of a User")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6398,12 +7456,29 @@ class UserProtectComplianceSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class UserPublicMetrics(BaseModel):
+    """A list of metrics for this User."""
+
+    followers_count: int = Field(description="Number of Users who follow this User.")
+    following_count: int = Field(description="Number of Users this User follows.")
+    listed_count: int = Field(description="Number of Lists that include this User.")
+    post_count: int = Field(
+        description="Number of Posts (including Reposts) created by this User."
+    )
+    like_count: Optional[Optional[int]] = Field(
+        default=None, description="Number of Posts this User has liked."
+    )
+    media_count: Optional[Optional[int]] = Field(
+        default=None, description="Number of media items posted by this User."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class UserScrubGeoObjectSchemaUser(BaseModel):
     """Nested model for UserScrubGeoObjectSchemaUser"""
 
-    id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    id: "UserId" = Field(description="Unique identifier of a User")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6412,9 +7487,7 @@ class UserScrubGeoObjectSchema(BaseModel):
     """Model for UserScrubGeoObjectSchema"""
 
     event_at: str = Field(description="Event time.")
-    up_to_tweet_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    up_to_tweet_id: "PostId" = Field(description="Unique identifier of a Post")
     user: "UserScrubGeoObjectSchemaUser"
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -6424,6 +7497,16 @@ class UserScrubGeoSchema(BaseModel):
     """Model for UserScrubGeoSchema"""
 
     scrub_geo: "UserScrubGeoObjectSchema"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UserSubscription(BaseModel):
+    """The subscription relationship between this User and you."""
+
+    subscribes_to_you: bool = Field(
+        description="Indicates if this User subscribes to you."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6439,9 +7522,7 @@ class UserSuspendComplianceSchema(BaseModel):
 class UserTakedownComplianceSchemaUser(BaseModel):
     """Nested model for UserTakedownComplianceSchemaUser"""
 
-    id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
+    id: "UserId" = Field(description="Unique identifier of a User")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6481,14 +7562,15 @@ class UserUnsuspendComplianceSchema(BaseModel):
 
 
 class UserWithheld(BaseModel):
-    """Indicates withholding details for [withheld content](https://help.twitter.com/en/rules-and-policies/tweet-withheld-by-country)."""
+    """Withholding details for withheld content."""
 
-    country_codes: List["CountryCode"] = Field(
-        description="Provides a list of countries where this content is not available."
-    )
-    scope: Optional[Literal["user"]] = Field(
+    country_codes: Optional[Optional[List[str]]] = Field(
         default=None,
-        description="Indicates that the content being withheld is a `user`.",
+        description="A list of countries (as ISO 3166-1 alpha-2 codes) where this content is withheld.",
+    )
+    scope: Optional[Optional[Literal["user"]]] = Field(
+        default=None,
+        description='The scope of the withholding. Only present, with the value "user", when the entire User is withheld.',
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -6502,350 +7584,51 @@ class UserWithheldComplianceSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UsersDMBlockCreateResponseData(BaseModel):
-    """Nested model for UsersDMBlockCreateResponseData"""
+class ValidateAccountActivitySubscriptionResponse(BaseModel):
+    """Model for ValidateAccountActivitySubscriptionResponse"""
 
-    blocked: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersDMBlockCreateResponse(BaseModel):
-    """Model for UsersDMBlockCreateResponse"""
-
-    data: Optional["UsersDMBlockCreateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersDMUnBlockCreateResponseData(BaseModel):
-    """Nested model for UsersDMUnBlockCreateResponseData"""
-
-    blocked: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersDMUnBlockCreateResponse(BaseModel):
-    """Model for UsersDMUnBlockCreateResponse"""
-
-    data: Optional["UsersDMUnBlockCreateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersFollowingCreateRequest(BaseModel):
-    """Model for UsersFollowingCreateRequest"""
-
-    target_user_id: "UserId" = Field(
-        description="Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+    data: Optional["ValidateAccountActivitySubscriptionResponseData"] = Field(
+        default=None
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersFollowingCreateResponseData(BaseModel):
-    """Nested model for UsersFollowingCreateResponseData"""
-
-    following: Optional[bool] = Field(default=None)
-    pending_follow: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersFollowingCreateResponse(BaseModel):
-    """Model for UsersFollowingCreateResponse"""
-
-    data: Optional["UsersFollowingCreateResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UsersFollowingDeleteResponseData(BaseModel):
-    """Nested model for UsersFollowingDeleteResponseData"""
+class ValidateAccountActivitySubscriptionResponseData(BaseModel):
+    """Model for ValidateAccountActivitySubscriptionResponseData"""
 
-    following: Optional[bool] = Field(default=None)
+    subscribed: bool = Field(description="Whether the user has an active subscription.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UsersFollowingDeleteResponse(BaseModel):
-    """Model for UsersFollowingDeleteResponse"""
+class ValidateWebhooksResponse(BaseModel):
+    """Model for ValidateWebhooksResponse"""
 
-    data: Optional["UsersFollowingDeleteResponseData"] = Field(default=None)
+    data: Optional["ValidateWebhooksResponseData"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UsersLikesCreateRequest(BaseModel):
-    """Model for UsersLikesCreateRequest"""
+class ValidateWebhooksResponseData(BaseModel):
+    """Model for ValidateWebhooksResponseData"""
 
-    tweet_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
+    valid: bool = Field(
+        description="Indicates whether the CRC validation check was triggered."
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersLikesCreateResponseData(BaseModel):
-    """Nested model for UsersLikesCreateResponseData"""
-
-    liked: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersLikesCreateResponse(BaseModel):
-    """Model for UsersLikesCreateResponse"""
-
-    data: Optional["UsersLikesCreateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersLikesDeleteResponseData(BaseModel):
-    """Nested model for UsersLikesDeleteResponseData"""
-
-    liked: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersLikesDeleteResponse(BaseModel):
-    """Model for UsersLikesDeleteResponse"""
-
-    data: Optional["UsersLikesDeleteResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersRetweetsCreateRequest(BaseModel):
-    """Model for UsersRetweetsCreateRequest"""
-
-    tweet_id: "TweetId" = Field(
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers."
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersRetweetsCreateResponseData(BaseModel):
-    """Nested model for UsersRetweetsCreateResponseData"""
-
-    id: Optional["TweetId"] = Field(
-        default=None,
-        description="Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.",
-    )
-    retweeted: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersRetweetsCreateResponse(BaseModel):
-    """Model for UsersRetweetsCreateResponse"""
-
-    data: Optional["UsersRetweetsCreateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersRetweetsDeleteResponseData(BaseModel):
-    """Nested model for UsersRetweetsDeleteResponseData"""
-
-    retweeted: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class UsersRetweetsDeleteResponse(BaseModel):
-    """Model for UsersRetweetsDeleteResponse"""
-
-    data: Optional["UsersRetweetsDeleteResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class Variant(BaseModel):
-    """Model for Variant"""
-
-    bit_rate: Optional[int] = Field(
-        default=None, description="The bit rate of the media."
-    )
-    content_type: Optional[str] = Field(
-        default=None, description="The content type of the media."
-    )
-    url: Optional[str] = Field(default=None, description="The url to the media.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class WebhookConfig(BaseModel):
-    """A Webhook Configuration"""
+    """Model for WebhookConfig"""
 
-    created_at: str
-    id: "WebhookConfigId" = Field(
-        description="The unique identifier of this webhook config."
-    )
-    url: str = Field(description="The callback URL of the webhook.")
-    valid: bool
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookConfigCreateRequest(BaseModel):
-    """Model for WebhookConfigCreateRequest"""
-
-    url: str
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookConfigCreateResponse(BaseModel):
-    """A Webhook Configuration"""
-
-    created_at: str
-    id: "WebhookConfigId" = Field(
-        description="The unique identifier of this webhook config."
-    )
-    url: str = Field(description="The callback URL of the webhook.")
-    valid: bool
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookConfigDeleteResponseData(BaseModel):
-    """Nested model for WebhookConfigDeleteResponseData"""
-
-    deleted: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookConfigDeleteResponse(BaseModel):
-    """Model for WebhookConfigDeleteResponse"""
-
-    data: Optional["WebhookConfigDeleteResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookConfigPutResponseData(BaseModel):
-    """Nested model for WebhookConfigPutResponseData"""
-
-    attempted: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookConfigPutResponse(BaseModel):
-    """Model for WebhookConfigPutResponse"""
-
-    data: Optional["WebhookConfigPutResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksCreateResponseData(BaseModel):
-    """Nested model for WebhookLinksCreateResponseData"""
-
-    provisioned: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksCreateResponse(BaseModel):
-    """Model for WebhookLinksCreateResponse"""
-
-    data: Optional["WebhookLinksCreateResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksDeleteResponseData(BaseModel):
-    """Nested model for WebhookLinksDeleteResponseData"""
-
-    deleted: Optional[bool] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksDeleteResponse(BaseModel):
-    """Model for WebhookLinksDeleteResponse"""
-
-    data: Optional["WebhookLinksDeleteResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksGetResponseDataLinksItem(BaseModel):
-    """Nested model for WebhookLinksGetResponseDataLinksItem"""
-
-    application_id: Optional[str] = Field(
-        default=None, description="The application ID"
-    )
-    business_user_id: Optional[str] = Field(default=None, description="The user ID")
-    created_at: Optional[str] = Field(
-        default=None, description="The datetime the webhook was linked to the stream"
-    )
-    fields: Optional[List[str]] = Field(
-        default=None, description="Requested fields to be rendered"
-    )
-    instance_id: Optional[str] = Field(
-        default=None,
-        description="The stream ID associated with the FilteredStream instance",
-    )
-    webhook_id: Optional[str] = Field(
-        default=None, description="The unique identifier for the webhook"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksGetResponseData(BaseModel):
-    """Nested model for WebhookLinksGetResponseData"""
-
-    links: List["WebhookLinksGetResponseDataLinksItem"] = Field(
-        description="list of links"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookLinksGetResponse(BaseModel):
-    """Model for WebhookLinksGetResponse"""
-
-    data: Optional["WebhookLinksGetResponseData"] = Field(
-        default=None, description="The list of active webhook links for a given stream"
-    )
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebhookReplayCreateRequest(BaseModel):
-    """Model for WebhookReplayCreateRequest"""
-
-    from_date: str = Field(
-        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format."
-    )
-    to_date: str = Field(
-        description="The oldest (starting) UTC timestamp (inclusive) from which events will be provided, in yyyymmddhhmm format."
-    )
-    webhook_id: "WebhookConfigId" = Field(
-        description="The unique identifier of this webhook config."
-    )
+    created_at: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    url: Optional[str] = Field(default=None)
+    valid: Optional[bool] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6857,196 +7640,79 @@ ActivityStreamingResponsePayload = Union[
     ProfileUpdateActivityResponsePayload,
     NewsActivityResponsePayload,
     FollowActivityResponsePayload,
-    Tweet,
+    Post,
     PostDeleteActivityResponsePayload,
-    LikeWithTweetAuthor,
+    LikeWithPostAuthor,
 ]
 
-# The unique identifier of this subscription.
-ActivitySubscriptionId = str
-
-AddOrDeleteRulesRequest = Union[AddRulesRequest, DeleteRulesRequest]
-
-# The sum of results returned in this response.
-Aggregate = int
-
-# Client App Rule Counts for all applications in the project
-AllProjectClientApps = List[AppRulesCount]
-
-AnimatedGif = Media
-
-# The unique identifier of this Article.
-ArticleId = str
-
-# Raw binary data bytes.
-BinaryPayload = str
-
-# The unique identifier of this Bookmark folder.
-BookmarkFolderId = str
-
-CashtagEntity = EntityIndicesInclusiveExclusive
-
-# Identifies the conversation target. Accepts three formats: (1) a recipient user ID for 1:1 conversations (e.g., '1215441834412953600'), (2) a legacy 1:1 conversation ID with two user IDs separated by a dash (e.g., '1215441834412953600-1603419180975409153'), or (3) a group conversation ID prefixed with 'g' (e.g., 'g1234567890123456789'). The server constructs the canonical conversation ID from the authenticated user and recipient when a single user ID is provided.
-ChatConversationOrRecipientId = str
-
-# The file to upload.
-MediaPayloadBinary = str
-
-# The file to upload.
-MediaPayloadByte = str
-
-MediaSegments = Union[int, str]
+# Unique identifier of a Analytics
+AnalyticsId = str
 
 
-class ChatMediaUploadAppendRequestVariant2(BaseModel):
-    """Nested model for ChatMediaUploadAppendRequestVariant2"""
+class AnalyticsTimestampedMetricsItemMetrics(BaseModel):
+    """Nested model for AnalyticsTimestampedMetricsItemMetrics"""
 
-    conversation_id: str = Field(
-        description="XChat conversation identifier for the upload."
-    )
-    media: "MediaPayloadByte" = Field(description="The file to upload.")
-    media_hash_key: str = Field(description="Media hash key returned from initialize.")
-    segment_index: "MediaSegments"
+    app_install_attempts: Optional[Optional[int]] = Field(default=None)
+    app_opens: Optional[Optional[int]] = Field(default=None)
+    bookmarks: Optional[Optional[int]] = Field(default=None)
+    detail_expands: Optional[Optional[int]] = Field(default=None)
+    email_tweet: Optional[Optional[int]] = Field(default=None)
+    engagements: Optional[Optional[int]] = Field(default=None)
+    follows: Optional[Optional[int]] = Field(default=None)
+    hashtag_clicks: Optional[Optional[int]] = Field(default=None)
+    impressions: Optional[Optional[int]] = Field(default=None)
+    likes: Optional[Optional[int]] = Field(default=None)
+    media_views: Optional[Optional[int]] = Field(default=None)
+    permalink_clicks: Optional[Optional[int]] = Field(default=None)
+    quote_tweets: Optional[Optional[int]] = Field(default=None)
+    replies: Optional[Optional[int]] = Field(default=None)
+    retweets: Optional[Optional[int]] = Field(default=None)
+    shares: Optional[Optional[int]] = Field(default=None)
+    unfollows: Optional[Optional[int]] = Field(default=None)
+    unlikes: Optional[Optional[int]] = Field(default=None)
+    url_clicks: Optional[Optional[int]] = Field(default=None)
+    user_profile_clicks: Optional[Optional[int]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class ChatMediaUploadAppendRequestVariant1(BaseModel):
-    """Nested model for ChatMediaUploadAppendRequestVariant1"""
+class AnalyticsTimestampedMetricsItem(BaseModel):
+    """Nested model for AnalyticsTimestampedMetricsItem"""
 
-    conversation_id: str = Field(
-        description="XChat conversation identifier for the upload."
+    metrics: Optional[Optional["AnalyticsTimestampedMetricsItemMetrics"]] = Field(
+        default=None, description="Engagement metric counts for this bucket."
     )
-    media: "MediaPayloadBinary" = Field(description="The file to upload.")
-    media_hash_key: str = Field(description="Media hash key returned from initialize.")
-    segment_index: "MediaSegments"
+    timestamp: Optional[Optional[str]] = Field(
+        default=None,
+        description="Start of the metrics bucket, as an ISO 8601 date-time.",
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-ChatMediaUploadAppendRequest = Union[
-    ChatMediaUploadAppendRequestVariant1, ChatMediaUploadAppendRequestVariant2
-]
+# Time-bucketed engagement metrics for the Post, one entry per granularity bucket.
+AnalyticsTimestampedMetrics = List[AnalyticsTimestampedMetricsItem]
 
-# The ID of the client application
-ClientAppId = str
-
-# Your client has gone away.
-ClientDisconnectedProblem = Problem
-
-# A problem that indicates your client is forbidden from making this request.
-ClientForbiddenProblem = Problem
-
-# The unique identifier of this Community.
+# Unique identifier of a Community
 CommunityId = str
-
-# User-provided name for a compliance job.
-ComplianceJobName = str
-
-# Status of a compliance job.
-ComplianceJobStatus = Literal["created", "in_progress", "failed", "complete", "expired"]
-
-# Type of compliance job to list.
-ComplianceJobType = Literal["tweets", "users"]
-
-# You cannot create a new job if one is already in progress.
-ConflictProblem = Problem
-
-# A problem that indicates something is wrong with the connection.
-ConnectionExceptionProblem = Problem
 
 # A two-letter ISO 3166-1 alpha-2 country code.
 CountryCode = str
 
-CreateMessageRequest = Union[CreateTextMessageRequest, CreateAttachmentsMessageRequest]
+CreateAccountActivitySubscriptionRequest = Dict[str, Any]
 
-# Creation time of the compliance job.
-CreatedAt = str
-
-# A problem that indicates that the resource requested violates the precepts of this API.
-DisallowedResourceProblem = Problem
-
-# Represent a boundary range (start and end zero-based indices) for the portion of text that is displayed for a post. `start` must be smaller than `end`. The start index is inclusive, the end index is exclusive.
-DisplayTextRange = List[int]
-
-# Attachments to a DM Event.
-DmAttachments = List[DmMediaAttachment]
-
-# Unique identifier of a DM conversation. This can either be a numeric string, or a pair of numeric strings separated by a '-' character in the case of one-on-one DM Conversations.
-DmConversationId = str
-
-# Unique identifier of a DM Event.
-DmEventId = str
-
-# Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.
-UserId = str
-
-# Participants for the DM Conversation.
-DmParticipants = List[UserId]
-
-# The resource identifier of the media file, including file extension.
-DmResourceId = str
-
-# Expiration time of the download URL.
-DownloadExpiration = str
-
-# URL from which the user will retrieve their compliance results.
-DownloadUrl = str
-
-# The rule you have submitted is a duplicate.
-DuplicateRuleProblem = Problem
-
-# The end time of the bucket.
-End = str
-
-# A problem that indicates that you are not allowed to see a particular field on a Tweet, User, etc.
-FieldUnauthorizedProblem = Problem
-
-# A generic problem with no additional information beyond that provided by the HTTP status code.
-GenericProblem = Problem
+CreateMediaMetadataMetadataStickerInfoStickers = Dict[str, Any]
 
 
-class GeoRestrictionsVariant2(BaseModel):
-    """Nested model for GeoRestrictionsVariant2"""
+class DmEventReferencedPostsItem(BaseModel):
+    """Nested model for DmEventReferencedPostsItem"""
 
-    blacklisted_country_codes: List[str] = Field(
-        description="List of blacklisted country codes"
-    )
-    whitelisted_country_codes: List[str] = Field(
-        description="List of whitelisted country codes"
-    )
+    id: str = Field(description="Unique identifier of the referenced Post.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class GeoRestrictionsVariant1(BaseModel):
-    """Nested model for GeoRestrictionsVariant1"""
-
-    blacklisted_country_codes: List[str] = Field(
-        description="List of blacklisted country codes"
-    )
-    whitelisted_country_codes: List[str] = Field(
-        description="List of whitelisted country codes"
-    )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-GeoRestrictions = Union[GeoRestrictionsVariant1, GeoRestrictionsVariant2]
-
-HashtagEntity = EntityIndicesInclusiveExclusive
-
-# HTTP Status Code.
-HttpStatusCode = int
-
-# A problem that indicates this request is invalid.
-InvalidRequestProblem = Problem
-
-# The rule you have submitted is invalid.
-InvalidRuleProblem = Problem
-
-# Compliance Job ID.
-JobId = str
+DmEventReferencedPosts = List[DmEventReferencedPostsItem]
 
 # A keyword to filter on.
 Keyword = str
@@ -7054,188 +7720,305 @@ Keyword = str
 # The unique identifier of this Like.
 LikeId = str
 
+# The number of users who follow this List.
+ListFollowerCount = int
 
-class LikesComplianceStreamResponseVariant2(BaseModel):
-    """Nested model for LikesComplianceStreamResponseVariant2"""
-
-    errors: List["Problem"]
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class LikesComplianceStreamResponseVariant1(BaseModel):
-    """Nested model for LikesComplianceStreamResponseVariant1"""
-
-    data: "LikeComplianceSchema"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Likes compliance stream events.
-LikesComplianceStreamResponse = Union[
-    LikesComplianceStreamResponseVariant1, LikesComplianceStreamResponseVariant2
-]
-
-# The unique identifier of this List.
+# Unique identifier of a List
 ListId = str
 
-# A string enum value which identifies a media use-case. This identifier is used to enforce use-case specific constraints (e.g. file size, video duration) and enable advanced features.
-MediaCategory = Literal[
-    "amplify_video",
-    "tweet_gif",
-    "tweet_image",
-    "tweet_video",
-    "dm_gif",
-    "dm_image",
-    "dm_video",
-    "subtitles",
-]
+# The number of members in this List.
+ListMemberCount = int
 
-# A string enum value which identifies a media use-case. This identifier is used to enforce use-case specific constraints (e.g. file size) and enable advanced features.
-MediaCategoryOneShot = Literal["tweet_image", "dm_image", "subtitles"]
 
-# The media category of uploaded media to which subtitles should be added/deleted
-MediaCategorySubtitles = Literal["AmplifyVideo", "TweetVideo"]
+class MediaAnalyticsTimestampedMetricsItemMetrics(BaseModel):
+    """Nested model for MediaAnalyticsTimestampedMetricsItemMetrics"""
 
-# The media hash key returned from the upload initialize step. Alphanumeric characters only.
-MediaHashKey = str
+    cta_url_clicks: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    cta_watch_clicks: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    play_from_tap: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    playback25: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    playback50: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    playback75: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    playback_complete: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    playback_start: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    video_views: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
+    watch_time_ms: Optional[Optional[Union[int, str]]] = Field(
+        default=None,
+        description="A video metric counter: an integer when the backend value parses as a number, otherwise the original string.",
+    )
 
-# The height of the media in pixels.
-MediaHeight = int
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-# The unique identifier of this Media.
+
+class MediaAnalyticsTimestampedMetricsItem(BaseModel):
+    """Nested model for MediaAnalyticsTimestampedMetricsItem"""
+
+    metrics: Optional[Optional["MediaAnalyticsTimestampedMetricsItemMetrics"]] = Field(
+        default=None,
+        description="Video metric counts for this bucket. Counters are integers when the backend value parses as a number, otherwise the original string is preserved.",
+    )
+    timestamp: Optional[Optional[str]] = Field(
+        default=None,
+        description="Start of the metrics bucket, as an ISO 8601 date-time.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Time-bucketed video metrics for the media, one entry per granularity bucket.
+MediaAnalyticsTimestampedMetrics = List[MediaAnalyticsTimestampedMetricsItem]
+
+# Unique identifier of a Media
 MediaId = str
 
-# The Media Key identifier for this attachment.
-MediaKey = str
 
+class MediaVariantsItem(BaseModel):
+    """Nested model for MediaVariantsItem"""
 
-class MediaUploadAppendRequestVariant2(BaseModel):
-    """Nested model for MediaUploadAppendRequestVariant2"""
-
-    media: "MediaPayloadByte" = Field(description="The file to upload.")
-    segment_index: "MediaSegments"
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class MediaUploadAppendRequestVariant1(BaseModel):
-    """Nested model for MediaUploadAppendRequestVariant1"""
-
-    media: "MediaPayloadBinary" = Field(description="The file to upload.")
-    segment_index: "MediaSegments"
+    bit_rate: Optional[Optional[int]] = Field(
+        default=None,
+        description="The bit rate of this variant, in bits per second. Absent for playlist variants.",
+    )
+    content_type: Optional[Optional[str]] = Field(
+        default=None,
+        description='The MIME type of this variant, for example "video/mp4" or "application/x-mpegURL".',
+    )
+    url: Optional[Optional[str]] = Field(
+        default=None, description="The URL to this media variant."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-MediaUploadAppendRequest = Union[
-    MediaUploadAppendRequestVariant1, MediaUploadAppendRequestVariant2
-]
+# Each media object may have multiple display or playback variants, with different resolutions or formats.
+MediaVariants = List[MediaVariantsItem]
 
-# The width of the media in pixels.
-MediaWidth = int
 
-MentionEntity = EntityIndicesInclusiveExclusive
+class NewsClusterPostsResultsItem(BaseModel):
+    """Nested model for NewsClusterPostsResultsItem"""
 
-# Community Note misleading tags type.
-MisleadingTags = Literal[
-    "disputed_claim_as_fact",
-    "factual_error",
-    "manipulated_media",
-    "misinterpreted_satire",
-    "missing_important_context",
-    "other",
-    "outdated_information",
-]
+    post_id: str = Field(description="Unique identifier of the Post.")
 
-# The newest id in this response.
-NewestId = str
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-# Unique identifier of news story.
-NewsId = str
 
-# The next token.
-NextToken = str
+NewsClusterPostsResults = List[NewsClusterPostsResultsItem]
 
-# A problem that indicates the user's rule set is not compliant.
-NonCompliantRulesProblem = Problem
-
-# Community Note classification type.
-NoteClassification = Literal["misinformed_or_potentially_misleading", "not_misleading"]
-
-# The unique identifier of this Community Note.
+# Unique identifier of a Note
 NoteId = str
 
-# Community Note rating status
-NoteRatingStatus = Literal[
-    "currently_rated_helpful",
-    "currently_rated_not_helpful",
-    "firm_reject",
-    "insufficient_consensus",
-    "minimum_ratings_not_met",
-    "needs_more_ratings",
-    "needs_your_help",
+# A list of unique identifiers of the Places that contain this place.
+PlaceContainedWithin = List[str]
+
+
+class PollOptionsItem(BaseModel):
+    """Nested model for PollOptionsItem"""
+
+    label: str = Field(description="The text label of this poll option.")
+    position: int = Field(
+        description="The 1-based position of this option within the poll."
+    )
+    votes: int = Field(description="The number of votes this option has received.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# The list of options (choices) available in this poll.
+PollOptions = List[PollOptionsItem]
+
+# Tweet compliance data.
+PostComplianceData = Union[
+    PostDeleteComplianceSchema,
+    PostWithheldComplianceSchema,
+    PostDropComplianceSchema,
+    PostUndropComplianceSchema,
+    PostEditComplianceSchema,
 ]
 
-# The note content of the Tweet.
-NoteTweetText = str
 
-# A problem that indicates your client application does not have the required OAuth1 permissions for the requested endpoint.
-Oauth1PermissionsProblem = Problem
+class PostContextAnnotationsItemEntityVariant1(BaseModel):
+    """Nested model for PostContextAnnotationsItemEntityVariant1"""
 
-# The oldest id in this response.
-OldestId = str
+    description: Optional[Optional[str]] = Field(default=None)
+    id: Optional[Optional[str]] = Field(default=None)
+    name: Optional[Optional[str]] = Field(default=None)
 
-# You have been disconnected for operational reasons.
-OperationalDisconnectProblem = Problem
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-# A base32 pagination token.
-PaginationToken32 = str
 
-# A base36 pagination token.
-PaginationToken36 = str
+class PostContextAnnotationsItemDomainVariant1(BaseModel):
+    """Nested model for PostContextAnnotationsItemDomainVariant1"""
 
-# A 'long' pagination token.
-PaginationTokenLong = str
+    description: Optional[Optional[str]] = Field(default=None)
+    id: Optional[Optional[str]] = Field(default=None)
+    name: Optional[Optional[str]] = Field(default=None)
 
-Photo = Media
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-# The identifier for this place.
-PlaceId = str
 
-PlaceType = Literal["poi", "neighborhood", "city", "admin", "country", "unknown"]
+class PostContextAnnotationsItem(BaseModel):
+    """Nested model for PostContextAnnotationsItem"""
 
-# Unique identifier of this poll.
-PollId = str
+    domain: "PostContextAnnotationsItemDomainVariant1" = Field(
+        description="The domain (broad category) this annotation belongs to."
+    )
+    entity: "PostContextAnnotationsItemEntityVariant1" = Field(
+        description="The specific entity recognized within the domain."
+    )
 
-# The text of a poll choice.
-PollOptionLabel = str
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-# A [GeoJson Position](https://tools.ietf.org/html/rfc7946#section-3.1.1) in the format `[longitude,latitude]`.
-Position = List[float]
 
-# The previous token.
-PreviousToken = str
+# Annotations inferred about the Post (domain and entity context).
+PostContextAnnotations = List[PostContextAnnotationsItem]
 
-# Shows who can reply a Tweet. Fields returned are everyone, mentioned_users, and following.
-ReplySettings = Literal["everyone", "mentionedUsers", "following", "other"]
+# The inclusive start and exclusive end indices of the displayable content of the Post.
+PostDisplayTextRange = List[int]
 
-# Shows who can reply a Tweet. Fields returned are everyone, mentioned_users, subscribers, verified and following.
-ReplySettingsWithVerifiedUsers = Literal[
-    "everyone", "mentionedUsers", "following", "other", "subscribers", "verified"
+# Unique identifier of a Post
+PostId = str
+
+# Tweet label data.
+PostLabelData = Union[PostNoticeSchema, PostUnviewableSchema]
+
+
+class PostMatchedMediaNotesItem(BaseModel):
+    """Nested model for PostMatchedMediaNotesItem"""
+
+    match_status: Optional[Optional[str]] = Field(
+        default=None, description="The status of the media note match."
+    )
+    note_id: Optional[Optional[str]] = Field(
+        default=None, description="The matched note's unique identifier."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Community-Notes media matches for this Post.
+PostMatchedMediaNotes = List[PostMatchedMediaNotesItem]
+
+
+class PostMediaMetadataItem(BaseModel):
+    """Nested model for PostMediaMetadataItem"""
+
+    alt_text: Optional[Optional[str]] = Field(
+        default=None,
+        description="Alternative text describing the media for accessibility.",
+    )
+    description: Optional[Optional[str]] = Field(
+        default=None, description="Description of the media."
+    )
+    media_key: Optional[Optional[str]] = Field(
+        default=None, description="The unique identifier of the media."
+    )
+    title: Optional[Optional[str]] = Field(
+        default=None, description="Title of the media."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Metadata for media attached to this Post.
+PostMediaMetadata = List[PostMediaMetadataItem]
+
+
+class PostNoteRequestSuggestionsItem(BaseModel):
+    """Nested model for PostNoteRequestSuggestionsItem"""
+
+    source_link: Optional[Optional[str]] = Field(
+        default=None, description="A suggested source link supporting the note request."
+    )
+    suggestion: Optional[Optional[str]] = Field(
+        default=None, description="The text of the note request suggestion."
+    )
+    suggestion_id: Optional[Optional[str]] = Field(
+        default=None,
+        description="The unique identifier of the note request suggestion.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Community-Notes request suggestions for this Post.
+PostNoteRequestSuggestions = List[PostNoteRequestSuggestionsItem]
+
+
+class PostReferencedPostsItem(BaseModel):
+    """Nested model for PostReferencedPostsItem"""
+
+    id: str = Field(description="Unique identifier of the referenced Post.")
+    type: Literal["retweeted", "quoted", "replied_to"] = Field(
+        description="How this Post references the other Post."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# A list of Posts this Post refers to. If the Post is a Retweet, Quote or Reply, it includes the referenced Post's type and ID.
+PostReferencedPosts = List[PostReferencedPostsItem]
+
+# URLs suggested as sources for this Post.
+PostSuggestedSourceLinks = List[str]
+
+
+class PostSuggestedSourceLinksWithCountsItem(BaseModel):
+    """Nested model for PostSuggestedSourceLinksWithCountsItem"""
+
+    count: Optional[Optional[int]] = Field(
+        default=None, description="Number of times this source link was suggested."
+    )
+    url: Optional[Optional[str]] = Field(
+        default=None, description="The suggested source URL."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Suggested source URLs for this Post, each with the number of times it was suggested.
+PostSuggestedSourceLinksWithCounts = List[PostSuggestedSourceLinksWithCountsItem]
+
+Problem = Union[
+    ResourceNotFoundProblem,
+    InvalidRequestProblem,
+    NotAuthorizedForResourceProblem,
+    NotAuthorizedForFieldProblem,
+    FieldUnauthorizedProblem,
+    FieldHydrationFailureProblem,
+    ResourceUnavailableProblem,
+    DisallowedResourceProblem,
+    InternalErrorProblem,
 ]
 
-# A problem that indicates that a given Tweet, User, etc. does not exist.
-ResourceNotFoundProblem = Problem
-
-# A problem that indicates you are not allowed to see a particular Tweet, User, etc.
-ResourceUnauthorizedProblem = Problem
-
-# A problem that indicates a particular Tweet, User, etc. is not available to you.
-ResourceUnavailableProblem = Problem
-
-# The number of results returned in this response.
-ResultCount = int
+# Unique identifier of a PublicKey
+PublicKeyId = str
 
 # Unique identifier of this rule.
 RuleId = str
@@ -7243,146 +8026,99 @@ RuleId = str
 # A tag meant for the labeling of user provided rules.
 RuleTag = str
 
-# The filterlang value of the rule.
-RuleValue = str
 
-# You have exceeded the maximum number of rules.
-RulesCapProblem = Problem
+class RulesCountAllProjectClientAppsItem(BaseModel):
+    """Nested model for RulesCountAllProjectClientAppsItem"""
 
-
-class RulesRequestSummaryVariant2(BaseModel):
-    """Nested model for RulesRequestSummaryVariant2"""
-
-    deleted: int = Field(
-        description="Number of user-specified stream filtering rules that were deleted."
+    rule_count: int = Field(
+        description="Number of rules configured for the client application."
     )
-    not_deleted: int = Field(
-        description="Number of user-specified stream filtering rules that were not deleted."
+    client_app_id: Optional[Optional[str]] = Field(
+        default=None, description="Unique identifier of the client application."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class RulesRequestSummaryVariant1(BaseModel):
-    """Nested model for RulesRequestSummaryVariant1"""
+RulesCountAllProjectClientApps = List[RulesCountAllProjectClientAppsItem]
 
-    created: int = Field(
-        description="Number of user-specified stream filtering rules that were created."
-    )
-    invalid: int = Field(
-        description="Number of invalid user-specified stream filtering rules."
-    )
-    not_created: int = Field(
-        description="Number of user-specified stream filtering rules that were not created."
-    )
-    valid: int = Field(
-        description="Number of valid user-specified stream filtering rules."
-    )
+# A list of unique identifiers of the Users who host this Space.
+SpaceHostIds = List[str]
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+# A list of unique identifiers of the Users invited to this Space.
+SpaceInvitedUserIds = List[str]
+
+# A list of unique identifiers of the Users who are speakers in this Space.
+SpaceSpeakerIds = List[str]
+
+# A list of unique identifiers of the Topics associated with this Space.
+SpaceTopicIds = List[str]
 
 
-RulesRequestSummary = Union[RulesRequestSummaryVariant1, RulesRequestSummaryVariant2]
-
-# The unique identifier of this Space.
-SpaceId = str
-
-# The start time of the bucket.
-Start = str
-
-SubscriptionsCreateRequest = Dict[str, Any]
-
-# The language code should be a BCP47 code (e.g. 'EN", "SP")
-SubtitleLanguageCode = str
-
-# Unique identifier of this Topic.
-TopicId = str
-
-# Tweet compliance data.
-TweetComplianceData = Union[
-    TweetDeleteComplianceSchema,
-    TweetWithheldComplianceSchema,
-    TweetDropComplianceSchema,
-    TweetUndropComplianceSchema,
-    TweetEditComplianceSchema,
-]
-
-
-class TweetComplianceStreamResponseVariant2(BaseModel):
-    """Nested model for TweetComplianceStreamResponseVariant2"""
+class StreamLabelsComplianceResponseVariant2(BaseModel):
+    """Nested model for StreamLabelsComplianceResponseVariant2"""
 
     errors: List["Problem"]
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class TweetComplianceStreamResponseVariant1(BaseModel):
-    """Nested model for TweetComplianceStreamResponseVariant1"""
+class StreamLabelsComplianceResponseVariant1(BaseModel):
+    """Nested model for StreamLabelsComplianceResponseVariant1"""
 
-    data: "TweetComplianceData" = Field(description="Tweet compliance data.")
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-# Tweet compliance stream events.
-TweetComplianceStreamResponse = Union[
-    TweetComplianceStreamResponseVariant1, TweetComplianceStreamResponseVariant2
-]
-
-# The count for the bucket.
-TweetCount = int
-
-# Unique identifier of this Tweet. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.
-TweetId = str
-
-# Tweet label data.
-TweetLabelData = Union[TweetNoticeSchema, TweetUnviewableSchema]
-
-
-class TweetLabelStreamResponseVariant2(BaseModel):
-    """Nested model for TweetLabelStreamResponseVariant2"""
-
-    errors: List["Problem"]
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class TweetLabelStreamResponseVariant1(BaseModel):
-    """Nested model for TweetLabelStreamResponseVariant1"""
-
-    data: "TweetLabelData" = Field(description="Tweet label data.")
+    data: "PostLabelData" = Field(description="Tweet label data.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 # Tweet label stream events.
-TweetLabelStreamResponse = Union[
-    TweetLabelStreamResponseVariant1, TweetLabelStreamResponseVariant2
+StreamLabelsComplianceResponse = Union[
+    StreamLabelsComplianceResponseVariant1, StreamLabelsComplianceResponseVariant2
 ]
 
-# The content of the Tweet.
-TweetText = str
 
-# A problem that indicates that the authentication used is not supported.
-UnsupportedAuthenticationProblem = Problem
+class StreamLikesComplianceResponseVariant2(BaseModel):
+    """Nested model for StreamLikesComplianceResponseVariant2"""
 
-# Expiration time of the upload URL.
-UploadExpiration = str
+    errors: List["Problem"]
 
-# URL to which the user will upload their Tweet or user IDs.
-UploadUrl = str
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-# A validly formatted URL.
-Url = str
 
-# Represent the portion of text recognized as a URL, and its start and end position within the text.
-UrlEntity = EntityIndicesInclusiveExclusive
+class StreamLikesComplianceResponseVariant1(BaseModel):
+    """Nested model for StreamLikesComplianceResponseVariant1"""
 
-# Represent the portion of text recognized as a URL, and its start and end position within the text.
-UrlEntityDm = EntityIndicesInclusiveExclusive
+    data: "LikeComplianceSchema"
 
-# A problem that indicates that a usage cap has been exceeded.
-UsageCapExceededProblem = Problem
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Likes compliance stream events.
+StreamLikesComplianceResponse = Union[
+    StreamLikesComplianceResponseVariant1, StreamLikesComplianceResponseVariant2
+]
+
+
+class StreamPostsComplianceResponseVariant2(BaseModel):
+    """Nested model for StreamPostsComplianceResponseVariant2"""
+
+    errors: List["Problem"]
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class StreamPostsComplianceResponseVariant1(BaseModel):
+    """Nested model for StreamPostsComplianceResponseVariant1"""
+
+    data: "PostComplianceData" = Field(description="Tweet compliance data.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Tweet compliance stream events.
+StreamPostsComplianceResponse = Union[
+    StreamPostsComplianceResponseVariant1, StreamPostsComplianceResponseVariant2
+]
 
 # User compliance data.
 UserComplianceData = Union[
@@ -7398,16 +8134,16 @@ UserComplianceData = Union[
 ]
 
 
-class UserComplianceStreamResponseVariant2(BaseModel):
-    """Nested model for UserComplianceStreamResponseVariant2"""
+class StreamUsersComplianceResponseVariant2(BaseModel):
+    """Nested model for StreamUsersComplianceResponseVariant2"""
 
     errors: List["Problem"]
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class UserComplianceStreamResponseVariant1(BaseModel):
-    """Nested model for UserComplianceStreamResponseVariant1"""
+class StreamUsersComplianceResponseVariant1(BaseModel):
+    """Nested model for StreamUsersComplianceResponseVariant1"""
 
     data: "UserComplianceData" = Field(description="User compliance data.")
 
@@ -7415,25 +8151,59 @@ class UserComplianceStreamResponseVariant1(BaseModel):
 
 
 # User compliance stream events.
-UserComplianceStreamResponse = Union[
-    UserComplianceStreamResponseVariant1, UserComplianceStreamResponseVariant2
+StreamUsersComplianceResponse = Union[
+    StreamUsersComplianceResponseVariant1, StreamUsersComplianceResponseVariant2
 ]
 
-# Unique identifier of this User. The value must be the same as the authenticated user.
-UserIdMatchesAuthenticatedUser = str
 
-# The X handle (screen name) of this user.
-UserName = str
+class UsageDailyClientAppUsageItemUsageItem(BaseModel):
+    """Nested model for UsageDailyClientAppUsageItemUsageItem"""
 
-# The the search string by which to query for users.
-UserSearchQueryVnext = str
+    date: str = Field(
+        description="The day of the usage entry, as an ISO 8601 date-time."
+    )
+    usage: Optional[Optional[str]] = Field(
+        default=None, description="Number of Posts used on this day."
+    )
 
-# An array of all available variants of the media.
-Variants = List[Variant]
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-Video = Media
 
-# The unique identifier of this webhook config.
+class UsageDailyClientAppUsageItem(BaseModel):
+    """Nested model for UsageDailyClientAppUsageItem"""
+
+    usage_result_count: int = Field(
+        description="Number of daily usage entries returned for this client app."
+    )
+    client_app_id: Optional[Optional[str]] = Field(
+        default=None, description="Unique identifier of the client app."
+    )
+    usage: Optional[List["UsageDailyClientAppUsageItemUsageItem"]] = Field(
+        default=None, description="Daily usage entries for this client app."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Per-client-app daily Post usage for the caller's project.
+UsageDailyClientAppUsage = List[UsageDailyClientAppUsageItem]
+
+# Returns detailed information about the relationship between two users.
+UserConnectionStatus = List[
+    Literal[
+        "blocking",
+        "follow_request_received",
+        "follow_request_sent",
+        "followed_by",
+        "following",
+        "muting",
+    ]
+]
+
+# Unique identifier of a User
+UserId = str
+
+# Unique identifier of a WebhookConfig
 WebhookConfigId = str
 
 for _model in list(globals().values()):

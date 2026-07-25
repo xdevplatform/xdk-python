@@ -41,7 +41,7 @@ class ComplianceClient:
 
     def get_jobs_by_id(
         self,
-        id: schemas.JobId,
+        id: str,
         compliance_job_fields: Optional[
             List[
                 Literal[
@@ -63,7 +63,7 @@ class ComplianceClient:
         Get Compliance Job by ID
         Retrieves details of a specific Compliance Job by its ID.
         Args:
-            id: The ID of the Compliance Job to retrieve.
+            id: id
             compliance_job_fields: A comma separated list of ComplianceJob fields to display.
             Returns:
             GetJobsByIdResponse: Response data
@@ -222,8 +222,8 @@ class ComplianceClient:
         Get Compliance Jobs
         Retrieves a list of Compliance Jobs filtered by job type and optional status.
         Args:
-            type: Type of Compliance Job to list.
-            status: Status of Compliance Job to list.
+            type: type
+            status: status
             compliance_job_fields: A comma separated list of ComplianceJob fields to display.
             Returns:
             GetJobsResponse: Response data
@@ -358,11 +358,32 @@ class ComplianceClient:
         return GetJobsResponse.model_validate(response_data)
 
 
-    def create_jobs(self, body: CreateJobsRequest) -> CreateJobsResponse:
+    def create_jobs(
+        self,
+        body: CreateJobsRequest,
+        compliance_job_fields: Optional[
+            List[
+                Literal[
+                    "created_at",
+                    "download_expires_at",
+                    "download_url",
+                    "id",
+                    "name",
+                    "resumable",
+                    "status",
+                    "type",
+                    "upload_expires_at",
+                    "upload_url",
+                ]
+            ]
+        ] = None,
+    ) -> CreateJobsResponse:
         """
         Create Compliance Job
         Creates a new Compliance Job for the specified job type.
-        body: A request to create a new batch compliance job.
+        Args:
+            compliance_job_fields: A comma separated list of ComplianceJob fields to display.
+            body: Request body
         Returns:
             CreateJobsResponse: Response data
         """
@@ -377,6 +398,10 @@ class ComplianceClient:
                 f"Bearer {self.client.access_token}"
             )
         params = {}
+        if compliance_job_fields is not None:
+            params["compliance_job.fields"] = ",".join(
+                str(item) for item in compliance_job_fields
+            )
         headers = {}
         headers["Content-Type"] = "application/json"
         # Prepare request data

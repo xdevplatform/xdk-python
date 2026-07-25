@@ -18,4 +18,4 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 from .. import schemas
 
 # Response model for get
-GetResponse = schemas.Get2UsageTweetsResponse
+GetResponse = schemas.GetUsageResponse

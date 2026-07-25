@@ -63,7 +63,7 @@ class ConnectionsClient:
         Terminate connections by endpoint
         Terminates all streaming connections for a specific endpoint ID for the authenticated application.
         Args:
-            endpoint_id: The endpoint ID to terminate connections for.
+            endpoint_id: endpoint_id
             Returns:
             DeleteByEndpointResponse: Response data
         """
@@ -363,10 +363,10 @@ class ConnectionsClient:
         Get Connection History
         Returns active and historical streaming connections with disconnect reasons for the authenticated application.
         Args:
-            status: Filter by connection status. Use 'active' for current connections, 'inactive' for historical/disconnected connections, or 'all' for both.
-            endpoints: Filter by streaming endpoint. Specify one or more endpoint names to filter results.
-            max_results: The maximum number of results to return per page.
-            pagination_token: Token for paginating through results. Use the value from 'next_token' in the previous response.
+            status: status
+            endpoints: endpoints
+            max_results: max_results
+            pagination_token: pagination_token
             connection_fields: A comma separated list of Connection fields to display.
             Yields:
             GetConnectionHistoryResponse: One page of results at a time. Automatically handles pagination using next_token.

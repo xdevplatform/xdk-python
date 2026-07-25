@@ -18,28 +18,28 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 from .. import schemas
 
 # Request model for evaluate
-EvaluateRequest = schemas.EvaluateNoteRequest
+EvaluateRequest = schemas.EvaluateCommunityNotesRequest
 
 
 # Response model for evaluate
-EvaluateResponse = schemas.EvaluateNoteResponse
-
-
-# Response model for delete
-DeleteResponse = schemas.DeleteNoteResponse
+EvaluateResponse = schemas.EvaluateCommunityNotesResponse
 
 
 # Response model for search_written
-SearchWrittenResponse = schemas.Get2NotesSearchNotesWrittenResponse
+SearchWrittenResponse = schemas.SearchCommunityNotesWrittenResponse
 
 
 # Response model for search_eligible_posts
-SearchEligiblePostsResponse = schemas.Get2NotesSearchPostsEligibleForNotesResponse
+SearchEligiblePostsResponse = schemas.SearchEligiblePostsResponse
+
+
+# Response model for delete
+DeleteResponse = schemas.DeleteCommunityNotesResponse
 
 
 # Request model for create
-CreateRequest = schemas.CreateNoteRequest
+CreateRequest = schemas.CreateCommunityNotesRequest
 
 
 # Response model for create
-CreateResponse = schemas.CreateNoteResponse
+CreateResponse = schemas.CreateCommunityNotesResponse

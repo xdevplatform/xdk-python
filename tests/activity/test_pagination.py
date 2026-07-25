@@ -63,7 +63,7 @@ class TestActivityPagination:
             first_page_response.status_code = 200
             first_page_response.json.return_value = {
                 "data": json.loads(
-                    r"""[{"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}, {"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}]"""
+                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
                 ),
                 "meta": {
                     **json.loads(r"""{}"""),
@@ -77,9 +77,7 @@ class TestActivityPagination:
             second_page_response = Mock()
             second_page_response.status_code = 200
             second_page_response.json.return_value = {
-                "data": json.loads(
-                    r"""[{"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}]"""
-                ),
+                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
                 "meta": {**json.loads(r"""{}"""), "result_count": 1},
             }
             second_page_response.raise_for_status.return_value = None
@@ -111,7 +109,7 @@ class TestActivityPagination:
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "data": json.loads(
-                    r"""[{"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}, {"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}, {"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}]"""
+                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
                 ),
                 # No next_token = single page
                 "meta": {**json.loads(r"""{}"""), "result_count": 3},
@@ -125,9 +123,7 @@ class TestActivityPagination:
             items = list(test_cursor.items(5))  # Limit to 5 items
             assert len(items) == 3, f"Should get 3 items, got {len(items)}"
             # Verify items round-trip the spec-valid mock payload
-            _expected_item = json.loads(
-                r"""{"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}"""
-            )
+            _expected_item = json.loads(r"""{"id": "1", "name": "Item 1"}""")
             for item in items:
                 if isinstance(_expected_item, dict):
                     for _key in _expected_item:
@@ -164,9 +160,7 @@ class TestActivityPagination:
             mock_response_with_token = Mock()
             mock_response_with_token.status_code = 200
             mock_response_with_token.json.return_value = {
-                "data": json.loads(
-                    r"""[{"created_at":"2021-01-01T00:00:00.000Z","event_type":"test_value","filter":{},"subscription_id":"test_value","updated_at":"2021-01-01T00:00:00.000Z"}]"""
-                ),
+                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
                 "meta": {
                     **json.loads(r"""{}"""),
                     "next_token": "next_token_value",

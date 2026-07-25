@@ -53,10 +53,9 @@ class UsageClient:
         ] = None,
     ) -> GetResponse:
         """
-        Get usage
-        Retrieves usage statistics for Posts over a specified number of days.
+        Get Usage
         Args:
-            days: The number of days for which you need usage for.
+            days: days
             usage_fields: A comma separated list of Usage fields to display.
             Returns:
             GetResponse: Response data

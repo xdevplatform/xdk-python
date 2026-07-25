@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 from .models import (
     EvaluateRequest,
     EvaluateResponse,
-    DeleteResponse,
     SearchWrittenResponse,
     SearchEligiblePostsResponse,
+    DeleteResponse,
     CreateRequest,
     CreateResponse,
 )
@@ -42,15 +42,14 @@ class CommunityNotesClient:
         self.client = client
 
 
-    def evaluate(self, body: Optional[EvaluateRequest] = None) -> EvaluateResponse:
+    def evaluate(self, body: EvaluateRequest) -> EvaluateResponse:
         """
-        Evaluate a Community Note
-        Endpoint to evaluate a community note.
+        Evaluate Community Notes
         body: Request body
         Returns:
             EvaluateResponse: Response data
         """
-        url = self.client.base_url + "/2/evaluate_note"
+        url = self.client.base_url + "/2/notes/evaluate"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -200,170 +199,21 @@ class CommunityNotesClient:
         return EvaluateResponse.model_validate(response_data)
 
 
-    def delete(self, id: schemas.NoteId) -> DeleteResponse:
-        """
-        Delete a Community Note
-        Deletes a community note.
-        Args:
-            id: The community note id to delete.
-            Returns:
-            DeleteResponse: Response data
-        """
-        url = self.client.base_url + "/2/notes/{id}"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteResponse.model_validate(response_data)
-
-
     def search_written(
         self,
         test_mode: bool,
-        pagination_token: Optional[str] = None,
         max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
         note_fields: Optional[
             List[Literal["id", "info", "scoring_status", "status", "test_result"]]
         ] = None,
     ) -> Iterator[SearchWrittenResponse]:
         """
-        Search for Community Notes Written
-        Returns all the community notes written by the user.
+        Search Community Notes Written
         Args:
-            test_mode: If true, return the notes the caller wrote for the test. If false, return the notes the caller wrote on the product.
-            pagination_token: Pagination token to get next set of posts eligible for notes.
-            max_results: Max results to return.
+            test_mode: test_mode
+            max_results: max_results
+            pagination_token: pagination_token
             note_fields: A comma separated list of Note fields to display.
             Yields:
             SearchWrittenResponse: One page of results at a time. Automatically handles pagination using next_token.
@@ -586,15 +436,15 @@ class CommunityNotesClient:
     def search_eligible_posts(
         self,
         test_mode: bool,
-        pagination_token: Optional[str] = None,
         max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
         post_selection: Optional[str] = None,
-        tweet_fields: Optional[
+        post_fields: Optional[
             List[
                 Literal[
                     "article",
+                    "article_title",
                     "attachments",
-                    "author_id",
                     "card_uri",
                     "community_id",
                     "context_annotations",
@@ -602,23 +452,20 @@ class CommunityNotesClient:
                     "created_at",
                     "display_text_range",
                     "edit_controls",
-                    "edit_history_tweet_ids",
                     "entities",
                     "geo",
                     "id",
-                    "in_reply_to_user_id",
                     "lang",
                     "matched_media_notes",
                     "media_metadata",
                     "non_public_metrics",
+                    "note_post",
                     "note_request_suggestions",
-                    "note_tweet",
                     "organic_metrics",
                     "paid_partnership",
                     "possibly_sensitive",
                     "promoted_metrics",
                     "public_metrics",
-                    "referenced_tweets",
                     "reply_settings",
                     "scopes",
                     "source",
@@ -638,14 +485,42 @@ class CommunityNotesClient:
                     "attachments.media_source_tweet",
                     "attachments.poll_ids",
                     "author_id",
-                    "edit_history_tweet_ids",
+                    "edit_history_post_ids",
                     "entities.mentions.username",
                     "geo.place_id",
                     "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
+                    "referenced_posts",
+                    "username",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
                 ]
             ]
         ] = None,
@@ -675,38 +550,6 @@ class CommunityNotesClient:
                 ]
             ]
         ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
         place_fields: Optional[
             List[
                 Literal[
@@ -723,18 +566,17 @@ class CommunityNotesClient:
         ] = None,
     ) -> Iterator[SearchEligiblePostsResponse]:
         """
-        Search for Posts Eligible for Community Notes
-        Returns all the posts that are eligible for community notes.
+        Search Eligible Posts
         Args:
-            test_mode: If true, return a list of posts that are for the test. If false, return a list of posts that the bots can write proposed notes on the product.
-            pagination_token: Pagination token to get next set of posts eligible for notes.
-            max_results: Max results to return.
-            post_selection: The selection of posts to return. Valid values are 'feed_size: [small|large|xl|xxl], feed_lang: [en|es|...|all]'. Default (if not specified) is 'feed_size: small, feed_lang: en'. Only top AI writers have access to large, xl, and xxl size feeds.
-            tweet_fields: A comma separated list of Tweet fields to display.
+            test_mode: test_mode
+            max_results: max_results
+            pagination_token: pagination_token
+            post_selection: post_selection
+            post_fields: A comma separated list of Post fields to display.
             expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
             media_fields: A comma separated list of Media fields to display.
             poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
             place_fields: A comma separated list of Place fields to display.
             Yields:
             SearchEligiblePostsResponse: One page of results at a time. Automatically handles pagination using next_token.
@@ -784,20 +626,18 @@ class CommunityNotesClient:
                 page_params["max_results"] = max_results
             if post_selection is not None:
                 page_params["post_selection"] = post_selection
-            if tweet_fields is not None:
-                page_params["tweet.fields"] = ",".join(
-                    str(item) for item in tweet_fields
-                )
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
             if expansions is not None:
                 page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
             if media_fields is not None:
                 page_params["media.fields"] = ",".join(
                     str(item) for item in media_fields
                 )
             if poll_fields is not None:
                 page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
             if place_fields is not None:
                 page_params["place.fields"] = ",".join(
                     str(item) for item in place_fields
@@ -972,10 +812,157 @@ class CommunityNotesClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def create(self, body: Optional[CreateRequest] = None) -> CreateResponse:
+    def delete(self, id: schemas.NoteId) -> DeleteResponse:
         """
-        Create a Community Note
-        Creates a community note endpoint for LLM use case.
+        Delete a Community Note
+        Deletes a community note.
+        Args:
+            id: id
+            Returns:
+            DeleteResponse: Response data
+        """
+        url = self.client.base_url + "/2/notes/{id}"
+        url = url.replace("{id}", str(id))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteResponse.model_validate(response_data)
+
+
+    def create(self, body: CreateRequest) -> CreateResponse:
+        """
+        Create Community Notes
         body: Request body
         Returns:
             CreateResponse: Response data

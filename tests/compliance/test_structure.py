@@ -160,7 +160,9 @@ class TestComplianceStructure:
                 required_param in params
             ), f"Required parameter '{required_param}' missing from create_jobs"
         # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
+        optional_params = [
+            "compliance_job.fields",
+        ]
         for optional_param in optional_params:
             if optional_param in params:
                 param_obj = sig.parameters[optional_param]

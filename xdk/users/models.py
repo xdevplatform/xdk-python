@@ -17,8 +17,80 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for get_followers
+GetFollowersResponse = schemas.GetUsersFollowersResponse
+
+
+# Response model for get_me
+GetMeResponse = schemas.GetUsersMeResponse
+
+
+# Response model for get_by_usernames
+GetByUsernamesResponse = schemas.GetUsersByUsernamesResponse
+
+
+# Response model for get_followed_lists
+GetFollowedListsResponse = schemas.GetUsersFollowedListsResponse
+
+
+# Request model for follow_list
+FollowListRequest = schemas.FollowListRequest
+
+
+# Response model for follow_list
+FollowListResponse = schemas.FollowListResponse
+
+
+# Response model for get_owned_lists
+GetOwnedListsResponse = schemas.GetUsersOwnedListsResponse
+
+
+# Response model for get_blocking
+GetBlockingResponse = schemas.GetUsersBlockingResponse
+
+
+# Response model for get_pinned_lists
+GetPinnedListsResponse = schemas.GetUsersPinnedListsResponse
+
+
+# Response model for get_reposts_of_me
+GetRepostsOfMeResponse = schemas.GetUsersRepostsOfMeResponse
+
+
+# Response model for get_by_ids
+GetByIdsResponse = schemas.GetUsersByIdsResponse
+
+
+# Response model for unfollow_user
+UnfollowUserResponse = schemas.UnfollowUserResponse
+
+
+# Response model for get_following
+GetFollowingResponse = schemas.GetUsersFollowingResponse
+
+
+# Request model for follow_user
+FollowUserRequest = schemas.FollowUserRequest
+
+
+# Response model for follow_user
+FollowUserResponse = schemas.FollowUserResponse
+
+
+# Response model for get_affiliates
+GetAffiliatesResponse = schemas.GetUsersAffiliatesResponse
+
+
+# Response model for get_by_username
+GetByUsernameResponse = schemas.GetUsersByUsernameResponse
+
+
+# Response model for search
+SearchResponse = schemas.SearchUsersResponse
+
+
 # Response model for get_muting
-GetMutingResponse = schemas.Get2UsersIdMutingResponse
+GetMutingResponse = schemas.GetUsersMutingResponse
 
 
 # Request model for mute_user
@@ -26,184 +98,12 @@ MuteUserRequest = schemas.MuteUserRequest
 
 
 # Response model for mute_user
-MuteUserResponse = schemas.MuteUserMutationResponse
+MuteUserResponse = schemas.MuteUserResponse
 
 
 # Response model for get_list_memberships
-GetListMembershipsResponse = schemas.Get2UsersIdListMembershipsResponse
-
-
-# Response model for get_owned_lists
-GetOwnedListsResponse = schemas.Get2UsersIdOwnedListsResponse
-
-
-# Response model for get_bookmarks_by_folder_id
-GetBookmarksByFolderIdResponse = schemas.BookmarkFolderPostsResponse
-
-
-# Request model for like_post
-LikePostRequest = schemas.UsersLikesCreateRequest
-
-
-# Response model for like_post
-LikePostResponse = schemas.UsersLikesCreateResponse
-
-
-# Response model for unfollow_list
-UnfollowListResponse = schemas.ListFollowedResponse
-
-
-# Response model for get_followers
-GetFollowersResponse = schemas.Get2UsersIdFollowersResponse
-
-
-# Response model for get_public_keys
-GetPublicKeysResponse = schemas.Get2UsersPublicKeysResponse
-
-
-# Response model for get_by_username
-GetByUsernameResponse = schemas.Get2UsersByUsernameUsernameResponse
-
-
-# Response model for get_by_ids
-GetByIdsResponse = schemas.Get2UsersResponse
-
-
-# Response model for get_affiliates
-GetAffiliatesResponse = schemas.Get2UsersIdAffiliatesResponse
-
-
-# Response model for get_liked_posts
-GetLikedPostsResponse = schemas.Get2UsersIdLikedTweetsResponse
-
-
-# Response model for get_me
-GetMeResponse = schemas.Get2UsersMeResponse
-
-
-# Response model for unlike_post
-UnlikePostResponse = schemas.UsersLikesDeleteResponse
-
-
-# Response model for unrepost_post
-UnrepostPostResponse = schemas.UsersRetweetsDeleteResponse
-
-
-# Response model for get_blocking
-GetBlockingResponse = schemas.Get2UsersIdBlockingResponse
-
-
-# Request model for repost_post
-RepostPostRequest = schemas.UsersRetweetsCreateRequest
-
-
-# Response model for repost_post
-RepostPostResponse = schemas.UsersRetweetsCreateResponse
-
-
-# Response model for block_dms
-BlockDmsResponse = schemas.UsersDMBlockCreateResponse
-
-
-# Response model for get_bookmark_folders
-GetBookmarkFoldersResponse = schemas.BookmarkFoldersResponse
-
-
-# Response model for get_posts
-GetPostsResponse = schemas.Get2UsersIdTweetsResponse
-
-
-# Response model for get_public_key
-GetPublicKeyResponse = schemas.Get2UsersIdPublicKeysResponse
-
-
-# Response model for get_bookmarks
-GetBookmarksResponse = schemas.Get2UsersIdBookmarksResponse
-
-
-# Request model for create_bookmark
-CreateBookmarkRequest = schemas.BookmarkAddRequest
-
-
-# Response model for create_bookmark
-CreateBookmarkResponse = schemas.BookmarkMutationResponse
-
-
-# Response model for unfollow_user
-UnfollowUserResponse = schemas.UsersFollowingDeleteResponse
-
-
-# Response model for get_reposts_of_me
-GetRepostsOfMeResponse = schemas.Get2UsersRepostsOfMeResponse
-
-
-# Response model for get_by_usernames
-GetByUsernamesResponse = schemas.Get2UsersByResponse
-
-
-# Response model for delete_bookmark
-DeleteBookmarkResponse = schemas.BookmarkMutationResponse
-
-
-# Response model for get_mentions
-GetMentionsResponse = schemas.Get2UsersIdMentionsResponse
-
-
-# Response model for unpin_list
-UnpinListResponse = schemas.ListUnpinResponse
-
-
-# Response model for get_following
-GetFollowingResponse = schemas.Get2UsersIdFollowingResponse
-
-
-# Request model for follow_user
-FollowUserRequest = schemas.UsersFollowingCreateRequest
-
-
-# Response model for follow_user
-FollowUserResponse = schemas.UsersFollowingCreateResponse
-
-
-# Response model for get_followed_lists
-GetFollowedListsResponse = schemas.Get2UsersIdFollowedListsResponse
-
-
-# Request model for follow_list
-FollowListRequest = schemas.ListFollowedRequest
-
-
-# Response model for follow_list
-FollowListResponse = schemas.ListFollowedResponse
-
-
-# Response model for search
-SearchResponse = schemas.Get2UsersSearchResponse
-
-
-# Response model for get_timeline
-GetTimelineResponse = schemas.Get2UsersIdTimelinesReverseChronologicalResponse
-
-
-# Response model for unblock_dms
-UnblockDmsResponse = schemas.UsersDMUnBlockCreateResponse
-
-
-# Response model for unmute_user
-UnmuteUserResponse = schemas.MuteUserMutationResponse
-
-
-# Response model for get_pinned_lists
-GetPinnedListsResponse = schemas.Get2UsersIdPinnedListsResponse
-
-
-# Request model for pin_list
-PinListRequest = schemas.ListPinnedRequest
-
-
-# Response model for pin_list
-PinListResponse = schemas.ListPinnedResponse
+GetListMembershipsResponse = schemas.GetUsersListMembershipsResponse
 
 
 # Response model for get_by_id
-GetByIdResponse = schemas.Get2UsersIdResponse
+GetByIdResponse = schemas.GetUsersByIdResponse
