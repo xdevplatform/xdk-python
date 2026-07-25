@@ -17,42 +17,6 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Request model for create_metadata
-CreateMetadataRequest = schemas.CreateMediaMetadataRequest
-
-
-# Response model for create_metadata
-CreateMetadataResponse = schemas.CreateMediaMetadataResponse
-
-
-# Response model for get_by_key
-GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
-
-
-# Response model for get_upload_status
-GetUploadStatusResponse = schemas.GetMediaUploadStatusResponse
-
-
-# Request model for upload
-UploadRequest = schemas.MediaUploadRequest
-
-
-# Response model for upload
-UploadResponse = schemas.MediaUploadResponse
-
-
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.InitializeMediaUploadRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.InitializeMediaUploadResponse
-
-
 # Request model for create_subtitles
 CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
 
@@ -69,12 +33,32 @@ DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
 DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
 
 
-# Response model for finalize_upload
-FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
-
-
 # Response model for get_by_keys
 GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
+
+
+# Response model for get_upload_status
+GetUploadStatusResponse = schemas.GetMediaUploadStatusResponse
+
+
+# Request model for upload
+UploadRequest = schemas.MediaUploadRequest
+
+
+# Response model for upload
+UploadResponse = schemas.MediaUploadResponse
+
+
+# Response model for get_by_key
+GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
+
+
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.InitializeMediaUploadRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.InitializeMediaUploadResponse
 
 
 # Request model for append_upload
@@ -83,3 +67,19 @@ AppendUploadRequest = schemas.AppendMediaUploadRequest
 
 # Response model for append_upload
 AppendUploadResponse = schemas.AppendMediaUploadResponse
+
+
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
+
+
+# Request model for create_metadata
+CreateMetadataRequest = schemas.CreateMediaMetadataRequest
+
+
+# Response model for create_metadata
+CreateMetadataResponse = schemas.CreateMediaMetadataResponse
+
+
+# Response model for finalize_upload
+FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse

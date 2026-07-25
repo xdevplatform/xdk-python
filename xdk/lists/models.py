@@ -17,8 +17,8 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for unpin_list
-UnpinListResponse = schemas.UnpinListResponse
+# Response model for get_followers
+GetFollowersResponse = schemas.GetListsFollowersResponse
 
 
 # Request model for create
@@ -29,12 +29,24 @@ CreateRequest = schemas.CreateListsRequest
 CreateResponse = schemas.CreateListsResponse
 
 
-# Request model for pin_list
-PinListRequest = schemas.PinListRequest
+# Response model for remove_member_by_user_id
+RemoveMemberByUserIdResponse = schemas.RemoveListsMemberByUserIdResponse
 
 
-# Response model for pin_list
-PinListResponse = schemas.PinListResponse
+# Response model for get_posts
+GetPostsResponse = schemas.GetListsPostsResponse
+
+
+# Response model for get_members
+GetMembersResponse = schemas.GetListsMembersResponse
+
+
+# Request model for add_member
+AddMemberRequest = schemas.AddListsMemberRequest
+
+
+# Response model for add_member
+AddMemberResponse = schemas.AddListsMemberResponse
 
 
 # Response model for get_by_id
@@ -51,31 +63,3 @@ UpdateResponse = schemas.UpdateListsResponse
 
 # Response model for delete
 DeleteResponse = schemas.DeleteListsResponse
-
-
-# Response model for get_followers
-GetFollowersResponse = schemas.GetListsFollowersResponse
-
-
-# Response model for get_posts
-GetPostsResponse = schemas.GetListsPostsResponse
-
-
-# Response model for remove_member_by_user_id
-RemoveMemberByUserIdResponse = schemas.RemoveListsMemberByUserIdResponse
-
-
-# Response model for unfollow_list
-UnfollowListResponse = schemas.UnfollowListResponse
-
-
-# Response model for get_members
-GetMembersResponse = schemas.GetListsMembersResponse
-
-
-# Request model for add_member
-AddMemberRequest = schemas.AddListsMemberRequest
-
-
-# Response model for add_member
-AddMemberResponse = schemas.AddListsMemberResponse

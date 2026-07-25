@@ -17,5 +17,9 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for get_by_woeid
+GetByWoeidResponse = schemas.GetTrendsByWoeidResponse
+
+
 # Response model for get_personalized
 GetPersonalizedResponse = schemas.GetTrendsPersonalizedTrendsResponse

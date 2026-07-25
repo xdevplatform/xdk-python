@@ -18,57 +18,47 @@ from .oauth2_auth import OAuth2PKCEAuth
 from .oauth1_auth import OAuth1
 from .paginator import Cursor, cursor, PaginationError
 
-from .media.client import MediaClient
-
-from .community_notes.client import CommunityNotesClient
-
-from .chats.client import ChatsClient
-
-from .users.client import UsersClient
-
-from .compliance.client import ComplianceClient
-
-from .spaces.client import SpacesClient
-
 from .usage.client import UsageClient
-
-from .webhooks.client import WebhooksClient
-
-from .direct_messages.client import DirectMessagesClient
-
-from .posts.client import PostsClient
-
-from .search.client import SearchClient
-
-from .connections.client import ConnectionsClient
-
-from .communities.client import CommunitiesClient
-
-from .lists.client import ListsClient
-
-from .activity.client import ActivityClient
-
-from .counts.client import CountsClient
-
-from .stream.client import StreamClient
-
-from .bookmarks.client import BookmarksClient
-
-from .news.client import NewsClient
-
-from .mutes.client import MutesClient
-
-from .account_activity.client import AccountActivityClient
-
-from .general.client import GeneralClient
-
-from .likes.client import LikesClient
-
-from .trends.client import TrendsClient
 
 from .articles.client import ArticlesClient
 
+from .posts.client import PostsClient
+
+from .users.client import UsersClient
+
+from .general.client import GeneralClient
+
+from .communities.client import CommunitiesClient
+
+from .news.client import NewsClient
+
+from .stream.client import StreamClient
+
+from .spaces.client import SpacesClient
+
+from .chat.client import ChatClient
+
+from .lists.client import ListsClient
+
+from .trends.client import TrendsClient
+
+from .account_activity.client import AccountActivityClient
+
 from .broadcasts.client import BroadcastsClient
+
+from .connections.client import ConnectionsClient
+
+from .community_notes.client import CommunityNotesClient
+
+from .direct_messages.client import DirectMessagesClient
+
+from .webhooks.client import WebhooksClient
+
+from .compliance.client import ComplianceClient
+
+from .media.client import MediaClient
+
+from .activity.client import ActivityClient
 
 
 class Client:
@@ -102,7 +92,7 @@ class Client:
             auth: OAuth1 instance for OAuth1.0a authentication.
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.10.4"})
+        self.session.headers.update({"User-Agent": "xdk-python/0.10.5"})
         self.base_url = base_url
         self.bearer_token = bearer_token
         # Extract access_token from token dict if provided, otherwise use direct access_token parameter
@@ -134,32 +124,27 @@ class Client:
         # Set up OAuth1 authentication if provided
         self.auth = auth
         # Initialize clients for each tag
-        self.media = MediaClient(self)
-        self.community_notes = CommunityNotesClient(self)
-        self.chats = ChatsClient(self)
-        self.users = UsersClient(self)
-        self.compliance = ComplianceClient(self)
-        self.spaces = SpacesClient(self)
         self.usage = UsageClient(self)
-        self.webhooks = WebhooksClient(self)
-        self.direct_messages = DirectMessagesClient(self)
-        self.posts = PostsClient(self)
-        self.search = SearchClient(self)
-        self.connections = ConnectionsClient(self)
-        self.communities = CommunitiesClient(self)
-        self.lists = ListsClient(self)
-        self.activity = ActivityClient(self)
-        self.counts = CountsClient(self)
-        self.stream = StreamClient(self)
-        self.bookmarks = BookmarksClient(self)
-        self.news = NewsClient(self)
-        self.mutes = MutesClient(self)
-        self.account_activity = AccountActivityClient(self)
-        self.general = GeneralClient(self)
-        self.likes = LikesClient(self)
-        self.trends = TrendsClient(self)
         self.articles = ArticlesClient(self)
+        self.posts = PostsClient(self)
+        self.users = UsersClient(self)
+        self.general = GeneralClient(self)
+        self.communities = CommunitiesClient(self)
+        self.news = NewsClient(self)
+        self.stream = StreamClient(self)
+        self.spaces = SpacesClient(self)
+        self.chat = ChatClient(self)
+        self.lists = ListsClient(self)
+        self.trends = TrendsClient(self)
+        self.account_activity = AccountActivityClient(self)
         self.broadcasts = BroadcastsClient(self)
+        self.connections = ConnectionsClient(self)
+        self.community_notes = CommunityNotesClient(self)
+        self.direct_messages = DirectMessagesClient(self)
+        self.webhooks = WebhooksClient(self)
+        self.compliance = ComplianceClient(self)
+        self.media = MediaClient(self)
+        self.activity = ActivityClient(self)
 
     @property
 

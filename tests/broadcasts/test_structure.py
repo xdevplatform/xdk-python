@@ -43,6 +43,196 @@ class TestBroadcastsStructure:
         self.broadcasts_client = getattr(self.client, "broadcasts")
 
 
+    def test_get_scheduled_broadcast_exists(self):
+        """Test that get_scheduled_broadcast method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "get_scheduled_broadcast", None)
+        assert (
+            method is not None
+        ), f"Method get_scheduled_broadcast does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"get_scheduled_broadcast is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_scheduled_broadcast should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_scheduled_broadcast"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_scheduled_broadcast_return_annotation(self):
+        """Test that get_scheduled_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "get_scheduled_broadcast")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_scheduled_broadcast should have return type annotation"
+
+
+    def test_update_scheduled_broadcast_exists(self):
+        """Test that update_scheduled_broadcast method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "update_scheduled_broadcast", None)
+        assert (
+            method is not None
+        ), f"Method update_scheduled_broadcast does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"update_scheduled_broadcast is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"update_scheduled_broadcast should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from update_scheduled_broadcast"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_update_scheduled_broadcast_return_annotation(self):
+        """Test that update_scheduled_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "update_scheduled_broadcast")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method update_scheduled_broadcast should have return type annotation"
+
+
+    def test_delete_scheduled_broadcast_exists(self):
+        """Test that delete_scheduled_broadcast method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "delete_scheduled_broadcast", None)
+        assert (
+            method is not None
+        ), f"Method delete_scheduled_broadcast does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"delete_scheduled_broadcast is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"delete_scheduled_broadcast should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from delete_scheduled_broadcast"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "roll_forward",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_delete_scheduled_broadcast_return_annotation(self):
+        """Test that delete_scheduled_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "delete_scheduled_broadcast")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method delete_scheduled_broadcast should have return type annotation"
+
+
+    def test_send_broadcast_chat_exists(self):
+        """Test that send_broadcast_chat method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "send_broadcast_chat", None)
+        assert (
+            method is not None
+        ), f"Method send_broadcast_chat does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"send_broadcast_chat is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"send_broadcast_chat should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from send_broadcast_chat"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_send_broadcast_chat_return_annotation(self):
+        """Test that send_broadcast_chat has proper return type annotation."""
+        method = getattr(BroadcastsClient, "send_broadcast_chat")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method send_broadcast_chat should have return type annotation"
+
+
     def test_list_scheduled_exists(self):
         """Test that list_scheduled method exists with correct signature."""
         # Check method exists
@@ -202,206 +392,16 @@ class TestBroadcastsStructure:
         ), f"Method go_live_scheduled_broadcast should have return type annotation"
 
 
-    def test_send_broadcast_chat_exists(self):
-        """Test that send_broadcast_chat method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "send_broadcast_chat", None)
-        assert (
-            method is not None
-        ), f"Method send_broadcast_chat does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"send_broadcast_chat is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"send_broadcast_chat should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from send_broadcast_chat"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_send_broadcast_chat_return_annotation(self):
-        """Test that send_broadcast_chat has proper return type annotation."""
-        method = getattr(BroadcastsClient, "send_broadcast_chat")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method send_broadcast_chat should have return type annotation"
-
-
-    def test_get_scheduled_broadcast_exists(self):
-        """Test that get_scheduled_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "get_scheduled_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method get_scheduled_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"get_scheduled_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"get_scheduled_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_scheduled_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_scheduled_broadcast_return_annotation(self):
-        """Test that get_scheduled_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "get_scheduled_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_scheduled_broadcast should have return type annotation"
-
-
-    def test_update_scheduled_broadcast_exists(self):
-        """Test that update_scheduled_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "update_scheduled_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method update_scheduled_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"update_scheduled_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"update_scheduled_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from update_scheduled_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_update_scheduled_broadcast_return_annotation(self):
-        """Test that update_scheduled_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "update_scheduled_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method update_scheduled_broadcast should have return type annotation"
-
-
-    def test_delete_scheduled_broadcast_exists(self):
-        """Test that delete_scheduled_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "delete_scheduled_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method delete_scheduled_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"delete_scheduled_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"delete_scheduled_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from delete_scheduled_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "roll_forward",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_delete_scheduled_broadcast_return_annotation(self):
-        """Test that delete_scheduled_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "delete_scheduled_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method delete_scheduled_broadcast should have return type annotation"
-
-
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "list_scheduled",
-            "create_scheduled_broadcast",
-            "go_live_scheduled_broadcast",
-            "send_broadcast_chat",
             "get_scheduled_broadcast",
             "update_scheduled_broadcast",
             "delete_scheduled_broadcast",
+            "send_broadcast_chat",
+            "list_scheduled",
+            "create_scheduled_broadcast",
+            "go_live_scheduled_broadcast",
         ]
         for expected_method in expected_methods:
             assert hasattr(

@@ -17,28 +17,56 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_users_bookmarks_by_folder_id
-GetUsersBookmarksByFolderIdResponse = schemas.GetUsersBookmarksByFolderIdResponse
+# Response model for get_quoted
+GetQuotedResponse = schemas.GetPostsQuotedPostsResponse
 
 
-# Response model for get_rules
-GetRulesResponse = schemas.GetRulesResponse
-
-
-# Request model for update_rules
-UpdateRulesRequest = schemas.UpdateRulesRequest
-
-
-# Response model for update_rules
-UpdateRulesResponse = schemas.UpdateRulesResponse
+# Response model for get_reposts
+GetRepostsResponse = schemas.GetPostsRepostsResponse
 
 
 # Response model for get_reposted_by
 GetRepostedByResponse = schemas.GetPostsRepostedByResponse
 
 
-# Response model for get_users_mentions
-GetUsersMentionsResponse = schemas.GetUsersMentionsResponse
+# Response model for get_counts_all
+GetCountsAllResponse = schemas.GetPostsCountsAllResponse
+
+
+# Response model for get_liking_users
+GetLikingUsersResponse = schemas.GetPostsLikingUsersResponse
+
+
+# Response model for search_all
+SearchAllResponse = schemas.SearchPostsAllResponse
+
+
+# Response model for get_by_id
+GetByIdResponse = schemas.GetPostsByIdResponse
+
+
+# Response model for delete
+DeleteResponse = schemas.DeletePostsResponse
+
+
+# Request model for hide_reply
+HideReplyRequest = schemas.HidePostsReplyRequest
+
+
+# Response model for hide_reply
+HideReplyResponse = schemas.HidePostsReplyResponse
+
+
+# Response model for get_counts_recent
+GetCountsRecentResponse = schemas.GetPostsCountsRecentResponse
+
+
+# Response model for search_recent
+SearchRecentResponse = schemas.SearchPostsRecentResponse
+
+
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.GetPostsAnalyticsResponse
 
 
 # Response model for get_by_ids
@@ -51,75 +79,3 @@ CreateRequest = schemas.CreatePostsRequest
 
 # Response model for create
 CreateResponse = schemas.CreatePostsResponse
-
-
-# Response model for get_users
-GetUsersResponse = schemas.GetUsersPostsResponse
-
-
-# Response model for get_users_timeline
-GetUsersTimelineResponse = schemas.GetUsersTimelineResponse
-
-
-# Response model for get_quoted
-GetQuotedResponse = schemas.GetPostsQuotedPostsResponse
-
-
-# Response model for get_users_liked
-GetUsersLikedResponse = schemas.GetUsersLikedPostsResponse
-
-
-# Response model for get_trends_by_woeid
-GetTrendsByWoeidResponse = schemas.GetTrendsByWoeidResponse
-
-
-# Response model for get_by_id
-GetByIdResponse = schemas.GetPostsByIdResponse
-
-
-# Response model for delete
-DeleteResponse = schemas.DeletePostsResponse
-
-
-# Response model for get_users_bookmarks
-GetUsersBookmarksResponse = schemas.GetUsersBookmarksResponse
-
-
-# Request model for create_users_bookmark
-CreateUsersBookmarkRequest = schemas.CreateUsersBookmarkRequest
-
-
-# Response model for create_users_bookmark
-CreateUsersBookmarkResponse = schemas.CreateUsersBookmarkResponse
-
-
-# Request model for hide_reply
-HideReplyRequest = schemas.HidePostsReplyRequest
-
-
-# Response model for hide_reply
-HideReplyResponse = schemas.HidePostsReplyResponse
-
-
-# Request model for repost_post
-RepostPostRequest = schemas.RepostPostRequest
-
-
-# Response model for repost_post
-RepostPostResponse = schemas.RepostPostResponse
-
-
-# Response model for get_reposts
-GetRepostsResponse = schemas.GetPostsRepostsResponse
-
-
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.GetPostsAnalyticsResponse
-
-
-# Response model for get_users_bookmark_folders
-GetUsersBookmarkFoldersResponse = schemas.GetUsersBookmarkFoldersResponse
-
-
-# Response model for unrepost_post
-UnrepostPostResponse = schemas.UnrepostPostResponse

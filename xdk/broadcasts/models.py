@@ -17,30 +17,6 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for list_scheduled
-ListScheduledResponse = schemas.ListScheduledBroadcastsResponse
-
-
-# Request model for create_scheduled_broadcast
-CreateScheduledBroadcastRequest = schemas.CreateScheduledBroadcastRequest
-
-
-# Response model for create_scheduled_broadcast
-CreateScheduledBroadcastResponse = schemas.CreateScheduledBroadcastResponse
-
-
-# Response model for go_live_scheduled_broadcast
-GoLiveScheduledBroadcastResponse = schemas.GoLiveScheduledBroadcastResponse
-
-
-# Request model for send_broadcast_chat
-SendBroadcastChatRequest = schemas.SendBroadcastChatRequest
-
-
-# Response model for send_broadcast_chat
-SendBroadcastChatResponse = schemas.SendBroadcastChatResponse
-
-
 # Response model for get_scheduled_broadcast
 GetScheduledBroadcastResponse = schemas.GetScheduledBroadcastResponse
 
@@ -55,3 +31,27 @@ UpdateScheduledBroadcastResponse = schemas.UpdateScheduledBroadcastResponse
 
 # Response model for delete_scheduled_broadcast
 DeleteScheduledBroadcastResponse = schemas.DeleteScheduledBroadcastResponse
+
+
+# Request model for send_broadcast_chat
+SendBroadcastChatRequest = schemas.SendBroadcastChatRequest
+
+
+# Response model for send_broadcast_chat
+SendBroadcastChatResponse = schemas.SendBroadcastChatResponse
+
+
+# Response model for list_scheduled
+ListScheduledResponse = schemas.ListScheduledBroadcastsResponse
+
+
+# Request model for create_scheduled_broadcast
+CreateScheduledBroadcastRequest = schemas.CreateScheduledBroadcastRequest
+
+
+# Response model for create_scheduled_broadcast
+CreateScheduledBroadcastResponse = schemas.CreateScheduledBroadcastResponse
+
+
+# Response model for go_live_scheduled_broadcast
+GoLiveScheduledBroadcastResponse = schemas.GoLiveScheduledBroadcastResponse
