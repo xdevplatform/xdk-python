@@ -18,43 +18,43 @@ from .oauth2_auth import OAuth2PKCEAuth
 from .oauth1_auth import OAuth1
 from .paginator import Cursor, cursor, PaginationError
 
-from .connections.client import ConnectionsClient
+from .posts.client import PostsClient
 
-from .direct_messages.client import DirectMessagesClient
+from .news.client import NewsClient
 
 from .activity.client import ActivityClient
 
-from .lists.client import ListsClient
+from .direct_messages.client import DirectMessagesClient
 
-from .media.client import MediaClient
-
-from .posts.client import PostsClient
-
-from .articles.client import ArticlesClient
-
-from .users.client import UsersClient
-
-from .compliance.client import ComplianceClient
-
-from .communities.client import CommunitiesClient
-
-from .usage.client import UsageClient
+from .webhooks.client import WebhooksClient
 
 from .account_activity.client import AccountActivityClient
 
 from .general.client import GeneralClient
 
-from .community_notes.client import CommunityNotesClient
-
-from .webhooks.client import WebhooksClient
+from .media.client import MediaClient
 
 from .spaces.client import SpacesClient
 
-from .news.client import NewsClient
+from .chat.client import ChatClient
+
+from .connections.client import ConnectionsClient
+
+from .usage.client import UsageClient
+
+from .community_notes.client import CommunityNotesClient
+
+from .users.client import UsersClient
+
+from .compliance.client import ComplianceClient
 
 from .stream.client import StreamClient
 
-from .chat.client import ChatClient
+from .articles.client import ArticlesClient
+
+from .lists.client import ListsClient
+
+from .communities.client import CommunitiesClient
 
 from .trends.client import TrendsClient
 
@@ -90,7 +90,7 @@ class Client:
             auth: OAuth1 instance for OAuth1.0a authentication.
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.10.2"})
+        self.session.headers.update({"User-Agent": "xdk-python/0.10.3"})
         self.base_url = base_url
         self.bearer_token = bearer_token
         # Extract access_token from token dict if provided, otherwise use direct access_token parameter
@@ -122,25 +122,25 @@ class Client:
         # Set up OAuth1 authentication if provided
         self.auth = auth
         # Initialize clients for each tag
-        self.connections = ConnectionsClient(self)
-        self.direct_messages = DirectMessagesClient(self)
-        self.activity = ActivityClient(self)
-        self.lists = ListsClient(self)
-        self.media = MediaClient(self)
         self.posts = PostsClient(self)
-        self.articles = ArticlesClient(self)
-        self.users = UsersClient(self)
-        self.compliance = ComplianceClient(self)
-        self.communities = CommunitiesClient(self)
-        self.usage = UsageClient(self)
+        self.news = NewsClient(self)
+        self.activity = ActivityClient(self)
+        self.direct_messages = DirectMessagesClient(self)
+        self.webhooks = WebhooksClient(self)
         self.account_activity = AccountActivityClient(self)
         self.general = GeneralClient(self)
-        self.community_notes = CommunityNotesClient(self)
-        self.webhooks = WebhooksClient(self)
+        self.media = MediaClient(self)
         self.spaces = SpacesClient(self)
-        self.news = NewsClient(self)
-        self.stream = StreamClient(self)
         self.chat = ChatClient(self)
+        self.connections = ConnectionsClient(self)
+        self.usage = UsageClient(self)
+        self.community_notes = CommunityNotesClient(self)
+        self.users = UsersClient(self)
+        self.compliance = ComplianceClient(self)
+        self.stream = StreamClient(self)
+        self.articles = ArticlesClient(self)
+        self.lists = ListsClient(self)
+        self.communities = CommunitiesClient(self)
         self.trends = TrendsClient(self)
 
     @property

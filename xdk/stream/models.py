@@ -17,48 +17,14 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_rule_counts
-GetRuleCountsResponse = schemas.Get2TweetsSearchStreamRulesCountsResponse
-
-
-# Response model for posts_firehose_ko
-PostsFirehoseKoResponse = schemas.StreamingTweetResponse
-
-
-# Response model for posts_sample10
-PostsSample10Response = schemas.Get2TweetsSample10StreamResponse
-
-
-# Response model for likes_firehose
-LikesFirehoseResponse = schemas.StreamingLikeResponseV2
-
-
-# Response model for posts_sample
-PostsSampleResponse = schemas.StreamingTweetResponse
-
-
-# Response model for posts_firehose_pt
-PostsFirehosePtResponse = schemas.StreamingTweetResponse
+# Response model for posts_firehose_ja
+PostsFirehoseJaResponse = schemas.StreamingTweetResponse
 
 
 class LabelsComplianceResponse(RootModel[schemas.TweetLabelStreamResponse]):
     """Response model for labels_compliance"""
 
     pass
-
-
-# Response model for likes_sample10
-LikesSample10Response = schemas.StreamingLikeResponseV2
-
-
-class LikesComplianceResponse(RootModel[schemas.LikesComplianceStreamResponse]):
-    """Response model for likes_compliance"""
-
-    pass
-
-
-# Response model for posts_firehose
-PostsFirehoseResponse = schemas.StreamingTweetResponse
 
 
 # Response model for get_rules
@@ -75,16 +41,34 @@ class UpdateRulesRequest(RootModel[schemas.AddOrDeleteRulesRequest]):
 UpdateRulesResponse = schemas.AddOrDeleteRulesResponse
 
 
-# Response model for posts_firehose_ja
-PostsFirehoseJaResponse = schemas.StreamingTweetResponse
+# Response model for posts_firehose_ko
+PostsFirehoseKoResponse = schemas.StreamingTweetResponse
 
 
-# Response model for posts_firehose_en
-PostsFirehoseEnResponse = schemas.StreamingTweetResponse
+class LikesComplianceResponse(RootModel[schemas.LikesComplianceStreamResponse]):
+    """Response model for likes_compliance"""
+
+    pass
+
+
+# Response model for posts_sample10
+PostsSample10Response = schemas.Get2TweetsSample10StreamResponse
 
 
 # Response model for posts
 PostsResponse = schemas.FilteredStreamingTweetResponse
+
+
+# Response model for likes_sample10
+LikesSample10Response = schemas.StreamingLikeResponseV2
+
+
+# Response model for posts_sample
+PostsSampleResponse = schemas.StreamingTweetResponse
+
+
+# Response model for get_rule_counts
+GetRuleCountsResponse = schemas.Get2TweetsSearchStreamRulesCountsResponse
 
 
 class PostsComplianceResponse(RootModel[schemas.TweetComplianceStreamResponse]):
@@ -97,3 +81,19 @@ class UsersComplianceResponse(RootModel[schemas.UserComplianceStreamResponse]):
     """Response model for users_compliance"""
 
     pass
+
+
+# Response model for posts_firehose
+PostsFirehoseResponse = schemas.StreamingTweetResponse
+
+
+# Response model for posts_firehose_en
+PostsFirehoseEnResponse = schemas.StreamingTweetResponse
+
+
+# Response model for likes_firehose
+LikesFirehoseResponse = schemas.StreamingLikeResponseV2
+
+
+# Response model for posts_firehose_pt
+PostsFirehosePtResponse = schemas.StreamingTweetResponse

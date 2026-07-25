@@ -17,25 +17,25 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for search
-SearchResponse = schemas.Get2SpacesSearchResponse
+# Response model for get_by_ids
+GetByIdsResponse = schemas.Get2SpacesResponse
 
 
 # Response model for get_buyers
 GetBuyersResponse = schemas.Get2SpacesIdBuyersResponse
 
 
-# Response model for get_by_creator_ids
-GetByCreatorIdsResponse = schemas.Get2SpacesByCreatorIdsResponse
-
-
-# Response model for get_by_ids
-GetByIdsResponse = schemas.Get2SpacesResponse
+# Response model for get_by_id
+GetByIdResponse = schemas.Get2SpacesIdResponse
 
 
 # Response model for get_posts
 GetPostsResponse = schemas.Get2SpacesIdTweetsResponse
 
 
-# Response model for get_by_id
-GetByIdResponse = schemas.Get2SpacesIdResponse
+# Response model for get_by_creator_ids
+GetByCreatorIdsResponse = schemas.Get2SpacesByCreatorIdsResponse
+
+
+# Response model for search
+SearchResponse = schemas.Get2SpacesSearchResponse

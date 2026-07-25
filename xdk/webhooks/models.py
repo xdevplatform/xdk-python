@@ -21,30 +21,6 @@ from .. import schemas
 GetStreamLinksResponse = schemas.WebhookLinksGetResponse
 
 
-# Response model for create_stream_link
-CreateStreamLinkResponse = schemas.WebhookLinksCreateResponse
-
-
-# Response model for delete_stream_link
-DeleteStreamLinkResponse = schemas.WebhookLinksDeleteResponse
-
-
-# Response model for validate
-ValidateResponse = schemas.WebhookConfigPutResponse
-
-
-# Response model for delete
-DeleteResponse = schemas.WebhookConfigDeleteResponse
-
-
-# Request model for create_webhook_replay_job
-CreateWebhookReplayJobRequest = schemas.WebhookReplayCreateRequest
-
-
-# Response model for create_webhook_replay_job
-CreateWebhookReplayJobResponse = schemas.ReplayJobCreateResponse
-
-
 # Response model for get
 GetResponse = schemas.Get2WebhooksResponse
 
@@ -55,3 +31,27 @@ CreateRequest = schemas.WebhookConfigCreateRequest
 
 # Response model for create
 CreateResponse = schemas.WebhookConfigCreateResponse
+
+
+# Request model for create_webhook_replay_job
+CreateWebhookReplayJobRequest = schemas.WebhookReplayCreateRequest
+
+
+# Response model for create_webhook_replay_job
+CreateWebhookReplayJobResponse = schemas.ReplayJobCreateResponse
+
+
+# Response model for validate
+ValidateResponse = schemas.WebhookConfigPutResponse
+
+
+# Response model for delete
+DeleteResponse = schemas.WebhookConfigDeleteResponse
+
+
+# Response model for create_stream_link
+CreateStreamLinkResponse = schemas.WebhookLinksCreateResponse
+
+
+# Response model for delete_stream_link
+DeleteStreamLinkResponse = schemas.WebhookLinksDeleteResponse

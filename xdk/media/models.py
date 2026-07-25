@@ -17,8 +17,31 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for finalize_upload
-FinalizeUploadResponse = schemas.MediaUploadResponse
+
+class AppendUploadRequest(RootModel[schemas.MediaUploadAppendRequest]):
+    """Request model for append_upload"""
+
+    pass
+
+
+# Response model for append_upload
+AppendUploadResponse = schemas.MediaUploadAppendResponse
+
+
+# Response model for get_by_key
+GetByKeyResponse = schemas.Get2MediaMediaKeyResponse
+
+
+# Response model for get_by_keys
+GetByKeysResponse = schemas.Get2MediaResponse
+
+
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.MediaUploadConfigRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.MediaUploadResponse
 
 
 # Request model for create_subtitles
@@ -49,39 +72,17 @@ UploadRequest = schemas.MediaUploadRequestOneShot
 UploadResponse = schemas.MediaUploadResponse
 
 
-# Response model for get_by_keys
-GetByKeysResponse = schemas.Get2MediaResponse
-
-
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.MediaAnalytics
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.MediaUploadConfigRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.MediaUploadResponse
-
-
-# Response model for get_by_key
-GetByKeyResponse = schemas.Get2MediaMediaKeyResponse
-
-
-class AppendUploadRequest(RootModel[schemas.MediaUploadAppendRequest]):
-    """Request model for append_upload"""
-
-    pass
-
-
-# Response model for append_upload
-AppendUploadResponse = schemas.MediaUploadAppendResponse
-
-
 # Request model for create_metadata
 CreateMetadataRequest = schemas.MetadataCreateRequest
 
 
 # Response model for create_metadata
 CreateMetadataResponse = schemas.MetadataCreateResponse
+
+
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.MediaAnalytics
+
+
+# Response model for finalize_upload
+FinalizeUploadResponse = schemas.MediaUploadResponse

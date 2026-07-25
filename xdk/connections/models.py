@@ -21,6 +21,10 @@ from .. import schemas
 DeleteByEndpointResponse = schemas.KillConnectionsByEndpointResponse
 
 
+# Response model for delete_all
+DeleteAllResponse = schemas.KillAllConnectionsResponse
+
+
 # Response model for get_connection_history
 GetConnectionHistoryResponse = schemas.Get2ConnectionsResponse
 
@@ -31,7 +35,3 @@ DeleteByUuidsRequest = schemas.KillConnectionsByUuidsRequest
 
 # Response model for delete_by_uuids
 DeleteByUuidsResponse = schemas.KillConnectionsByUuidsResponse
-
-
-# Response model for delete_all
-DeleteAllResponse = schemas.KillAllConnectionsResponse

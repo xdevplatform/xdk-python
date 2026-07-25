@@ -33,6 +33,10 @@ CreateSubscriptionResponse = schemas.ActivitySubscriptionCreateResponse
 DeleteSubscriptionsByIdsResponse = schemas.ActivitySubscriptionDeleteResponse
 
 
+# Response model for stream
+StreamResponse = schemas.ActivityStreamingResponse
+
+
 # Request model for update_subscription
 UpdateSubscriptionRequest = schemas.ActivitySubscriptionUpdateRequest
 
@@ -43,7 +47,3 @@ UpdateSubscriptionResponse = schemas.ActivitySubscriptionUpdateResponse
 
 # Response model for delete_subscription
 DeleteSubscriptionResponse = schemas.ActivitySubscriptionDeleteResponse
-
-
-# Response model for stream
-StreamResponse = schemas.ActivityStreamingResponse

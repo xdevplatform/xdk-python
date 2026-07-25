@@ -43,53 +43,6 @@ class TestChatStructure:
         self.chat_client = getattr(self.client, "chat")
 
 
-    def test_media_upload_finalize_exists(self):
-        """Test that media_upload_finalize method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "media_upload_finalize", None)
-        assert (
-            method is not None
-        ), f"Method media_upload_finalize does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"media_upload_finalize is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"media_upload_finalize should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from media_upload_finalize"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_media_upload_finalize_return_annotation(self):
-        """Test that media_upload_finalize has proper return type annotation."""
-        method = getattr(ChatClient, "media_upload_finalize")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method media_upload_finalize should have return type annotation"
-
-
     def test_send_message_exists(self):
         """Test that send_message method exists with correct signature."""
         # Check method exists
@@ -131,165 +84,6 @@ class TestChatStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method send_message should have return type annotation"
-
-
-    def test_initialize_group_exists(self):
-        """Test that initialize_group method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "initialize_group", None)
-        assert (
-            method is not None
-        ), f"Method initialize_group does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"initialize_group is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"initialize_group should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from initialize_group"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_initialize_group_return_annotation(self):
-        """Test that initialize_group has proper return type annotation."""
-        method = getattr(ChatClient, "initialize_group")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method initialize_group should have return type annotation"
-
-
-    def test_get_conversation_events_exists(self):
-        """Test that get_conversation_events method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "get_conversation_events", None)
-        assert (
-            method is not None
-        ), f"Method get_conversation_events does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"get_conversation_events is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"get_conversation_events should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_conversation_events"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "max_results",
-            "pagination_token",
-            "chat_message_event.fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_conversation_events_return_annotation(self):
-        """Test that get_conversation_events has proper return type annotation."""
-        method = getattr(ChatClient, "get_conversation_events")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_conversation_events should have return type annotation"
-
-
-    def test_get_conversation_events_pagination_params(self):
-        """Test that get_conversation_events has pagination parameters."""
-        method = getattr(ChatClient, "get_conversation_events")
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have pagination-related parameters
-        pagination_params = [
-            "pagination_token",
-            "max_results",
-            "next_token",
-            "cursor",
-            "limit",
-        ]
-        has_pagination_param = any(param in params for param in pagination_params)
-        assert (
-            has_pagination_param
-        ), f"Paginated method get_conversation_events should have pagination parameters"
-
-
-    def test_media_download_exists(self):
-        """Test that media_download method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "media_download", None)
-        assert method is not None, f"Method media_download does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"media_download is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"media_download should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-            "media_hash_key",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from media_download"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_media_download_return_annotation(self):
-        """Test that media_download has proper return type annotation."""
-        method = getattr(ChatClient, "media_download")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method media_download should have return type annotation"
 
 
     def test_send_typing_indicator_exists(self):
@@ -337,100 +131,6 @@ class TestChatStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method send_typing_indicator should have return type annotation"
-
-
-    def test_add_conversation_keys_exists(self):
-        """Test that add_conversation_keys method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "add_conversation_keys", None)
-        assert (
-            method is not None
-        ), f"Method add_conversation_keys does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"add_conversation_keys is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"add_conversation_keys should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from add_conversation_keys"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_add_conversation_keys_return_annotation(self):
-        """Test that add_conversation_keys has proper return type annotation."""
-        method = getattr(ChatClient, "add_conversation_keys")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method add_conversation_keys should have return type annotation"
-
-
-    def test_add_user_public_key_exists(self):
-        """Test that add_user_public_key method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "add_user_public_key", None)
-        assert (
-            method is not None
-        ), f"Method add_user_public_key does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"add_user_public_key is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"add_user_public_key should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from add_user_public_key"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_add_user_public_key_return_annotation(self):
-        """Test that add_user_public_key has proper return type annotation."""
-        method = getattr(ChatClient, "add_user_public_key")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method add_user_public_key should have return type annotation"
 
 
     def test_get_conversations_exists(self):
@@ -503,51 +203,6 @@ class TestChatStructure:
         ), f"Paginated method get_conversations should have pagination parameters"
 
 
-    def test_create_conversation_exists(self):
-        """Test that create_conversation method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "create_conversation", None)
-        assert (
-            method is not None
-        ), f"Method create_conversation does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"create_conversation is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"create_conversation should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_conversation"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_conversation_return_annotation(self):
-        """Test that create_conversation has proper return type annotation."""
-        method = getattr(ChatClient, "create_conversation")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_conversation should have return type annotation"
-
-
     def test_get_conversation_exists(self):
         """Test that get_conversation method exists with correct signature."""
         # Check method exists
@@ -599,98 +254,6 @@ class TestChatStructure:
         ), f"Method get_conversation should have return type annotation"
 
 
-    def test_add_group_members_exists(self):
-        """Test that add_group_members method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "add_group_members", None)
-        assert (
-            method is not None
-        ), f"Method add_group_members does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"add_group_members is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"add_group_members should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from add_group_members"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_add_group_members_return_annotation(self):
-        """Test that add_group_members has proper return type annotation."""
-        method = getattr(ChatClient, "add_group_members")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method add_group_members should have return type annotation"
-
-
-    def test_media_upload_initialize_exists(self):
-        """Test that media_upload_initialize method exists with correct signature."""
-        # Check method exists
-        method = getattr(ChatClient, "media_upload_initialize", None)
-        assert (
-            method is not None
-        ), f"Method media_upload_initialize does not exist on ChatClient"
-        # Check method is callable
-        assert callable(method), f"media_upload_initialize is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"media_upload_initialize should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from media_upload_initialize"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_media_upload_initialize_return_annotation(self):
-        """Test that media_upload_initialize has proper return type annotation."""
-        method = getattr(ChatClient, "media_upload_initialize")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method media_upload_initialize should have return type annotation"
-
-
     def test_media_upload_append_exists(self):
         """Test that media_upload_append method exists with correct signature."""
         # Check method exists
@@ -736,6 +299,165 @@ class TestChatStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method media_upload_append should have return type annotation"
+
+
+    def test_get_conversation_events_exists(self):
+        """Test that get_conversation_events method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "get_conversation_events", None)
+        assert (
+            method is not None
+        ), f"Method get_conversation_events does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"get_conversation_events is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_conversation_events should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_conversation_events"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "max_results",
+            "pagination_token",
+            "chat_message_event.fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_conversation_events_return_annotation(self):
+        """Test that get_conversation_events has proper return type annotation."""
+        method = getattr(ChatClient, "get_conversation_events")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_conversation_events should have return type annotation"
+
+
+    def test_get_conversation_events_pagination_params(self):
+        """Test that get_conversation_events has pagination parameters."""
+        method = getattr(ChatClient, "get_conversation_events")
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have pagination-related parameters
+        pagination_params = [
+            "pagination_token",
+            "max_results",
+            "next_token",
+            "cursor",
+            "limit",
+        ]
+        has_pagination_param = any(param in params for param in pagination_params)
+        assert (
+            has_pagination_param
+        ), f"Paginated method get_conversation_events should have pagination parameters"
+
+
+    def test_create_conversation_exists(self):
+        """Test that create_conversation method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "create_conversation", None)
+        assert (
+            method is not None
+        ), f"Method create_conversation does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"create_conversation is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"create_conversation should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_conversation"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_conversation_return_annotation(self):
+        """Test that create_conversation has proper return type annotation."""
+        method = getattr(ChatClient, "create_conversation")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_conversation should have return type annotation"
+
+
+    def test_media_download_exists(self):
+        """Test that media_download method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "media_download", None)
+        assert method is not None, f"Method media_download does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"media_download is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"media_download should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+            "media_hash_key",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from media_download"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_media_download_return_annotation(self):
+        """Test that media_download has proper return type annotation."""
+        method = getattr(ChatClient, "media_download")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method media_download should have return type annotation"
 
 
     def test_mark_conversation_read_exists(self):
@@ -785,24 +507,302 @@ class TestChatStructure:
         ), f"Method mark_conversation_read should have return type annotation"
 
 
+    def test_add_group_members_exists(self):
+        """Test that add_group_members method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "add_group_members", None)
+        assert (
+            method is not None
+        ), f"Method add_group_members does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"add_group_members is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"add_group_members should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from add_group_members"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_add_group_members_return_annotation(self):
+        """Test that add_group_members has proper return type annotation."""
+        method = getattr(ChatClient, "add_group_members")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method add_group_members should have return type annotation"
+
+
+    def test_initialize_group_exists(self):
+        """Test that initialize_group method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "initialize_group", None)
+        assert (
+            method is not None
+        ), f"Method initialize_group does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"initialize_group is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"initialize_group should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from initialize_group"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_initialize_group_return_annotation(self):
+        """Test that initialize_group has proper return type annotation."""
+        method = getattr(ChatClient, "initialize_group")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method initialize_group should have return type annotation"
+
+
+    def test_media_upload_initialize_exists(self):
+        """Test that media_upload_initialize method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "media_upload_initialize", None)
+        assert (
+            method is not None
+        ), f"Method media_upload_initialize does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"media_upload_initialize is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"media_upload_initialize should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from media_upload_initialize"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_media_upload_initialize_return_annotation(self):
+        """Test that media_upload_initialize has proper return type annotation."""
+        method = getattr(ChatClient, "media_upload_initialize")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method media_upload_initialize should have return type annotation"
+
+
+    def test_add_user_public_key_exists(self):
+        """Test that add_user_public_key method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "add_user_public_key", None)
+        assert (
+            method is not None
+        ), f"Method add_user_public_key does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"add_user_public_key is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"add_user_public_key should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from add_user_public_key"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_add_user_public_key_return_annotation(self):
+        """Test that add_user_public_key has proper return type annotation."""
+        method = getattr(ChatClient, "add_user_public_key")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method add_user_public_key should have return type annotation"
+
+
+    def test_media_upload_finalize_exists(self):
+        """Test that media_upload_finalize method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "media_upload_finalize", None)
+        assert (
+            method is not None
+        ), f"Method media_upload_finalize does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"media_upload_finalize is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"media_upload_finalize should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from media_upload_finalize"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_media_upload_finalize_return_annotation(self):
+        """Test that media_upload_finalize has proper return type annotation."""
+        method = getattr(ChatClient, "media_upload_finalize")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method media_upload_finalize should have return type annotation"
+
+
+    def test_add_conversation_keys_exists(self):
+        """Test that add_conversation_keys method exists with correct signature."""
+        # Check method exists
+        method = getattr(ChatClient, "add_conversation_keys", None)
+        assert (
+            method is not None
+        ), f"Method add_conversation_keys does not exist on ChatClient"
+        # Check method is callable
+        assert callable(method), f"add_conversation_keys is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"add_conversation_keys should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from add_conversation_keys"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_add_conversation_keys_return_annotation(self):
+        """Test that add_conversation_keys has proper return type annotation."""
+        method = getattr(ChatClient, "add_conversation_keys")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method add_conversation_keys should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "media_upload_finalize",
             "send_message",
-            "initialize_group",
-            "get_conversation_events",
-            "media_download",
             "send_typing_indicator",
-            "add_conversation_keys",
-            "add_user_public_key",
             "get_conversations",
-            "create_conversation",
             "get_conversation",
-            "add_group_members",
-            "media_upload_initialize",
             "media_upload_append",
+            "get_conversation_events",
+            "create_conversation",
+            "media_download",
             "mark_conversation_read",
+            "add_group_members",
+            "initialize_group",
+            "media_upload_initialize",
+            "add_user_public_key",
+            "media_upload_finalize",
+            "add_conversation_keys",
         ]
         for expected_method in expected_methods:
             assert hasattr(

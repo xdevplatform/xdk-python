@@ -43,6 +43,166 @@ class TestPostsPagination:
         self.posts_client = getattr(self.client, "posts")
 
 
+    def test_search_recent_cursor_creation(self):
+        """Test that search_recent can be used with Cursor."""
+        method = getattr(self.posts_client, "search_recent")
+        # Should be able to create cursor without error
+        try:
+            test_cursor = cursor(method, "test_query", max_results=10)
+            assert test_cursor is not None
+            assert isinstance(test_cursor, Cursor)
+        except PaginationError:
+            pytest.fail(f"Method search_recent should support pagination")
+
+
+    def test_search_recent_cursor_pages(self):
+        """Test pagination with pages() for search_recent."""
+        with patch.object(self.client, "session") as mock_session:
+            # Mock first page response
+            first_page_response = Mock()
+            first_page_response.status_code = 200
+            first_page_response.json.return_value = {
+                "data": json.loads(
+                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
+                ),
+                "meta": {
+                    **json.loads(r"""{}"""),
+                    "next_token": "next_page_token",
+                    "result_count": 2,
+                },
+            }
+            first_page_response.raise_for_status.return_value = None
+            first_page_response.headers = {"content-type": "application/json"}
+            # Mock second page response (no next token = end of pagination)
+            second_page_response = Mock()
+            second_page_response.status_code = 200
+            second_page_response.json.return_value = {
+                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
+                "meta": {**json.loads(r"""{}"""), "result_count": 1},
+            }
+            second_page_response.raise_for_status.return_value = None
+            second_page_response.headers = {"content-type": "application/json"}
+            # Return different responses for consecutive calls
+            mock_session.get.side_effect = [first_page_response, second_page_response]
+            # Test pagination
+            method = getattr(self.posts_client, "search_recent")
+            test_cursor = cursor(method, "test_query", max_results=2)
+            pages = list(test_cursor.pages(2))  # Limit to 2 pages
+            assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
+            # Verify first page
+            first_page = pages[0]
+            assert hasattr(first_page, "data")
+            first_data = getattr(first_page, "data")
+            assert len(first_data) == 2, "First page should have 2 items"
+            # Verify second page
+            second_page = pages[1]
+            assert hasattr(second_page, "data")
+            second_data = getattr(second_page, "data")
+            assert len(second_data) == 1, "Second page should have 1 item"
+
+
+    def test_search_recent_cursor_items(self):
+        """Test pagination with items() for search_recent."""
+        with patch.object(self.client, "session") as mock_session:
+            # Mock response with paginated data
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": json.loads(
+                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
+                ),
+                # No next_token = single page
+                "meta": {**json.loads(r"""{}"""), "result_count": 3},
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Test item iteration
+            method = getattr(self.posts_client, "search_recent")
+            test_cursor = cursor(method, "test_query", max_results=10)
+            items = list(test_cursor.items(5))  # Limit to 5 items
+            assert len(items) == 3, f"Should get 3 items, got {len(items)}"
+            # Verify items round-trip the spec-valid mock payload
+            _expected_item = json.loads(r"""{"id": "1", "name": "Item 1"}""")
+            for item in items:
+                if isinstance(_expected_item, dict):
+                    for _key in _expected_item:
+                        assert (isinstance(item, dict) and _key in item) or hasattr(
+                            item, _key
+                        ), f"Items should have '{_key}' field"
+
+
+    def test_search_recent_pagination_parameters(self):
+        """Test that pagination parameters are handled correctly for search_recent."""
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": [],
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            method = getattr(self.posts_client, "search_recent")
+            # Test with max_results parameter
+            test_cursor = cursor(method, "test_query", max_results=5)
+            list(test_cursor.pages(1))  # Trigger one request
+            # Verify max_results was passed in request
+            call_args = mock_session.get.call_args
+            if call_args and "params" in call_args[1]:
+                params = call_args[1]["params"]
+                assert (
+                    "max_results" in params
+                ), "max_results should be in request parameters"
+            # Test with pagination token (simulate second page request)
+            mock_session.reset_mock()
+            mock_response_with_token = Mock()
+            mock_response_with_token.status_code = 200
+            mock_response_with_token.json.return_value = {
+                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
+                "meta": {
+                    **json.loads(r"""{}"""),
+                    "next_token": "next_token_value",
+                    "result_count": 1,
+                },
+            }
+            mock_response_with_token.raise_for_status.return_value = None
+            mock_response_with_token.headers = {"content-type": "application/json"}
+            second_page_response = Mock()
+            second_page_response.status_code = 200
+            second_page_response.json.return_value = {
+                "data": [],
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
+            }
+            second_page_response.raise_for_status.return_value = None
+            second_page_response.headers = {"content-type": "application/json"}
+            mock_session.get.side_effect = [
+                mock_response_with_token,
+                second_page_response,
+            ]
+            test_cursor = cursor(method, "test_query", max_results=1)
+            pages = list(test_cursor.pages(2))
+            # Should have made 2 requests
+            assert (
+                mock_session.get.call_count == 2
+            ), "Should make 2 requests for 2 pages"
+            # Second request should include pagination token
+            second_call_args = mock_session.get.call_args_list[1]
+            if (
+                second_call_args
+                and len(second_call_args) > 1
+                and "params" in second_call_args[1]
+            ):
+                second_params = second_call_args[1]["params"]
+                assert (
+                    "pagination_token" in second_params
+                ), "Second request should include pagination_token"
+                assert (
+                    second_params["pagination_token"] == "next_token_value"
+                ), "Pagination token should be passed correctly"
+
+
     def test_get_reposts_cursor_creation(self):
         """Test that get_reposts can be used with Cursor."""
         method = getattr(self.posts_client, "get_reposts")
@@ -161,6 +321,172 @@ class TestPostsPagination:
             mock_response_with_token.status_code = 200
             mock_response_with_token.json.return_value = {
                 "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
+                "meta": {
+                    **json.loads(r"""{}"""),
+                    "next_token": "next_token_value",
+                    "result_count": 1,
+                },
+            }
+            mock_response_with_token.raise_for_status.return_value = None
+            mock_response_with_token.headers = {"content-type": "application/json"}
+            second_page_response = Mock()
+            second_page_response.status_code = 200
+            second_page_response.json.return_value = {
+                "data": [],
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
+            }
+            second_page_response.raise_for_status.return_value = None
+            second_page_response.headers = {"content-type": "application/json"}
+            mock_session.get.side_effect = [
+                mock_response_with_token,
+                second_page_response,
+            ]
+            test_cursor = cursor(method, "test_value", max_results=1)
+            pages = list(test_cursor.pages(2))
+            # Should have made 2 requests
+            assert (
+                mock_session.get.call_count == 2
+            ), "Should make 2 requests for 2 pages"
+            # Second request should include pagination token
+            second_call_args = mock_session.get.call_args_list[1]
+            if (
+                second_call_args
+                and len(second_call_args) > 1
+                and "params" in second_call_args[1]
+            ):
+                second_params = second_call_args[1]["params"]
+                assert (
+                    "pagination_token" in second_params
+                ), "Second request should include pagination_token"
+                assert (
+                    second_params["pagination_token"] == "next_token_value"
+                ), "Pagination token should be passed correctly"
+
+
+    def test_get_reposted_by_cursor_creation(self):
+        """Test that get_reposted_by can be used with Cursor."""
+        method = getattr(self.posts_client, "get_reposted_by")
+        # Should be able to create cursor without error
+        try:
+            test_cursor = cursor(method, "test_value", max_results=10)
+            assert test_cursor is not None
+            assert isinstance(test_cursor, Cursor)
+        except PaginationError:
+            pytest.fail(f"Method get_reposted_by should support pagination")
+
+
+    def test_get_reposted_by_cursor_pages(self):
+        """Test pagination with pages() for get_reposted_by."""
+        with patch.object(self.client, "session") as mock_session:
+            # Mock first page response
+            first_page_response = Mock()
+            first_page_response.status_code = 200
+            first_page_response.json.return_value = {
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                "meta": {
+                    **json.loads(r"""{}"""),
+                    "next_token": "next_page_token",
+                    "result_count": 2,
+                },
+            }
+            first_page_response.raise_for_status.return_value = None
+            first_page_response.headers = {"content-type": "application/json"}
+            # Mock second page response (no next token = end of pagination)
+            second_page_response = Mock()
+            second_page_response.status_code = 200
+            second_page_response.json.return_value = {
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                "meta": {**json.loads(r"""{}"""), "result_count": 1},
+            }
+            second_page_response.raise_for_status.return_value = None
+            second_page_response.headers = {"content-type": "application/json"}
+            # Return different responses for consecutive calls
+            mock_session.get.side_effect = [first_page_response, second_page_response]
+            # Test pagination
+            method = getattr(self.posts_client, "get_reposted_by")
+            test_cursor = cursor(method, "test_value", max_results=2)
+            pages = list(test_cursor.pages(2))  # Limit to 2 pages
+            assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
+            # Verify first page
+            first_page = pages[0]
+            assert hasattr(first_page, "data")
+            first_data = getattr(first_page, "data")
+            assert len(first_data) == 2, "First page should have 2 items"
+            # Verify second page
+            second_page = pages[1]
+            assert hasattr(second_page, "data")
+            second_data = getattr(second_page, "data")
+            assert len(second_data) == 1, "Second page should have 1 item"
+
+
+    def test_get_reposted_by_cursor_items(self):
+        """Test pagination with items() for get_reposted_by."""
+        with patch.object(self.client, "session") as mock_session:
+            # Mock response with paginated data
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
+                # No next_token = single page
+                "meta": {**json.loads(r"""{}"""), "result_count": 3},
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Test item iteration
+            method = getattr(self.posts_client, "get_reposted_by")
+            test_cursor = cursor(method, "test_value", max_results=10)
+            items = list(test_cursor.items(5))  # Limit to 5 items
+            assert len(items) == 3, f"Should get 3 items, got {len(items)}"
+            # Verify items round-trip the spec-valid mock payload
+            _expected_item = json.loads(
+                r"""{"id":"test_value","name":"test_value","username":"test_value"}"""
+            )
+            for item in items:
+                if isinstance(_expected_item, dict):
+                    for _key in _expected_item:
+                        assert (isinstance(item, dict) and _key in item) or hasattr(
+                            item, _key
+                        ), f"Items should have '{_key}' field"
+
+
+    def test_get_reposted_by_pagination_parameters(self):
+        """Test that pagination parameters are handled correctly for get_reposted_by."""
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "data": [],
+                "meta": {**json.loads(r"""{}"""), "result_count": 0},
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            method = getattr(self.posts_client, "get_reposted_by")
+            # Test with max_results parameter
+            test_cursor = cursor(method, "test_value", max_results=5)
+            list(test_cursor.pages(1))  # Trigger one request
+            # Verify max_results was passed in request
+            call_args = mock_session.get.call_args
+            if call_args and "params" in call_args[1]:
+                params = call_args[1]["params"]
+                assert (
+                    "max_results" in params
+                ), "max_results should be in request parameters"
+            # Test with pagination token (simulate second page request)
+            mock_session.reset_mock()
+            mock_response_with_token = Mock()
+            mock_response_with_token.status_code = 200
+            mock_response_with_token.json.return_value = {
+                "data": json.loads(
+                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}]"""
+                ),
                 "meta": {
                     **json.loads(r"""{}"""),
                     "next_token": "next_token_value",
@@ -369,166 +695,6 @@ class TestPostsPagination:
                 ), "Pagination token should be passed correctly"
 
 
-    def test_get_quoted_cursor_creation(self):
-        """Test that get_quoted can be used with Cursor."""
-        method = getattr(self.posts_client, "get_quoted")
-        # Should be able to create cursor without error
-        try:
-            test_cursor = cursor(method, "test_value", max_results=10)
-            assert test_cursor is not None
-            assert isinstance(test_cursor, Cursor)
-        except PaginationError:
-            pytest.fail(f"Method get_quoted should support pagination")
-
-
-    def test_get_quoted_cursor_pages(self):
-        """Test pagination with pages() for get_quoted."""
-        with patch.object(self.client, "session") as mock_session:
-            # Mock first page response
-            first_page_response = Mock()
-            first_page_response.status_code = 200
-            first_page_response.json.return_value = {
-                "data": json.loads(
-                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
-                ),
-                "meta": {
-                    **json.loads(r"""{}"""),
-                    "next_token": "next_page_token",
-                    "result_count": 2,
-                },
-            }
-            first_page_response.raise_for_status.return_value = None
-            first_page_response.headers = {"content-type": "application/json"}
-            # Mock second page response (no next token = end of pagination)
-            second_page_response = Mock()
-            second_page_response.status_code = 200
-            second_page_response.json.return_value = {
-                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
-                "meta": {**json.loads(r"""{}"""), "result_count": 1},
-            }
-            second_page_response.raise_for_status.return_value = None
-            second_page_response.headers = {"content-type": "application/json"}
-            # Return different responses for consecutive calls
-            mock_session.get.side_effect = [first_page_response, second_page_response]
-            # Test pagination
-            method = getattr(self.posts_client, "get_quoted")
-            test_cursor = cursor(method, "test_value", max_results=2)
-            pages = list(test_cursor.pages(2))  # Limit to 2 pages
-            assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
-            # Verify first page
-            first_page = pages[0]
-            assert hasattr(first_page, "data")
-            first_data = getattr(first_page, "data")
-            assert len(first_data) == 2, "First page should have 2 items"
-            # Verify second page
-            second_page = pages[1]
-            assert hasattr(second_page, "data")
-            second_data = getattr(second_page, "data")
-            assert len(second_data) == 1, "Second page should have 1 item"
-
-
-    def test_get_quoted_cursor_items(self):
-        """Test pagination with items() for get_quoted."""
-        with patch.object(self.client, "session") as mock_session:
-            # Mock response with paginated data
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": json.loads(
-                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
-                ),
-                # No next_token = single page
-                "meta": {**json.loads(r"""{}"""), "result_count": 3},
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Test item iteration
-            method = getattr(self.posts_client, "get_quoted")
-            test_cursor = cursor(method, "test_value", max_results=10)
-            items = list(test_cursor.items(5))  # Limit to 5 items
-            assert len(items) == 3, f"Should get 3 items, got {len(items)}"
-            # Verify items round-trip the spec-valid mock payload
-            _expected_item = json.loads(r"""{"id": "1", "name": "Item 1"}""")
-            for item in items:
-                if isinstance(_expected_item, dict):
-                    for _key in _expected_item:
-                        assert (isinstance(item, dict) and _key in item) or hasattr(
-                            item, _key
-                        ), f"Items should have '{_key}' field"
-
-
-    def test_get_quoted_pagination_parameters(self):
-        """Test that pagination parameters are handled correctly for get_quoted."""
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": [],
-                "meta": {**json.loads(r"""{}"""), "result_count": 0},
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            method = getattr(self.posts_client, "get_quoted")
-            # Test with max_results parameter
-            test_cursor = cursor(method, "test_value", max_results=5)
-            list(test_cursor.pages(1))  # Trigger one request
-            # Verify max_results was passed in request
-            call_args = mock_session.get.call_args
-            if call_args and "params" in call_args[1]:
-                params = call_args[1]["params"]
-                assert (
-                    "max_results" in params
-                ), "max_results should be in request parameters"
-            # Test with pagination token (simulate second page request)
-            mock_session.reset_mock()
-            mock_response_with_token = Mock()
-            mock_response_with_token.status_code = 200
-            mock_response_with_token.json.return_value = {
-                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
-                "meta": {
-                    **json.loads(r"""{}"""),
-                    "next_token": "next_token_value",
-                    "result_count": 1,
-                },
-            }
-            mock_response_with_token.raise_for_status.return_value = None
-            mock_response_with_token.headers = {"content-type": "application/json"}
-            second_page_response = Mock()
-            second_page_response.status_code = 200
-            second_page_response.json.return_value = {
-                "data": [],
-                "meta": {**json.loads(r"""{}"""), "result_count": 0},
-            }
-            second_page_response.raise_for_status.return_value = None
-            second_page_response.headers = {"content-type": "application/json"}
-            mock_session.get.side_effect = [
-                mock_response_with_token,
-                second_page_response,
-            ]
-            test_cursor = cursor(method, "test_value", max_results=1)
-            pages = list(test_cursor.pages(2))
-            # Should have made 2 requests
-            assert (
-                mock_session.get.call_count == 2
-            ), "Should make 2 requests for 2 pages"
-            # Second request should include pagination token
-            second_call_args = mock_session.get.call_args_list[1]
-            if (
-                second_call_args
-                and len(second_call_args) > 1
-                and "params" in second_call_args[1]
-            ):
-                second_params = second_call_args[1]["params"]
-                assert (
-                    "pagination_token" in second_params
-                ), "Second request should include pagination_token"
-                assert (
-                    second_params["pagination_token"] == "next_token_value"
-                ), "Pagination token should be passed correctly"
-
-
     def test_search_all_cursor_creation(self):
         """Test that search_all can be used with Cursor."""
         method = getattr(self.posts_client, "search_all")
@@ -689,20 +855,20 @@ class TestPostsPagination:
                 ), "Pagination token should be passed correctly"
 
 
-    def test_search_recent_cursor_creation(self):
-        """Test that search_recent can be used with Cursor."""
-        method = getattr(self.posts_client, "search_recent")
+    def test_get_quoted_cursor_creation(self):
+        """Test that get_quoted can be used with Cursor."""
+        method = getattr(self.posts_client, "get_quoted")
         # Should be able to create cursor without error
         try:
-            test_cursor = cursor(method, "test_query", max_results=10)
+            test_cursor = cursor(method, "test_value", max_results=10)
             assert test_cursor is not None
             assert isinstance(test_cursor, Cursor)
         except PaginationError:
-            pytest.fail(f"Method search_recent should support pagination")
+            pytest.fail(f"Method get_quoted should support pagination")
 
 
-    def test_search_recent_cursor_pages(self):
-        """Test pagination with pages() for search_recent."""
+    def test_get_quoted_cursor_pages(self):
+        """Test pagination with pages() for get_quoted."""
         with patch.object(self.client, "session") as mock_session:
             # Mock first page response
             first_page_response = Mock()
@@ -731,169 +897,7 @@ class TestPostsPagination:
             # Return different responses for consecutive calls
             mock_session.get.side_effect = [first_page_response, second_page_response]
             # Test pagination
-            method = getattr(self.posts_client, "search_recent")
-            test_cursor = cursor(method, "test_query", max_results=2)
-            pages = list(test_cursor.pages(2))  # Limit to 2 pages
-            assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
-            # Verify first page
-            first_page = pages[0]
-            assert hasattr(first_page, "data")
-            first_data = getattr(first_page, "data")
-            assert len(first_data) == 2, "First page should have 2 items"
-            # Verify second page
-            second_page = pages[1]
-            assert hasattr(second_page, "data")
-            second_data = getattr(second_page, "data")
-            assert len(second_data) == 1, "Second page should have 1 item"
-
-
-    def test_search_recent_cursor_items(self):
-        """Test pagination with items() for search_recent."""
-        with patch.object(self.client, "session") as mock_session:
-            # Mock response with paginated data
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": json.loads(
-                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
-                ),
-                # No next_token = single page
-                "meta": {**json.loads(r"""{}"""), "result_count": 3},
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Test item iteration
-            method = getattr(self.posts_client, "search_recent")
-            test_cursor = cursor(method, "test_query", max_results=10)
-            items = list(test_cursor.items(5))  # Limit to 5 items
-            assert len(items) == 3, f"Should get 3 items, got {len(items)}"
-            # Verify items round-trip the spec-valid mock payload
-            _expected_item = json.loads(r"""{"id": "1", "name": "Item 1"}""")
-            for item in items:
-                if isinstance(_expected_item, dict):
-                    for _key in _expected_item:
-                        assert (isinstance(item, dict) and _key in item) or hasattr(
-                            item, _key
-                        ), f"Items should have '{_key}' field"
-
-
-    def test_search_recent_pagination_parameters(self):
-        """Test that pagination parameters are handled correctly for search_recent."""
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "data": [],
-                "meta": {**json.loads(r"""{}"""), "result_count": 0},
-            }
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            method = getattr(self.posts_client, "search_recent")
-            # Test with max_results parameter
-            test_cursor = cursor(method, "test_query", max_results=5)
-            list(test_cursor.pages(1))  # Trigger one request
-            # Verify max_results was passed in request
-            call_args = mock_session.get.call_args
-            if call_args and "params" in call_args[1]:
-                params = call_args[1]["params"]
-                assert (
-                    "max_results" in params
-                ), "max_results should be in request parameters"
-            # Test with pagination token (simulate second page request)
-            mock_session.reset_mock()
-            mock_response_with_token = Mock()
-            mock_response_with_token.status_code = 200
-            mock_response_with_token.json.return_value = {
-                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
-                "meta": {
-                    **json.loads(r"""{}"""),
-                    "next_token": "next_token_value",
-                    "result_count": 1,
-                },
-            }
-            mock_response_with_token.raise_for_status.return_value = None
-            mock_response_with_token.headers = {"content-type": "application/json"}
-            second_page_response = Mock()
-            second_page_response.status_code = 200
-            second_page_response.json.return_value = {
-                "data": [],
-                "meta": {**json.loads(r"""{}"""), "result_count": 0},
-            }
-            second_page_response.raise_for_status.return_value = None
-            second_page_response.headers = {"content-type": "application/json"}
-            mock_session.get.side_effect = [
-                mock_response_with_token,
-                second_page_response,
-            ]
-            test_cursor = cursor(method, "test_query", max_results=1)
-            pages = list(test_cursor.pages(2))
-            # Should have made 2 requests
-            assert (
-                mock_session.get.call_count == 2
-            ), "Should make 2 requests for 2 pages"
-            # Second request should include pagination token
-            second_call_args = mock_session.get.call_args_list[1]
-            if (
-                second_call_args
-                and len(second_call_args) > 1
-                and "params" in second_call_args[1]
-            ):
-                second_params = second_call_args[1]["params"]
-                assert (
-                    "pagination_token" in second_params
-                ), "Second request should include pagination_token"
-                assert (
-                    second_params["pagination_token"] == "next_token_value"
-                ), "Pagination token should be passed correctly"
-
-
-    def test_get_reposted_by_cursor_creation(self):
-        """Test that get_reposted_by can be used with Cursor."""
-        method = getattr(self.posts_client, "get_reposted_by")
-        # Should be able to create cursor without error
-        try:
-            test_cursor = cursor(method, "test_value", max_results=10)
-            assert test_cursor is not None
-            assert isinstance(test_cursor, Cursor)
-        except PaginationError:
-            pytest.fail(f"Method get_reposted_by should support pagination")
-
-
-    def test_get_reposted_by_cursor_pages(self):
-        """Test pagination with pages() for get_reposted_by."""
-        with patch.object(self.client, "session") as mock_session:
-            # Mock first page response
-            first_page_response = Mock()
-            first_page_response.status_code = 200
-            first_page_response.json.return_value = {
-                "data": json.loads(
-                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}]"""
-                ),
-                "meta": {
-                    **json.loads(r"""{}"""),
-                    "next_token": "next_page_token",
-                    "result_count": 2,
-                },
-            }
-            first_page_response.raise_for_status.return_value = None
-            first_page_response.headers = {"content-type": "application/json"}
-            # Mock second page response (no next token = end of pagination)
-            second_page_response = Mock()
-            second_page_response.status_code = 200
-            second_page_response.json.return_value = {
-                "data": json.loads(
-                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}]"""
-                ),
-                "meta": {**json.loads(r"""{}"""), "result_count": 1},
-            }
-            second_page_response.raise_for_status.return_value = None
-            second_page_response.headers = {"content-type": "application/json"}
-            # Return different responses for consecutive calls
-            mock_session.get.side_effect = [first_page_response, second_page_response]
-            # Test pagination
-            method = getattr(self.posts_client, "get_reposted_by")
+            method = getattr(self.posts_client, "get_quoted")
             test_cursor = cursor(method, "test_value", max_results=2)
             pages = list(test_cursor.pages(2))  # Limit to 2 pages
             assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
@@ -909,15 +913,15 @@ class TestPostsPagination:
             assert len(second_data) == 1, "Second page should have 1 item"
 
 
-    def test_get_reposted_by_cursor_items(self):
-        """Test pagination with items() for get_reposted_by."""
+    def test_get_quoted_cursor_items(self):
+        """Test pagination with items() for get_quoted."""
         with patch.object(self.client, "session") as mock_session:
             # Mock response with paginated data
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "data": json.loads(
-                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}, {"id":"test_value","name":"test_value","username":"test_value"}]"""
+                    r"""[{"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}, {"id": "1", "name": "Item 1"}]"""
                 ),
                 # No next_token = single page
                 "meta": {**json.loads(r"""{}"""), "result_count": 3},
@@ -926,14 +930,12 @@ class TestPostsPagination:
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Test item iteration
-            method = getattr(self.posts_client, "get_reposted_by")
+            method = getattr(self.posts_client, "get_quoted")
             test_cursor = cursor(method, "test_value", max_results=10)
             items = list(test_cursor.items(5))  # Limit to 5 items
             assert len(items) == 3, f"Should get 3 items, got {len(items)}"
             # Verify items round-trip the spec-valid mock payload
-            _expected_item = json.loads(
-                r"""{"id":"test_value","name":"test_value","username":"test_value"}"""
-            )
+            _expected_item = json.loads(r"""{"id": "1", "name": "Item 1"}""")
             for item in items:
                 if isinstance(_expected_item, dict):
                     for _key in _expected_item:
@@ -942,8 +944,8 @@ class TestPostsPagination:
                         ), f"Items should have '{_key}' field"
 
 
-    def test_get_reposted_by_pagination_parameters(self):
-        """Test that pagination parameters are handled correctly for get_reposted_by."""
+    def test_get_quoted_pagination_parameters(self):
+        """Test that pagination parameters are handled correctly for get_quoted."""
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -954,7 +956,7 @@ class TestPostsPagination:
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
-            method = getattr(self.posts_client, "get_reposted_by")
+            method = getattr(self.posts_client, "get_quoted")
             # Test with max_results parameter
             test_cursor = cursor(method, "test_value", max_results=5)
             list(test_cursor.pages(1))  # Trigger one request
@@ -970,9 +972,7 @@ class TestPostsPagination:
             mock_response_with_token = Mock()
             mock_response_with_token.status_code = 200
             mock_response_with_token.json.return_value = {
-                "data": json.loads(
-                    r"""[{"id":"test_value","name":"test_value","username":"test_value"}]"""
-                ),
+                "data": json.loads(r"""[{"id": "1", "name": "Item 1"}]"""),
                 "meta": {
                     **json.loads(r"""{}"""),
                     "next_token": "next_token_value",
@@ -1029,8 +1029,8 @@ class TestPostsPagination:
             empty_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = empty_response
             # Pick first paginatable method for testing
-            method = getattr(self.posts_client, "get_reposts")
-            test_cursor = cursor(method, "test_value", max_results=10)
+            method = getattr(self.posts_client, "search_recent")
+            test_cursor = cursor(method, "test_query", max_results=10)
             # Should handle empty responses gracefully
             pages = list(test_cursor.pages(1))
             assert len(pages) == 1, "Should get one page even if empty"

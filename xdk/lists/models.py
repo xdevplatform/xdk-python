@@ -17,24 +17,20 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_by_id
-GetByIdResponse = schemas.Get2ListsIdResponse
-
-
-# Request model for update
-UpdateRequest = schemas.ListUpdateRequest
-
-
-# Response model for update
-UpdateResponse = schemas.ListUpdateResponse
-
-
-# Response model for delete
-DeleteResponse = schemas.ListDeleteResponse
-
-
 # Response model for get_followers
 GetFollowersResponse = schemas.Get2ListsIdFollowersResponse
+
+
+# Response model for get_posts
+GetPostsResponse = schemas.Get2ListsIdTweetsResponse
+
+
+# Request model for create
+CreateRequest = schemas.ListCreateRequest
+
+
+# Response model for create
+CreateResponse = schemas.ListCreateResponse
 
 
 # Response model for get_members
@@ -49,16 +45,20 @@ AddMemberRequest = schemas.ListAddUserRequest
 AddMemberResponse = schemas.ListMutateResponse
 
 
-# Response model for get_posts
-GetPostsResponse = schemas.Get2ListsIdTweetsResponse
+# Response model for get_by_id
+GetByIdResponse = schemas.Get2ListsIdResponse
 
 
-# Request model for create
-CreateRequest = schemas.ListCreateRequest
+# Request model for update
+UpdateRequest = schemas.ListUpdateRequest
 
 
-# Response model for create
-CreateResponse = schemas.ListCreateResponse
+# Response model for update
+UpdateResponse = schemas.ListUpdateResponse
+
+
+# Response model for delete
+DeleteResponse = schemas.ListDeleteResponse
 
 
 # Response model for remove_member_by_user_id

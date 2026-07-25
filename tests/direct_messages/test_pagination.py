@@ -43,22 +43,20 @@ class TestDirectMessagesPagination:
         self.direct_messages_client = getattr(self.client, "direct_messages")
 
 
-    def test_get_events_by_participant_id_cursor_creation(self):
-        """Test that get_events_by_participant_id can be used with Cursor."""
-        method = getattr(self.direct_messages_client, "get_events_by_participant_id")
+    def test_get_events_cursor_creation(self):
+        """Test that get_events can be used with Cursor."""
+        method = getattr(self.direct_messages_client, "get_events")
         # Should be able to create cursor without error
         try:
-            test_cursor = cursor(method, "test_value", max_results=10)
+            test_cursor = cursor(method, max_results=10)
             assert test_cursor is not None
             assert isinstance(test_cursor, Cursor)
         except PaginationError:
-            pytest.fail(
-                f"Method get_events_by_participant_id should support pagination"
-            )
+            pytest.fail(f"Method get_events should support pagination")
 
 
-    def test_get_events_by_participant_id_cursor_pages(self):
-        """Test pagination with pages() for get_events_by_participant_id."""
+    def test_get_events_cursor_pages(self):
+        """Test pagination with pages() for get_events."""
         with patch.object(self.client, "session") as mock_session:
             # Mock first page response
             first_page_response = Mock()
@@ -89,10 +87,8 @@ class TestDirectMessagesPagination:
             # Return different responses for consecutive calls
             mock_session.get.side_effect = [first_page_response, second_page_response]
             # Test pagination
-            method = getattr(
-                self.direct_messages_client, "get_events_by_participant_id"
-            )
-            test_cursor = cursor(method, "test_value", max_results=2)
+            method = getattr(self.direct_messages_client, "get_events")
+            test_cursor = cursor(method, max_results=2)
             pages = list(test_cursor.pages(2))  # Limit to 2 pages
             assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
             # Verify first page
@@ -107,8 +103,8 @@ class TestDirectMessagesPagination:
             assert len(second_data) == 1, "Second page should have 1 item"
 
 
-    def test_get_events_by_participant_id_cursor_items(self):
-        """Test pagination with items() for get_events_by_participant_id."""
+    def test_get_events_cursor_items(self):
+        """Test pagination with items() for get_events."""
         with patch.object(self.client, "session") as mock_session:
             # Mock response with paginated data
             mock_response = Mock()
@@ -124,10 +120,8 @@ class TestDirectMessagesPagination:
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Test item iteration
-            method = getattr(
-                self.direct_messages_client, "get_events_by_participant_id"
-            )
-            test_cursor = cursor(method, "test_value", max_results=10)
+            method = getattr(self.direct_messages_client, "get_events")
+            test_cursor = cursor(method, max_results=10)
             items = list(test_cursor.items(5))  # Limit to 5 items
             assert len(items) == 3, f"Should get 3 items, got {len(items)}"
             # Verify items round-trip the spec-valid mock payload
@@ -142,8 +136,8 @@ class TestDirectMessagesPagination:
                         ), f"Items should have '{_key}' field"
 
 
-    def test_get_events_by_participant_id_pagination_parameters(self):
-        """Test that pagination parameters are handled correctly for get_events_by_participant_id."""
+    def test_get_events_pagination_parameters(self):
+        """Test that pagination parameters are handled correctly for get_events."""
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -154,11 +148,9 @@ class TestDirectMessagesPagination:
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
-            method = getattr(
-                self.direct_messages_client, "get_events_by_participant_id"
-            )
+            method = getattr(self.direct_messages_client, "get_events")
             # Test with max_results parameter
-            test_cursor = cursor(method, "test_value", max_results=5)
+            test_cursor = cursor(method, max_results=5)
             list(test_cursor.pages(1))  # Trigger one request
             # Verify max_results was passed in request
             call_args = mock_session.get.call_args
@@ -195,7 +187,7 @@ class TestDirectMessagesPagination:
                 mock_response_with_token,
                 second_page_response,
             ]
-            test_cursor = cursor(method, "test_value", max_results=1)
+            test_cursor = cursor(method, max_results=1)
             pages = list(test_cursor.pages(2))
             # Should have made 2 requests
             assert (
@@ -391,20 +383,22 @@ class TestDirectMessagesPagination:
                 ), "Pagination token should be passed correctly"
 
 
-    def test_get_events_cursor_creation(self):
-        """Test that get_events can be used with Cursor."""
-        method = getattr(self.direct_messages_client, "get_events")
+    def test_get_events_by_participant_id_cursor_creation(self):
+        """Test that get_events_by_participant_id can be used with Cursor."""
+        method = getattr(self.direct_messages_client, "get_events_by_participant_id")
         # Should be able to create cursor without error
         try:
-            test_cursor = cursor(method, max_results=10)
+            test_cursor = cursor(method, "test_value", max_results=10)
             assert test_cursor is not None
             assert isinstance(test_cursor, Cursor)
         except PaginationError:
-            pytest.fail(f"Method get_events should support pagination")
+            pytest.fail(
+                f"Method get_events_by_participant_id should support pagination"
+            )
 
 
-    def test_get_events_cursor_pages(self):
-        """Test pagination with pages() for get_events."""
+    def test_get_events_by_participant_id_cursor_pages(self):
+        """Test pagination with pages() for get_events_by_participant_id."""
         with patch.object(self.client, "session") as mock_session:
             # Mock first page response
             first_page_response = Mock()
@@ -435,8 +429,10 @@ class TestDirectMessagesPagination:
             # Return different responses for consecutive calls
             mock_session.get.side_effect = [first_page_response, second_page_response]
             # Test pagination
-            method = getattr(self.direct_messages_client, "get_events")
-            test_cursor = cursor(method, max_results=2)
+            method = getattr(
+                self.direct_messages_client, "get_events_by_participant_id"
+            )
+            test_cursor = cursor(method, "test_value", max_results=2)
             pages = list(test_cursor.pages(2))  # Limit to 2 pages
             assert len(pages) == 2, f"Should get 2 pages, got {len(pages)}"
             # Verify first page
@@ -451,8 +447,8 @@ class TestDirectMessagesPagination:
             assert len(second_data) == 1, "Second page should have 1 item"
 
 
-    def test_get_events_cursor_items(self):
-        """Test pagination with items() for get_events."""
+    def test_get_events_by_participant_id_cursor_items(self):
+        """Test pagination with items() for get_events_by_participant_id."""
         with patch.object(self.client, "session") as mock_session:
             # Mock response with paginated data
             mock_response = Mock()
@@ -468,8 +464,10 @@ class TestDirectMessagesPagination:
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Test item iteration
-            method = getattr(self.direct_messages_client, "get_events")
-            test_cursor = cursor(method, max_results=10)
+            method = getattr(
+                self.direct_messages_client, "get_events_by_participant_id"
+            )
+            test_cursor = cursor(method, "test_value", max_results=10)
             items = list(test_cursor.items(5))  # Limit to 5 items
             assert len(items) == 3, f"Should get 3 items, got {len(items)}"
             # Verify items round-trip the spec-valid mock payload
@@ -484,8 +482,8 @@ class TestDirectMessagesPagination:
                         ), f"Items should have '{_key}' field"
 
 
-    def test_get_events_pagination_parameters(self):
-        """Test that pagination parameters are handled correctly for get_events."""
+    def test_get_events_by_participant_id_pagination_parameters(self):
+        """Test that pagination parameters are handled correctly for get_events_by_participant_id."""
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -496,9 +494,11 @@ class TestDirectMessagesPagination:
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
-            method = getattr(self.direct_messages_client, "get_events")
+            method = getattr(
+                self.direct_messages_client, "get_events_by_participant_id"
+            )
             # Test with max_results parameter
-            test_cursor = cursor(method, max_results=5)
+            test_cursor = cursor(method, "test_value", max_results=5)
             list(test_cursor.pages(1))  # Trigger one request
             # Verify max_results was passed in request
             call_args = mock_session.get.call_args
@@ -535,7 +535,7 @@ class TestDirectMessagesPagination:
                 mock_response_with_token,
                 second_page_response,
             ]
-            test_cursor = cursor(method, max_results=1)
+            test_cursor = cursor(method, "test_value", max_results=1)
             pages = list(test_cursor.pages(2))
             # Should have made 2 requests
             assert (
@@ -571,10 +571,8 @@ class TestDirectMessagesPagination:
             empty_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = empty_response
             # Pick first paginatable method for testing
-            method = getattr(
-                self.direct_messages_client, "get_events_by_participant_id"
-            )
-            test_cursor = cursor(method, "test_value", max_results=10)
+            method = getattr(self.direct_messages_client, "get_events")
+            test_cursor = cursor(method, max_results=10)
             # Should handle empty responses gracefully
             pages = list(test_cursor.pages(1))
             assert len(pages) == 1, "Should get one page even if empty"
