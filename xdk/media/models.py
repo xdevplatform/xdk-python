@@ -17,6 +17,30 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for finalize_upload
+FinalizeUploadResponse = schemas.MediaUploadResponse
+
+
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.MediaAnalytics
+
+
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.MediaUploadConfigRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.MediaUploadResponse
+
+
+# Request model for create_metadata
+CreateMetadataRequest = schemas.MetadataCreateRequest
+
+
+# Response model for create_metadata
+CreateMetadataResponse = schemas.MetadataCreateResponse
+
+
 # Response model for get_upload_status
 GetUploadStatusResponse = schemas.MediaUploadResponse
 
@@ -27,18 +51,6 @@ UploadRequest = schemas.MediaUploadRequestOneShot
 
 # Response model for upload
 UploadResponse = schemas.MediaUploadResponse
-
-
-# Response model for finalize_upload
-FinalizeUploadResponse = schemas.MediaUploadResponse
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.MediaUploadConfigRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.MediaUploadResponse
 
 
 # Response model for get_by_keys
@@ -59,18 +71,6 @@ DeleteSubtitlesRequest = schemas.SubtitlesDeleteRequest
 
 # Response model for delete_subtitles
 DeleteSubtitlesResponse = schemas.SubtitlesDeleteResponse
-
-
-# Request model for create_metadata
-CreateMetadataRequest = schemas.MetadataCreateRequest
-
-
-# Response model for create_metadata
-CreateMetadataResponse = schemas.MetadataCreateResponse
-
-
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.MediaAnalytics
 
 
 class AppendUploadRequest(RootModel[schemas.MediaUploadAppendRequest]):

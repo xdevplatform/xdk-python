@@ -6889,13 +6889,13 @@ CashtagEntity = EntityIndicesInclusiveExclusive
 # Identifies the conversation target. Accepts three formats: (1) a recipient user ID for 1:1 conversations (e.g., '1215441834412953600'), (2) a legacy 1:1 conversation ID with two user IDs separated by a dash (e.g., '1215441834412953600-1603419180975409153'), or (3) a group conversation ID prefixed with 'g' (e.g., 'g1234567890123456789'). The server constructs the canonical conversation ID from the authenticated user and recipient when a single user ID is provided.
 ChatConversationOrRecipientId = str
 
-MediaSegments = Union[int, str]
-
 # The file to upload.
 MediaPayloadByte = str
 
 # The file to upload.
 MediaPayloadBinary = str
+
+MediaSegments = Union[int, str]
 
 
 class ChatMediaUploadAppendRequestVariant2(BaseModel):

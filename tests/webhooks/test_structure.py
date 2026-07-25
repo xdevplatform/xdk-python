@@ -129,51 +129,6 @@ class TestWebhooksStructure:
         ), f"Method delete should have return type annotation"
 
 
-    def test_create_webhook_replay_job_exists(self):
-        """Test that create_webhook_replay_job method exists with correct signature."""
-        # Check method exists
-        method = getattr(WebhooksClient, "create_webhook_replay_job", None)
-        assert (
-            method is not None
-        ), f"Method create_webhook_replay_job does not exist on WebhooksClient"
-        # Check method is callable
-        assert callable(method), f"create_webhook_replay_job is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"create_webhook_replay_job should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_webhook_replay_job"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_webhook_replay_job_return_annotation(self):
-        """Test that create_webhook_replay_job has proper return type annotation."""
-        method = getattr(WebhooksClient, "create_webhook_replay_job")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_webhook_replay_job should have return type annotation"
-
-
     def test_get_exists(self):
         """Test that get method exists with correct signature."""
         # Check method exists
@@ -303,6 +258,51 @@ class TestWebhooksStructure:
         ), f"Method get_stream_links should have return type annotation"
 
 
+    def test_create_webhook_replay_job_exists(self):
+        """Test that create_webhook_replay_job method exists with correct signature."""
+        # Check method exists
+        method = getattr(WebhooksClient, "create_webhook_replay_job", None)
+        assert (
+            method is not None
+        ), f"Method create_webhook_replay_job does not exist on WebhooksClient"
+        # Check method is callable
+        assert callable(method), f"create_webhook_replay_job is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"create_webhook_replay_job should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_webhook_replay_job"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_webhook_replay_job_return_annotation(self):
+        """Test that create_webhook_replay_job has proper return type annotation."""
+        method = getattr(WebhooksClient, "create_webhook_replay_job")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_webhook_replay_job should have return type annotation"
+
+
     def test_create_stream_link_exists(self):
         """Test that create_stream_link method exists with correct signature."""
         # Check method exists
@@ -409,10 +409,10 @@ class TestWebhooksStructure:
         expected_methods = [
             "validate",
             "delete",
-            "create_webhook_replay_job",
             "get",
             "create",
             "get_stream_links",
+            "create_webhook_replay_job",
             "create_stream_link",
             "delete_stream_link",
         ]

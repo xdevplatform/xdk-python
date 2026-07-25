@@ -17,6 +17,17 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Request model for create_conversation
+CreateConversationRequest = schemas.CreateDmConversationRequest
+
+
+# Response model for create_conversation
+CreateConversationResponse = schemas.CreateDmEventResponse
+
+
+# Response model for get_events_by_conversation_id
+GetEventsByConversationIdResponse = schemas.Get2DmConversationsIdDmEventsResponse
+
 
 class CreateByConversationIdRequest(RootModel[schemas.CreateMessageRequest]):
     """Request model for create_by_conversation_id"""
@@ -26,6 +37,12 @@ class CreateByConversationIdRequest(RootModel[schemas.CreateMessageRequest]):
 
 # Response model for create_by_conversation_id
 CreateByConversationIdResponse = schemas.CreateDmEventResponse
+
+
+# Response model for get_events_by_participant_id
+GetEventsByParticipantIdResponse = (
+    schemas.Get2DmConversationsWithParticipantIdDmEventsResponse
+)
 
 
 class CreateByParticipantIdRequest(RootModel[schemas.CreateMessageRequest]):
@@ -42,27 +59,9 @@ CreateByParticipantIdResponse = schemas.CreateDmEventResponse
 GetEventsResponse = schemas.Get2DmEventsResponse
 
 
-# Response model for get_events_by_conversation_id
-GetEventsByConversationIdResponse = schemas.Get2DmConversationsIdDmEventsResponse
-
-
-# Request model for create_conversation
-CreateConversationRequest = schemas.CreateDmConversationRequest
-
-
-# Response model for create_conversation
-CreateConversationResponse = schemas.CreateDmEventResponse
-
-
 # Response model for get_events_by_id
 GetEventsByIdResponse = schemas.Get2DmEventsEventIdResponse
 
 
 # Response model for delete_events
 DeleteEventsResponse = schemas.DeleteDmResponse
-
-
-# Response model for get_events_by_participant_id
-GetEventsByParticipantIdResponse = (
-    schemas.Get2DmConversationsWithParticipantIdDmEventsResponse
-)

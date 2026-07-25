@@ -17,22 +17,6 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for stream
-StreamResponse = schemas.ActivityStreamingResponse
-
-
-# Request model for update_subscription
-UpdateSubscriptionRequest = schemas.ActivitySubscriptionUpdateRequest
-
-
-# Response model for update_subscription
-UpdateSubscriptionResponse = schemas.ActivitySubscriptionUpdateResponse
-
-
-# Response model for delete_subscription
-DeleteSubscriptionResponse = schemas.ActivitySubscriptionDeleteResponse
-
-
 # Response model for get_subscriptions
 GetSubscriptionsResponse = schemas.ActivitySubscriptionGetResponse
 
@@ -47,3 +31,19 @@ CreateSubscriptionResponse = schemas.ActivitySubscriptionCreateResponse
 
 # Response model for delete_subscriptions_by_ids
 DeleteSubscriptionsByIdsResponse = schemas.ActivitySubscriptionDeleteResponse
+
+
+# Request model for update_subscription
+UpdateSubscriptionRequest = schemas.ActivitySubscriptionUpdateRequest
+
+
+# Response model for update_subscription
+UpdateSubscriptionResponse = schemas.ActivitySubscriptionUpdateResponse
+
+
+# Response model for delete_subscription
+DeleteSubscriptionResponse = schemas.ActivitySubscriptionDeleteResponse
+
+
+# Response model for stream
+StreamResponse = schemas.ActivityStreamingResponse

@@ -25,14 +25,6 @@ ValidateResponse = schemas.WebhookConfigPutResponse
 DeleteResponse = schemas.WebhookConfigDeleteResponse
 
 
-# Request model for create_webhook_replay_job
-CreateWebhookReplayJobRequest = schemas.WebhookReplayCreateRequest
-
-
-# Response model for create_webhook_replay_job
-CreateWebhookReplayJobResponse = schemas.ReplayJobCreateResponse
-
-
 # Response model for get
 GetResponse = schemas.Get2WebhooksResponse
 
@@ -47,6 +39,14 @@ CreateResponse = schemas.WebhookConfigCreateResponse
 
 # Response model for get_stream_links
 GetStreamLinksResponse = schemas.WebhookLinksGetResponse
+
+
+# Request model for create_webhook_replay_job
+CreateWebhookReplayJobRequest = schemas.WebhookReplayCreateRequest
+
+
+# Response model for create_webhook_replay_job
+CreateWebhookReplayJobResponse = schemas.ReplayJobCreateResponse
 
 
 # Response model for create_stream_link
