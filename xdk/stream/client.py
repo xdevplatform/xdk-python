@@ -37,25 +37,25 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
+    PostsFirehoseKoResponse,
+    GetRuleCountsResponse,
+    UsersComplianceResponse,
+    PostsFirehoseEnResponse,
+    LabelsComplianceResponse,
+    PostsResponse,
+    PostsFirehoseJaResponse,
+    ActivityResponse,
+    PostsSampleResponse,
+    PostsSample10Response,
     GetRulesResponse,
     UpdateRulesRequest,
     UpdateRulesResponse,
-    PostsFirehoseEnResponse,
-    PostsSample10Response,
-    PostsComplianceResponse,
-    PostsFirehoseKoResponse,
-    PostsFirehosePtResponse,
-    LabelsComplianceResponse,
-    LikesFirehoseResponse,
-    PostsSampleResponse,
-    PostsResponse,
-    LikesComplianceResponse,
-    GetRuleCountsResponse,
     PostsFirehoseResponse,
+    LikesComplianceResponse,
+    LikesFirehoseResponse,
+    PostsFirehosePtResponse,
     LikesSample10Response,
-    UsersComplianceResponse,
-    PostsFirehoseJaResponse,
-    ActivityResponse,
+    PostsComplianceResponse,
 )
 
 
@@ -65,6 +65,1637 @@ class StreamClient:
 
     def __init__(self, client: Client):
         self.client = client
+
+
+    def posts_firehose_ko(
+        self,
+        partition: int,
+        backfill_minutes: Optional[int] = None,
+        tweet_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "attachments",
+                    "author_id",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "edit_history_tweet_ids",
+                    "entities",
+                    "geo",
+                    "id",
+                    "in_reply_to_user_id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_request_suggestions",
+                    "note_tweet",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "referenced_tweets",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_tweet_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "entities.note.mentions.username",
+                    "referenced_tweets.id",
+                    "referenced_tweets.id.attachments.media_keys",
+                    "referenced_tweets.id.author_id",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[PostsFirehoseKoResponse, None, None]:
+        """
+        Stream Korean Posts (Streaming)
+        Streams all public Korean-language Posts in real-time.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            partition: The partition number.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            PostsFirehoseKoResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/firehose/stream/lang/ko"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if tweet_fields is not None:
+            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        if poll_fields is not None:
+            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if place_fields is not None:
+            params["place.fields"] = ",".join(str(item) for item in place_fields)
+        if partition is not None:
+            params["partition"] = partition
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=PostsFirehoseKoResponse,
+        )
+
+
+    def get_rule_counts(
+        self, rules_count_fields: Optional[str] = None
+    ) -> GetRuleCountsResponse:
+        """
+        Get Rule Counts
+        Args:
+            rules_count_fields: rules_count.fields
+            Returns:
+            GetRuleCountsResponse: Response data
+        """
+        url = self.client.base_url + "/2/tweets/search/stream/rules/counts"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if rules_count_fields is not None:
+            params["rules_count.fields"] = rules_count_fields
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetRuleCountsResponse.model_validate(response_data)
+
+
+    def users_compliance(
+        self,
+        partition: int,
+        backfill_minutes: Optional[int] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[UsersComplianceResponse, None, None]:
+        """
+        Stream Users compliance data (Streaming)
+        Streams all compliance data related to Users.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            partition: The partition number.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the User Compliance events will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the User Compliance events will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            UsersComplianceResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/users/compliance/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if partition is not None:
+            params["partition"] = partition
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=UsersComplianceResponse,
+        )
+
+
+    def posts_firehose_en(
+        self,
+        partition: int,
+        backfill_minutes: Optional[int] = None,
+        tweet_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "attachments",
+                    "author_id",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "edit_history_tweet_ids",
+                    "entities",
+                    "geo",
+                    "id",
+                    "in_reply_to_user_id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_request_suggestions",
+                    "note_tweet",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "referenced_tweets",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_tweet_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "entities.note.mentions.username",
+                    "referenced_tweets.id",
+                    "referenced_tweets.id.attachments.media_keys",
+                    "referenced_tweets.id.author_id",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[PostsFirehoseEnResponse, None, None]:
+        """
+        Stream English Posts (Streaming)
+        Streams all public English-language Posts in real-time.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            partition: The partition number.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            PostsFirehoseEnResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/firehose/stream/lang/en"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if tweet_fields is not None:
+            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        if poll_fields is not None:
+            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if place_fields is not None:
+            params["place.fields"] = ",".join(str(item) for item in place_fields)
+        if partition is not None:
+            params["partition"] = partition
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=PostsFirehoseEnResponse,
+        )
+
+
+    def labels_compliance(
+        self,
+        backfill_minutes: Optional[int] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[LabelsComplianceResponse, None, None]:
+        """
+        Stream Post labels (Streaming)
+        Streams all labeling events applied to Posts.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Post labels will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Post labels will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            LabelsComplianceResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/label/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=LabelsComplianceResponse,
+        )
+
+
+    def posts(
+        self,
+        backfill_minutes: Optional[int] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        tweet_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "attachments",
+                    "author_id",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "edit_history_tweet_ids",
+                    "entities",
+                    "geo",
+                    "id",
+                    "in_reply_to_user_id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_request_suggestions",
+                    "note_tweet",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "referenced_tweets",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_tweet_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "entities.note.mentions.username",
+                    "referenced_tweets.id",
+                    "referenced_tweets.id.attachments.media_keys",
+                    "referenced_tweets.id.author_id",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[PostsResponse, None, None]:
+        """
+        Stream filtered Posts (Streaming)
+        Streams Posts in real-time matching the active rule set.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            PostsResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/search/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        if tweet_fields is not None:
+            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        if poll_fields is not None:
+            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if place_fields is not None:
+            params["place.fields"] = ",".join(str(item) for item in place_fields)
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=PostsResponse,
+        )
+
+
+    def posts_firehose_ja(
+        self,
+        partition: int,
+        backfill_minutes: Optional[int] = None,
+        tweet_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "attachments",
+                    "author_id",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "edit_history_tweet_ids",
+                    "entities",
+                    "geo",
+                    "id",
+                    "in_reply_to_user_id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_request_suggestions",
+                    "note_tweet",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "referenced_tweets",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_tweet_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "entities.note.mentions.username",
+                    "referenced_tweets.id",
+                    "referenced_tweets.id.attachments.media_keys",
+                    "referenced_tweets.id.author_id",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[PostsFirehoseJaResponse, None, None]:
+        """
+        Stream Japanese Posts (Streaming)
+        Streams all public Japanese-language Posts in real-time.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            partition: The partition number.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            PostsFirehoseJaResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/firehose/stream/lang/ja"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if tweet_fields is not None:
+            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        if poll_fields is not None:
+            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if place_fields is not None:
+            params["place.fields"] = ",".join(str(item) for item in place_fields)
+        if partition is not None:
+            params["partition"] = partition
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=PostsFirehoseJaResponse,
+        )
+
+
+    def activity(
+        self,
+        backfill_minutes: Optional[int] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[ActivityResponse, None, None]:
+        """
+        Activity Stream (Streaming)
+        Stream of X Activities
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the activities will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the activities will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            ActivityResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/activity/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=ActivityResponse,
+        )
+
+
+    def posts_sample(
+        self,
+        backfill_minutes: Optional[int] = None,
+        tweet_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "attachments",
+                    "author_id",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "edit_history_tweet_ids",
+                    "entities",
+                    "geo",
+                    "id",
+                    "in_reply_to_user_id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_request_suggestions",
+                    "note_tweet",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "referenced_tweets",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_tweet_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "entities.note.mentions.username",
+                    "referenced_tweets.id",
+                    "referenced_tweets.id.attachments.media_keys",
+                    "referenced_tweets.id.author_id",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[PostsSampleResponse, None, None]:
+        """
+        Stream sampled Posts (Streaming)
+        Streams a 1% sample of public Posts in real-time.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            PostsSampleResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/sample/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if tweet_fields is not None:
+            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        if poll_fields is not None:
+            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if place_fields is not None:
+            params["place.fields"] = ",".join(str(item) for item in place_fields)
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=PostsSampleResponse,
+        )
+
+
+    def posts_sample10(
+        self,
+        partition: int,
+        backfill_minutes: Optional[int] = None,
+        tweet_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "attachments",
+                    "author_id",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "edit_history_tweet_ids",
+                    "entities",
+                    "geo",
+                    "id",
+                    "in_reply_to_user_id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_request_suggestions",
+                    "note_tweet",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "referenced_tweets",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_tweet_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "entities.note.mentions.username",
+                    "referenced_tweets.id",
+                    "referenced_tweets.id.attachments.media_keys",
+                    "referenced_tweets.id.author_id",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[PostsSample10Response, None, None]:
+        """
+        Stream 10% sampled Posts (Streaming)
+        Streams a 10% sample of public Posts in real-time.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            tweet_fields: A comma separated list of Tweet fields to display.
+            expansions: A comma separated list of fields to expand.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            user_fields: A comma separated list of User fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            partition: The partition number.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            PostsSample10Response: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/tweets/sample10/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if tweet_fields is not None:
+            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
+        if poll_fields is not None:
+            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if place_fields is not None:
+            params["place.fields"] = ",".join(str(item) for item in place_fields)
+        if partition is not None:
+            params["partition"] = partition
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=PostsSample10Response,
+        )
 
 
     def get_rules(
@@ -434,7 +2065,7 @@ class StreamClient:
         return UpdateRulesResponse.model_validate(response_data)
 
 
-    def posts_firehose_en(
+    def posts_firehose(
         self,
         partition: int,
         backfill_minutes: Optional[int] = None,
@@ -573,10 +2204,10 @@ class StreamClient:
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsFirehoseEnResponse, None, None]:
+    ) -> Generator[PostsFirehoseResponse, None, None]:
         """
-        Stream English Posts (Streaming)
-        Streams all public English-language Posts in real-time.
+        Stream all Posts (Streaming)
+        Streams all public Posts in real-time.
         This is a streaming endpoint that yields data in real-time as it becomes available.
         Each yielded item represents a single data point from the stream.
         The connection is automatically managed with exponential backoff retry logic.
@@ -596,11 +2227,11 @@ class StreamClient:
                 Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
                 (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
         Yields:
-            PostsFirehoseEnResponse: Individual streaming data items
+            PostsFirehoseResponse: Individual streaming data items
         Raises:
             StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
         """
-        url = self.client.base_url + "/2/tweets/firehose/stream/lang/en"
+        url = self.client.base_url + "/2/tweets/firehose/stream"
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -649,14 +2280,151 @@ class StreamClient:
             config=stream_config,
             params=params,
             headers=headers,
-            response_model=PostsFirehoseEnResponse,
+            response_model=PostsFirehoseResponse,
         )
 
 
-    def posts_sample10(
+    def likes_compliance(
+        self,
+        backfill_minutes: Optional[int] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        stream_config: Optional[StreamConfig] = None,
+    ) -> Generator[LikesComplianceResponse, None, None]:
+        """
+        Stream Likes compliance data (Streaming)
+        Streams all compliance data related to Likes for Users.
+        This is a streaming endpoint that yields data in real-time as it becomes available.
+        Each yielded item represents a single data point from the stream.
+        The connection is automatically managed with exponential backoff retry logic.
+        If the stream disconnects, the SDK will automatically reconnect without client intervention.
+        Args:
+            backfill_minutes: The number of minutes of backfill requested.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Likes Compliance events will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Likes Compliance events will be provided.
+            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
+                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
+                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
+        Yields:
+            LikesComplianceResponse: Individual streaming data items
+        Raises:
+            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
+        """
+        url = self.client.base_url + "/2/likes/compliance/stream"
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if backfill_minutes is not None:
+            params["backfill_minutes"] = backfill_minutes
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        headers = {
+            "Accept": "application/json",
+        }
+        # Prepare request data
+        json_data = None
+        # Ensure params is defined (build_query_params should set it, but initialize if not)
+        try:
+            _ = params  # Check if params exists
+        except NameError:
+            params = {}  # Initialize if not defined
+        # Use robust streaming with automatic retry and exponential backoff
+        yield from stream_with_retry(
+            session=self.client.session,
+            method="get",
+            url=url,
+            config=stream_config,
+            params=params,
+            headers=headers,
+            response_model=LikesComplianceResponse,
+        )
+
+
+    def likes_firehose(
         self,
         partition: int,
         backfill_minutes: Optional[int] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        like_with_tweet_author_fields: Optional[
+            List[
+                Literal[
+                    "attachments_media_keys",
+                    "created_at",
+                    "id",
+                    "liked_tweet_author_id",
+                    "liked_tweet_id",
+                    "timestamp_ms",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "attachments.media_keys", "liked_tweet_author_id", "liked_tweet_id"
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "affiliation",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "most_recent_tweet_id",
+                    "name",
+                    "parody",
+                    "pinned_tweet_id",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_dm",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
         tweet_fields: Optional[
             List[
                 Literal[
@@ -697,129 +2465,34 @@ class StreamClient:
                 ]
             ]
         ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_tweet_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
         stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsSample10Response, None, None]:
+    ) -> Generator[LikesFirehoseResponse, None, None]:
         """
-        Stream 10% sampled Posts (Streaming)
-        Streams a 10% sample of public Posts in real-time.
+        Stream all Likes (Streaming)
+        Streams all public Likes in real-time.
         This is a streaming endpoint that yields data in real-time as it becomes available.
         Each yielded item represents a single data point from the stream.
         The connection is automatically managed with exponential backoff retry logic.
         If the stream disconnects, the SDK will automatically reconnect without client intervention.
         Args:
             backfill_minutes: The number of minutes of backfill requested.
-            tweet_fields: A comma separated list of Tweet fields to display.
+            partition: The partition number.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Likes will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            like_with_tweet_author_fields: A comma separated list of LikeWithTweetAuthor fields to display.
             expansions: A comma separated list of fields to expand.
             media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
             user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
+            tweet_fields: A comma separated list of Tweet fields to display.
             stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
                 Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
                 (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
         Yields:
-            PostsSample10Response: Individual streaming data items
+            LikesFirehoseResponse: Individual streaming data items
         Raises:
             StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
         """
-        url = self.client.base_url + "/2/tweets/sample10/stream"
+        url = self.client.base_url + "/2/likes/firehose/stream"
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -832,312 +2505,24 @@ class StreamClient:
         params = {}
         if backfill_minutes is not None:
             params["backfill_minutes"] = backfill_minutes
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
+        if partition is not None:
+            params["partition"] = partition
+        if start_time is not None:
+            params["start_time"] = start_time
+        if end_time is not None:
+            params["end_time"] = end_time
+        if like_with_tweet_author_fields is not None:
+            params["like_with_tweet_author.fields"] = ",".join(
+                str(item) for item in like_with_tweet_author_fields
+            )
         if expansions is not None:
             params["expansions"] = ",".join(str(item) for item in expansions)
         if media_fields is not None:
             params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
         if user_fields is not None:
             params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
-        if partition is not None:
-            params["partition"] = partition
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=PostsSample10Response,
-        )
-
-
-    def posts_compliance(
-        self,
-        partition: int,
-        backfill_minutes: Optional[int] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsComplianceResponse, None, None]:
-        """
-        Stream Posts compliance data (Streaming)
-        Streams all compliance data related to Posts.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Post Compliance events will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Post Compliance events will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            PostsComplianceResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/compliance/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if partition is not None:
-            params["partition"] = partition
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=PostsComplianceResponse,
-        )
-
-
-    def posts_firehose_ko(
-        self,
-        partition: int,
-        backfill_minutes: Optional[int] = None,
-        tweet_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "attachments",
-                    "author_id",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "edit_history_tweet_ids",
-                    "entities",
-                    "geo",
-                    "id",
-                    "in_reply_to_user_id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_request_suggestions",
-                    "note_tweet",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "referenced_tweets",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_tweet_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsFirehoseKoResponse, None, None]:
-        """
-        Stream Korean Posts (Streaming)
-        Streams all public Korean-language Posts in real-time.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            PostsFirehoseKoResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/firehose/stream/lang/ko"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
         if tweet_fields is not None:
             params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
-        if partition is not None:
-            params["partition"] = partition
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
         headers = {
             "Accept": "application/json",
         }
@@ -1156,7 +2541,7 @@ class StreamClient:
             config=stream_config,
             params=params,
             headers=headers,
-            response_model=PostsFirehoseKoResponse,
+            response_model=LikesFirehoseResponse,
         )
 
 
@@ -1379,1107 +2764,6 @@ class StreamClient:
         )
 
 
-    def labels_compliance(
-        self,
-        backfill_minutes: Optional[int] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[LabelsComplianceResponse, None, None]:
-        """
-        Stream Post labels (Streaming)
-        Streams all labeling events applied to Posts.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Post labels will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Post labels will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            LabelsComplianceResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/label/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=LabelsComplianceResponse,
-        )
-
-
-    def likes_firehose(
-        self,
-        partition: int,
-        backfill_minutes: Optional[int] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        like_with_tweet_author_fields: Optional[
-            List[
-                Literal[
-                    "attachments_media_keys",
-                    "created_at",
-                    "id",
-                    "liked_tweet_author_id",
-                    "liked_tweet_id",
-                    "timestamp_ms",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "attachments.media_keys", "liked_tweet_author_id", "liked_tweet_id"
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        tweet_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "attachments",
-                    "author_id",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "edit_history_tweet_ids",
-                    "entities",
-                    "geo",
-                    "id",
-                    "in_reply_to_user_id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_request_suggestions",
-                    "note_tweet",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "referenced_tweets",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[LikesFirehoseResponse, None, None]:
-        """
-        Stream all Likes (Streaming)
-        Streams all public Likes in real-time.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Likes will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
-            like_with_tweet_author_fields: A comma separated list of LikeWithTweetAuthor fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            user_fields: A comma separated list of User fields to display.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            LikesFirehoseResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/likes/firehose/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if partition is not None:
-            params["partition"] = partition
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        if like_with_tweet_author_fields is not None:
-            params["like_with_tweet_author.fields"] = ",".join(
-                str(item) for item in like_with_tweet_author_fields
-            )
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=LikesFirehoseResponse,
-        )
-
-
-    def posts_sample(
-        self,
-        backfill_minutes: Optional[int] = None,
-        tweet_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "attachments",
-                    "author_id",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "edit_history_tweet_ids",
-                    "entities",
-                    "geo",
-                    "id",
-                    "in_reply_to_user_id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_request_suggestions",
-                    "note_tweet",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "referenced_tweets",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_tweet_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsSampleResponse, None, None]:
-        """
-        Stream sampled Posts (Streaming)
-        Streams a 1% sample of public Posts in real-time.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            PostsSampleResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/sample/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=PostsSampleResponse,
-        )
-
-
-    def posts(
-        self,
-        backfill_minutes: Optional[int] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        tweet_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "attachments",
-                    "author_id",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "edit_history_tweet_ids",
-                    "entities",
-                    "geo",
-                    "id",
-                    "in_reply_to_user_id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_request_suggestions",
-                    "note_tweet",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "referenced_tweets",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_tweet_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsResponse, None, None]:
-        """
-        Stream filtered Posts (Streaming)
-        Streams Posts in real-time matching the active rule set.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            PostsResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/search/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=PostsResponse,
-        )
-
-
-    def likes_compliance(
-        self,
-        backfill_minutes: Optional[int] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[LikesComplianceResponse, None, None]:
-        """
-        Stream Likes compliance data (Streaming)
-        Streams all compliance data related to Likes for Users.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Likes Compliance events will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Likes Compliance events will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            LikesComplianceResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/likes/compliance/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=LikesComplianceResponse,
-        )
-
-
-    def get_rule_counts(
-        self, rules_count_fields: Optional[str] = None
-    ) -> GetRuleCountsResponse:
-        """
-        Get Rule Counts
-        Args:
-            rules_count_fields: rules_count.fields
-            Returns:
-            GetRuleCountsResponse: Response data
-        """
-        url = self.client.base_url + "/2/tweets/search/stream/rules/counts"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if rules_count_fields is not None:
-            params["rules_count.fields"] = rules_count_fields
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetRuleCountsResponse.model_validate(response_data)
-
-
-    def posts_firehose(
-        self,
-        partition: int,
-        backfill_minutes: Optional[int] = None,
-        tweet_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "attachments",
-                    "author_id",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "edit_history_tweet_ids",
-                    "entities",
-                    "geo",
-                    "id",
-                    "in_reply_to_user_id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_request_suggestions",
-                    "note_tweet",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "referenced_tweets",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_tweet_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsFirehoseResponse, None, None]:
-        """
-        Stream all Posts (Streaming)
-        Streams all public Posts in real-time.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            PostsFirehoseResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/firehose/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
-        if partition is not None:
-            params["partition"] = partition
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=PostsFirehoseResponse,
-        )
-
-
     def likes_sample10(
         self,
         partition: int,
@@ -2676,17 +2960,17 @@ class StreamClient:
         )
 
 
-    def users_compliance(
+    def posts_compliance(
         self,
         partition: int,
         backfill_minutes: Optional[int] = None,
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[UsersComplianceResponse, None, None]:
+    ) -> Generator[PostsComplianceResponse, None, None]:
         """
-        Stream Users compliance data (Streaming)
-        Streams all compliance data related to Users.
+        Stream Posts compliance data (Streaming)
+        Streams all compliance data related to Posts.
         This is a streaming endpoint that yields data in real-time as it becomes available.
         Each yielded item represents a single data point from the stream.
         The connection is automatically managed with exponential backoff retry logic.
@@ -2694,17 +2978,17 @@ class StreamClient:
         Args:
             backfill_minutes: The number of minutes of backfill requested.
             partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the User Compliance events will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the User Compliance events will be provided.
+            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the Post Compliance events will be provided.
+            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the Post Compliance events will be provided.
             stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
                 Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
                 (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
         Yields:
-            UsersComplianceResponse: Individual streaming data items
+            PostsComplianceResponse: Individual streaming data items
         Raises:
             StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
         """
-        url = self.client.base_url + "/2/users/compliance/stream"
+        url = self.client.base_url + "/2/tweets/compliance/stream"
         # Priority: bearer_token > access_token (matches TypeScript behavior)
         if self.client.bearer_token:
             self.client.session.headers["Authorization"] = (
@@ -2741,289 +3025,5 @@ class StreamClient:
             config=stream_config,
             params=params,
             headers=headers,
-            response_model=UsersComplianceResponse,
-        )
-
-
-    def posts_firehose_ja(
-        self,
-        partition: int,
-        backfill_minutes: Optional[int] = None,
-        tweet_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "attachments",
-                    "author_id",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "edit_history_tweet_ids",
-                    "entities",
-                    "geo",
-                    "id",
-                    "in_reply_to_user_id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_request_suggestions",
-                    "note_tweet",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "referenced_tweets",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_tweet_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "entities.note.mentions.username",
-                    "referenced_tweets.id",
-                    "referenced_tweets.id.attachments.media_keys",
-                    "referenced_tweets.id.author_id",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "affiliation",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "most_recent_tweet_id",
-                    "name",
-                    "parody",
-                    "pinned_tweet_id",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[PostsFirehoseJaResponse, None, None]:
-        """
-        Stream Japanese Posts (Streaming)
-        Streams all public Japanese-language Posts in real-time.
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            tweet_fields: A comma separated list of Tweet fields to display.
-            expansions: A comma separated list of fields to expand.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            user_fields: A comma separated list of User fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            partition: The partition number.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp to which the Posts will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            PostsFirehoseJaResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/tweets/firehose/stream/lang/ja"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if tweet_fields is not None:
-            params["tweet.fields"] = ",".join(str(item) for item in tweet_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
-        if poll_fields is not None:
-            params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if place_fields is not None:
-            params["place.fields"] = ",".join(str(item) for item in place_fields)
-        if partition is not None:
-            params["partition"] = partition
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=PostsFirehoseJaResponse,
-        )
-
-
-    def activity(
-        self,
-        backfill_minutes: Optional[int] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        stream_config: Optional[StreamConfig] = None,
-    ) -> Generator[ActivityResponse, None, None]:
-        """
-        Activity Stream (Streaming)
-        Stream of X Activities
-        This is a streaming endpoint that yields data in real-time as it becomes available.
-        Each yielded item represents a single data point from the stream.
-        The connection is automatically managed with exponential backoff retry logic.
-        If the stream disconnects, the SDK will automatically reconnect without client intervention.
-        Args:
-            backfill_minutes: The number of minutes of backfill requested.
-            start_time: YYYY-MM-DDTHH:mm:ssZ. The earliest UTC timestamp from which the activities will be provided.
-            end_time: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the activities will be provided.
-            stream_config: Optional StreamConfig for customizing retry behavior, timeouts, and callbacks.
-                Configure max_retries (-1 for infinite), initial_backoff, max_backoff, and lifecycle callbacks
-                (on_connect, on_disconnect, on_reconnect, on_error) for monitoring connection state.
-        Yields:
-            ActivityResponse: Individual streaming data items
-        Raises:
-            StreamError: If a non-retryable error occurs (auth errors, client errors) or max retries exceeded.
-        """
-        url = self.client.base_url + "/2/activity/stream"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if backfill_minutes is not None:
-            params["backfill_minutes"] = backfill_minutes
-        if start_time is not None:
-            params["start_time"] = start_time
-        if end_time is not None:
-            params["end_time"] = end_time
-        headers = {
-            "Accept": "application/json",
-        }
-        # Prepare request data
-        json_data = None
-        # Ensure params is defined (build_query_params should set it, but initialize if not)
-        try:
-            _ = params  # Check if params exists
-        except NameError:
-            params = {}  # Initialize if not defined
-        # Use robust streaming with automatic retry and exponential backoff
-        yield from stream_with_retry(
-            session=self.client.session,
-            method="get",
-            url=url,
-            config=stream_config,
-            params=params,
-            headers=headers,
-            response_model=ActivityResponse,
+            response_model=PostsComplianceResponse,
         )

@@ -18,47 +18,47 @@ from .oauth2_auth import OAuth2PKCEAuth
 from .oauth1_auth import OAuth1
 from .paginator import Cursor, cursor, PaginationError
 
-from .usage.client import UsageClient
+from .account_activity.client import AccountActivityClient
 
 from .articles.client import ArticlesClient
 
-from .posts.client import PostsClient
+from .webhooks.client import WebhooksClient
 
-from .users.client import UsersClient
+from .connections.client import ConnectionsClient
 
-from .general.client import GeneralClient
+from .compliance.client import ComplianceClient
 
-from .communities.client import CommunitiesClient
-
-from .news.client import NewsClient
-
-from .stream.client import StreamClient
+from .lists.client import ListsClient
 
 from .spaces.client import SpacesClient
 
 from .chat.client import ChatClient
 
-from .lists.client import ListsClient
-
-from .trends.client import TrendsClient
-
-from .account_activity.client import AccountActivityClient
-
-from .broadcasts.client import BroadcastsClient
-
-from .connections.client import ConnectionsClient
+from .activity.client import ActivityClient
 
 from .community_notes.client import CommunityNotesClient
 
+from .broadcasts.client import BroadcastsClient
+
+from .usage.client import UsageClient
+
+from .users.client import UsersClient
+
+from .general.client import GeneralClient
+
+from .trends.client import TrendsClient
+
+from .news.client import NewsClient
+
 from .direct_messages.client import DirectMessagesClient
 
-from .webhooks.client import WebhooksClient
+from .posts.client import PostsClient
 
-from .compliance.client import ComplianceClient
+from .communities.client import CommunitiesClient
 
 from .media.client import MediaClient
 
-from .activity.client import ActivityClient
+from .stream.client import StreamClient
 
 
 class Client:
@@ -92,7 +92,7 @@ class Client:
             auth: OAuth1 instance for OAuth1.0a authentication.
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.10.5"})
+        self.session.headers.update({"User-Agent": "xdk-python/0.10.6"})
         self.base_url = base_url
         self.bearer_token = bearer_token
         # Extract access_token from token dict if provided, otherwise use direct access_token parameter
@@ -124,27 +124,27 @@ class Client:
         # Set up OAuth1 authentication if provided
         self.auth = auth
         # Initialize clients for each tag
-        self.usage = UsageClient(self)
+        self.account_activity = AccountActivityClient(self)
         self.articles = ArticlesClient(self)
-        self.posts = PostsClient(self)
-        self.users = UsersClient(self)
-        self.general = GeneralClient(self)
-        self.communities = CommunitiesClient(self)
-        self.news = NewsClient(self)
-        self.stream = StreamClient(self)
+        self.webhooks = WebhooksClient(self)
+        self.connections = ConnectionsClient(self)
+        self.compliance = ComplianceClient(self)
+        self.lists = ListsClient(self)
         self.spaces = SpacesClient(self)
         self.chat = ChatClient(self)
-        self.lists = ListsClient(self)
-        self.trends = TrendsClient(self)
-        self.account_activity = AccountActivityClient(self)
-        self.broadcasts = BroadcastsClient(self)
-        self.connections = ConnectionsClient(self)
-        self.community_notes = CommunityNotesClient(self)
-        self.direct_messages = DirectMessagesClient(self)
-        self.webhooks = WebhooksClient(self)
-        self.compliance = ComplianceClient(self)
-        self.media = MediaClient(self)
         self.activity = ActivityClient(self)
+        self.community_notes = CommunityNotesClient(self)
+        self.broadcasts = BroadcastsClient(self)
+        self.usage = UsageClient(self)
+        self.users = UsersClient(self)
+        self.general = GeneralClient(self)
+        self.trends = TrendsClient(self)
+        self.news = NewsClient(self)
+        self.direct_messages = DirectMessagesClient(self)
+        self.posts = PostsClient(self)
+        self.communities = CommunitiesClient(self)
+        self.media = MediaClient(self)
+        self.stream = StreamClient(self)
 
     @property
 

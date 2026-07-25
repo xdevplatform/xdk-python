@@ -17,6 +17,10 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for go_live_scheduled_broadcast
+GoLiveScheduledBroadcastResponse = schemas.GoLiveScheduledBroadcastResponse
+
+
 # Response model for get_scheduled_broadcast
 GetScheduledBroadcastResponse = schemas.GetScheduledBroadcastResponse
 
@@ -51,7 +55,3 @@ CreateScheduledBroadcastRequest = schemas.CreateScheduledBroadcastRequest
 
 # Response model for create_scheduled_broadcast
 CreateScheduledBroadcastResponse = schemas.CreateScheduledBroadcastResponse
-
-
-# Response model for go_live_scheduled_broadcast
-GoLiveScheduledBroadcastResponse = schemas.GoLiveScheduledBroadcastResponse

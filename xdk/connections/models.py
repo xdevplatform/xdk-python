@@ -29,9 +29,9 @@ DeleteByUuidsRequest = schemas.DeleteConnectionsByUuidsRequest
 DeleteByUuidsResponse = schemas.DeleteConnectionsByUuidsResponse
 
 
-# Response model for delete_by_endpoint
-DeleteByEndpointResponse = schemas.DeleteConnectionsByEndpointResponse
-
-
 # Response model for delete_all
 DeleteAllResponse = schemas.DeleteAllConnectionsResponse
+
+
+# Response model for delete_by_endpoint
+DeleteByEndpointResponse = schemas.DeleteConnectionsByEndpointResponse

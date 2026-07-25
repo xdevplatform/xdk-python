@@ -17,9 +17,9 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for search
-SearchResponse = schemas.SearchNewsResponse
-
-
 # Response model for get
 GetResponse = schemas.GetNewsResponse
+
+
+# Response model for search
+SearchResponse = schemas.SearchNewsResponse

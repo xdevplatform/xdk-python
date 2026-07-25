@@ -17,22 +17,6 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Request model for create_subtitles
-CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
-
-
-# Response model for create_subtitles
-CreateSubtitlesResponse = schemas.CreateMediaSubtitlesResponse
-
-
-# Request model for delete_subtitles
-DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
-
-
-# Response model for delete_subtitles
-DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
-
-
 # Response model for get_by_keys
 GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
 
@@ -49,30 +33,6 @@ UploadRequest = schemas.MediaUploadRequest
 UploadResponse = schemas.MediaUploadResponse
 
 
-# Response model for get_by_key
-GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.InitializeMediaUploadRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.InitializeMediaUploadResponse
-
-
-# Request model for append_upload
-AppendUploadRequest = schemas.AppendMediaUploadRequest
-
-
-# Response model for append_upload
-AppendUploadResponse = schemas.AppendMediaUploadResponse
-
-
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
-
-
 # Request model for create_metadata
 CreateMetadataRequest = schemas.CreateMediaMetadataRequest
 
@@ -83,3 +43,43 @@ CreateMetadataResponse = schemas.CreateMediaMetadataResponse
 
 # Response model for finalize_upload
 FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
+
+
+# Response model for get_by_key
+GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
+
+
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
+
+
+# Request model for create_subtitles
+CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
+
+
+# Response model for create_subtitles
+CreateSubtitlesResponse = schemas.CreateMediaSubtitlesResponse
+
+
+# Request model for delete_subtitles
+DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
+
+
+# Response model for delete_subtitles
+DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
+
+
+# Request model for append_upload
+AppendUploadRequest = schemas.AppendMediaUploadRequest
+
+
+# Response model for append_upload
+AppendUploadResponse = schemas.AppendMediaUploadResponse
+
+
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.InitializeMediaUploadRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.InitializeMediaUploadResponse

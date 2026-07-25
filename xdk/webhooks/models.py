@@ -21,14 +21,6 @@ from .. import schemas
 GetStreamLinksResponse = schemas.GetWebhooksStreamLinksResponse
 
 
-# Response model for create_stream_link
-CreateStreamLinkResponse = schemas.CreateWebhooksStreamLinkResponse
-
-
-# Response model for delete_stream_link
-DeleteStreamLinkResponse = schemas.DeleteWebhooksStreamLinkResponse
-
-
 # Response model for get
 GetResponse = schemas.GetWebhooksResponse
 
@@ -55,3 +47,11 @@ ValidateResponse = schemas.ValidateWebhooksResponse
 
 # Response model for delete
 DeleteResponse = schemas.DeleteWebhooksResponse
+
+
+# Response model for create_stream_link
+CreateStreamLinkResponse = schemas.CreateWebhooksStreamLinkResponse
+
+
+# Response model for delete_stream_link
+DeleteStreamLinkResponse = schemas.DeleteWebhooksStreamLinkResponse

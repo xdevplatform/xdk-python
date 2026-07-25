@@ -17,24 +17,8 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Request model for media_upload_append
-MediaUploadAppendRequest = schemas.ChatMediaUploadAppendRequest
-
-
-# Response model for media_upload_append
-MediaUploadAppendResponse = schemas.ChatMediaUploadAppendResponse
-
-
-# Request model for delete_messages
-DeleteMessagesRequest = schemas.DeleteChatMessagesRequest
-
-
-# Response model for delete_messages
-DeleteMessagesResponse = schemas.DeleteChatMessagesResponse
-
-
-# Response model for get_conversation
-GetConversationResponse = schemas.GetChatConversationResponse
+# Response model for get_conversation_events
+GetConversationEventsResponse = schemas.GetChatConversationEventsResponse
 
 
 # Request model for add_conversation_keys
@@ -45,26 +29,6 @@ AddConversationKeysRequest = schemas.AddConversationKeysRequest
 AddConversationKeysResponse = schemas.AddConversationKeysResponse
 
 
-# Request model for add_group_members
-AddGroupMembersRequest = schemas.AddChatGroupMembersRequest
-
-
-# Response model for add_group_members
-AddGroupMembersResponse = schemas.AddChatGroupMembersResponse
-
-
-# Response model for send_typing_indicator
-SendTypingIndicatorResponse = schemas.SendChatTypingIndicatorResponse
-
-
-# Response model for get_conversations
-GetConversationsResponse = schemas.GetChatConversationsResponse
-
-
-# Response model for initialize_group
-InitializeGroupResponse = schemas.InitializeChatGroupResponse
-
-
 # Request model for send_message
 SendMessageRequest = schemas.SendChatMessageRequest
 
@@ -73,28 +37,8 @@ SendMessageRequest = schemas.SendChatMessageRequest
 SendMessageResponse = schemas.SendChatMessageResponse
 
 
-# Request model for mark_conversation_read
-MarkConversationReadRequest = schemas.MarkChatConversationReadRequest
-
-
-# Response model for mark_conversation_read
-MarkConversationReadResponse = schemas.MarkChatConversationReadResponse
-
-
-# Request model for create_conversation
-CreateConversationRequest = schemas.CreateChatConversationRequest
-
-
-# Response model for create_conversation
-CreateConversationResponse = schemas.CreateChatConversationResponse
-
-
-# Request model for add_user_public_key
-AddUserPublicKeyRequest = schemas.AddUserPublicKeyRequest
-
-
-# Response model for add_user_public_key
-AddUserPublicKeyResponse = schemas.AddUserPublicKeyResponse
+# Response model for get_conversations
+GetConversationsResponse = schemas.GetChatConversationsResponse
 
 
 # Request model for media_upload_initialize
@@ -105,8 +49,48 @@ MediaUploadInitializeRequest = schemas.ChatMediaUploadInitializeRequest
 MediaUploadInitializeResponse = schemas.ChatMediaUploadInitializeResponse
 
 
-# Response model for get_conversation_events
-GetConversationEventsResponse = schemas.GetChatConversationEventsResponse
+# Request model for add_user_public_key
+AddUserPublicKeyRequest = schemas.AddUserPublicKeyRequest
+
+
+# Response model for add_user_public_key
+AddUserPublicKeyResponse = schemas.AddUserPublicKeyResponse
+
+
+# Request model for delete_messages
+DeleteMessagesRequest = schemas.DeleteChatMessagesRequest
+
+
+# Response model for delete_messages
+DeleteMessagesResponse = schemas.DeleteChatMessagesResponse
+
+
+# Request model for create_conversation
+CreateConversationRequest = schemas.CreateChatConversationRequest
+
+
+# Response model for create_conversation
+CreateConversationResponse = schemas.CreateChatConversationResponse
+
+
+# Request model for media_upload_append
+MediaUploadAppendRequest = schemas.ChatMediaUploadAppendRequest
+
+
+# Response model for media_upload_append
+MediaUploadAppendResponse = schemas.ChatMediaUploadAppendResponse
+
+
+# Response model for get_conversation
+GetConversationResponse = schemas.GetChatConversationResponse
+
+
+# Request model for mark_conversation_read
+MarkConversationReadRequest = schemas.MarkChatConversationReadRequest
+
+
+# Response model for mark_conversation_read
+MarkConversationReadResponse = schemas.MarkChatConversationReadResponse
 
 
 # Request model for media_upload_finalize
@@ -115,3 +99,19 @@ MediaUploadFinalizeRequest = schemas.ChatMediaUploadFinalizeRequest
 
 # Response model for media_upload_finalize
 MediaUploadFinalizeResponse = schemas.ChatMediaUploadFinalizeResponse
+
+
+# Response model for send_typing_indicator
+SendTypingIndicatorResponse = schemas.SendChatTypingIndicatorResponse
+
+
+# Request model for add_group_members
+AddGroupMembersRequest = schemas.AddChatGroupMembersRequest
+
+
+# Response model for add_group_members
+AddGroupMembersResponse = schemas.AddChatGroupMembersResponse
+
+
+# Response model for initialize_group
+InitializeGroupResponse = schemas.InitializeChatGroupResponse

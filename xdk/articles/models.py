@@ -17,13 +17,13 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for article_publish
+ArticlePublishResponse = schemas.ArticlePublishResponse
+
+
 # Request model for article_create_draft
 ArticleCreateDraftRequest = schemas.ArticleCreateDraftRequest
 
 
 # Response model for article_create_draft
 ArticleCreateDraftResponse = schemas.ArticleCreateDraftResponse
-
-
-# Response model for article_publish
-ArticlePublishResponse = schemas.ArticlePublishResponse

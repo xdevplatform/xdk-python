@@ -17,28 +17,36 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_quoted
-GetQuotedResponse = schemas.GetPostsQuotedPostsResponse
+# Response model for search_recent
+SearchRecentResponse = schemas.SearchPostsRecentResponse
 
 
-# Response model for get_reposts
-GetRepostsResponse = schemas.GetPostsRepostsResponse
+# Response model for search_all
+SearchAllResponse = schemas.SearchPostsAllResponse
+
+
+# Response model for get_by_ids
+GetByIdsResponse = schemas.GetPostsByIdsResponse
+
+
+# Request model for create
+CreateRequest = schemas.CreatePostsRequest
+
+
+# Response model for create
+CreateResponse = schemas.CreatePostsResponse
 
 
 # Response model for get_reposted_by
 GetRepostedByResponse = schemas.GetPostsRepostedByResponse
 
 
-# Response model for get_counts_all
-GetCountsAllResponse = schemas.GetPostsCountsAllResponse
-
-
 # Response model for get_liking_users
 GetLikingUsersResponse = schemas.GetPostsLikingUsersResponse
 
 
-# Response model for search_all
-SearchAllResponse = schemas.SearchPostsAllResponse
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.GetPostsAnalyticsResponse
 
 
 # Response model for get_by_id
@@ -47,6 +55,14 @@ GetByIdResponse = schemas.GetPostsByIdResponse
 
 # Response model for delete
 DeleteResponse = schemas.DeletePostsResponse
+
+
+# Response model for get_counts_all
+GetCountsAllResponse = schemas.GetPostsCountsAllResponse
+
+
+# Response model for get_quoted
+GetQuotedResponse = schemas.GetPostsQuotedPostsResponse
 
 
 # Request model for hide_reply
@@ -61,21 +77,5 @@ HideReplyResponse = schemas.HidePostsReplyResponse
 GetCountsRecentResponse = schemas.GetPostsCountsRecentResponse
 
 
-# Response model for search_recent
-SearchRecentResponse = schemas.SearchPostsRecentResponse
-
-
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.GetPostsAnalyticsResponse
-
-
-# Response model for get_by_ids
-GetByIdsResponse = schemas.GetPostsByIdsResponse
-
-
-# Request model for create
-CreateRequest = schemas.CreatePostsRequest
-
-
-# Response model for create
-CreateResponse = schemas.CreatePostsResponse
+# Response model for get_reposts
+GetRepostsResponse = schemas.GetPostsRepostsResponse
