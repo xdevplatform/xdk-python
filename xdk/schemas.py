@@ -15,9 +15,30 @@ from typing import Any, Dict, List, Optional, Union, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class AcceptChatMessageRequestResponse(BaseModel):
+    """Model for AcceptChatMessageRequestResponse"""
+
+    data: Optional["AcceptChatMessageRequestResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AcceptChatMessageRequestResponseData(BaseModel):
+    """Model for AcceptChatMessageRequestResponseData"""
+
+    accepted: bool = Field(description="Whether the message request was accepted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class ActivityStreamResponseData(BaseModel):
     """Nested model for ActivityStreamResponseData"""
 
+    created_at: Optional[str] = Field(
+        default=None,
+        description="The time the activity occurred, not when it was delivered.",
+    )
     event_type: Optional[str] = Field(default=None)
     event_uuid: Optional["ActivityEventId"] = Field(
         default=None, description="The unique identifier of an Activity event."
@@ -44,7 +65,7 @@ class ActivityStreamResponse(BaseModel):
 class ActivitySubscriptionFilter(BaseModel):
     """An XAA subscription filter."""
 
-    direction: Optional[Literal["inbound", "outbound"]] = Field(
+    direction: Optional[Union[Literal["inbound", "outbound"], str]] = Field(
         default=None, description="Optional direction filter for directional events."
     )
     keyword: Optional["Keyword"] = Field(
@@ -57,11 +78,101 @@ class ActivitySubscriptionFilter(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class AddChatGroupAdminsActionSignatures(BaseModel):
+    """Model for AddChatGroupAdminsActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: "AddChatGroupAdminsActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupAdminsActionSignaturesMessageEventSignature(BaseModel):
+    """Model for AddChatGroupAdminsActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "AddChatGroupAdminsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupAdminsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for AddChatGroupAdminsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupAdminsRequest(BaseModel):
+    """Model for AddChatGroupAdminsRequest"""
+
+    user_ids: List[str] = Field(description="List of member user IDs to make admins.")
+    action_signatures: Optional[List["AddChatGroupAdminsActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupAdminsResponse(BaseModel):
+    """Model for AddChatGroupAdminsResponse"""
+
+    data: Optional["AddChatGroupAdminsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatGroupAdminsResponseData(BaseModel):
+    """Model for AddChatGroupAdminsResponseData"""
+
+    added: bool = Field(description="Whether the admins were added.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class AddChatGroupMembersActionSignatures(BaseModel):
     """Model for AddChatGroupMembersActionSignatures"""
 
     encoded_message_event_detail: str = Field(
-        description="Base64-encoded message event detail."
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
     )
     message_event_signature: "AddChatGroupMembersActionSignaturesMessageEventSignature"
     message_id: str = Field(
@@ -121,15 +232,13 @@ class AddChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyI
 class AddChatGroupMembersConversationParticipantKeys(BaseModel):
     """Model for AddChatGroupMembersConversationParticipantKeys"""
 
-    encrypted_conversation_key: Optional[str] = Field(
-        default=None,
-        description="Conversation key encrypted with this participant's public key.",
+    encrypted_conversation_key: str = Field(
+        description="Conversation key encrypted with this participant's public key."
     )
-    public_key_version: Optional[str] = Field(
-        default=None,
-        description="Version of the participant's public key used for encryption.",
+    public_key_version: str = Field(
+        description="Version of the participant's public key used for encryption."
     )
-    user_id: Optional[str] = Field(default=None, description="Participant user ID.")
+    user_id: str = Field(description="Participant user ID.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -141,7 +250,8 @@ class AddChatGroupMembersRequest(BaseModel):
         description="List of user IDs to add to the group conversation."
     )
     action_signatures: Optional[List["AddChatGroupMembersActionSignatures"]] = Field(
-        default=None, description="Cryptographic signatures for the action."
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
     )
     conversation_key_version: Optional[str] = Field(
         default=None, description="Version of the new rotated conversation key."
@@ -171,11 +281,38 @@ class AddChatGroupMembersResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class AddChatModeratorRequest(BaseModel):
+    """Model for AddChatModeratorRequest"""
+
+    user_id: str = Field(description="The user to appoint as a moderator.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatModeratorResponse(BaseModel):
+    """Model for AddChatModeratorResponse"""
+
+    data: Optional["AddChatModeratorResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddChatModeratorResponseData(BaseModel):
+    """Model for AddChatModeratorResponseData"""
+
+    moderator_user_ids: List[str] = Field(
+        description="The user IDs currently appointed as chat moderators."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class AddConversationKeysActionSignatures(BaseModel):
     """Model for AddConversationKeysActionSignatures"""
 
     encoded_message_event_detail: str = Field(
-        description="Base64-encoded message event detail."
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
     )
     message_event_signature: "AddConversationKeysActionSignaturesMessageEventSignature"
     message_id: str = Field(
@@ -235,15 +372,13 @@ class AddConversationKeysActionSignaturesMessageEventSignatureMessageSigningKeyI
 class AddConversationKeysConversationParticipantKeys(BaseModel):
     """Model for AddConversationKeysConversationParticipantKeys"""
 
-    encrypted_conversation_key: Optional[str] = Field(
-        default=None,
-        description="Conversation key encrypted with this participant's public key.",
+    encrypted_conversation_key: str = Field(
+        description="Conversation key encrypted with this participant's public key."
     )
-    public_key_version: Optional[str] = Field(
-        default=None,
-        description="Version of the participant's public key used for encryption.",
+    public_key_version: str = Field(
+        description="Version of the participant's public key used for encryption."
     )
-    user_id: Optional[str] = Field(default=None, description="Participant user ID.")
+    user_id: str = Field(description="Participant user ID.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -258,7 +393,8 @@ class AddConversationKeysRequest(BaseModel):
         "AddConversationKeysConversationParticipantKeys"
     ] = Field(description="Encrypted conversation keys for each participant.")
     action_signatures: Optional[List["AddConversationKeysActionSignatures"]] = Field(
-        default=None, description="Cryptographic signatures for the action."
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
     )
     base64_encoded_key_rotation: Optional[str] = Field(
         default=None,
@@ -317,6 +453,110 @@ class AddListsMemberResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class AddMediaToLibraryMonetization(BaseModel):
+    """Model for AddMediaToLibraryMonetization"""
+
+    allowed_countries: Optional[List[str]] = Field(
+        default=None,
+        description="ISO 3166-1 alpha-2 codes of the only countries the video is monetized in. Omit to monetize everywhere.",
+    )
+    blocked_advertiser_category_ids: Optional[List[int]] = Field(
+        default=None,
+        description="Advertiser categories (from the categories endpoint) whose ads may not run against the video.",
+    )
+    blocked_advertiser_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Advertiser account ids whose ads may not run against the video.",
+    )
+    enabled: Optional[bool] = Field(
+        default=None,
+        description="Whether ads may run against the video. Requires the account to be enrolled in video monetization.",
+    )
+    program_id: Optional[str] = Field(
+        default=None,
+        description="Amplify program to monetize the video through, instead of `video_category_ids`.",
+    )
+    video_category_ids: Optional[List[int]] = Field(
+        default=None,
+        description="Video category ids (from the categories endpoint) describing the content; at most one when creating. Required when enabled, unless `program_id` is set.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddMediaToLibraryRequest(BaseModel):
+    """Model for AddMediaToLibraryRequest"""
+
+    media_key: str = Field(
+        description="The media key of the uploaded image, GIF or video to add."
+    )
+    description: Optional[str] = Field(
+        default=None, description="Description shown with the video in the player card."
+    )
+    label: Optional[str] = Field(
+        default=None, description="Label of the item in the library."
+    )
+    monetization: Optional["AddMediaToLibraryMonetization"] = Field(default=None)
+    name: Optional[str] = Field(
+        default=None, description="Name of the item in the library."
+    )
+    title: Optional[str] = Field(
+        default=None, description="Title shown with the video in the player card."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddMediaToLibraryResponse(BaseModel):
+    """Model for AddMediaToLibraryResponse"""
+
+    data: Optional["AddMediaToLibraryResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddMediaToLibraryResponseData(BaseModel):
+    """Model for AddMediaToLibraryResponseData"""
+
+    media_key: str = Field(description="The media key of the library item.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddPostToAmplifyProgramsRequest(BaseModel):
+    """Model for AddPostToAmplifyProgramsRequest"""
+
+    post_id: str = Field(description="The post to publish. It must belong to the user.")
+    program_ids: List[str] = Field(description="The programs to publish the post into.")
+    blocked_advertiser_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Advertiser account ids whose pre-rolls may not run on this post.",
+    )
+    promotion_ends_at: Optional[str] = Field(
+        default=None, description="When promotion of the post ends (ISO 8601)."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddPostToAmplifyProgramsResponse(BaseModel):
+    """Model for AddPostToAmplifyProgramsResponse"""
+
+    data: Optional["AddPostToAmplifyProgramsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AddPostToAmplifyProgramsResponseData(BaseModel):
+    """Model for AddPostToAmplifyProgramsResponseData"""
+
+    added: bool = Field(description="Whether the post was published into the programs.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class AddUserPublicKeyPublicKey(BaseModel):
     """Model for AddUserPublicKeyPublicKey"""
 
@@ -346,10 +586,6 @@ class AddUserPublicKeyRequest(BaseModel):
     """Model for AddUserPublicKeyRequest"""
 
     public_key: "AddUserPublicKeyPublicKey"
-    version: str = Field(description="Public key version.")
-    generate_version: Optional[bool] = Field(
-        default=None, description="When true, the server generates a new version."
-    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -413,9 +649,11 @@ class Analytics(BaseModel):
 class AppendMediaUploadRequest(BaseModel):
     """Model for AppendMediaUploadRequest"""
 
-    media: str = Field(description="The media chunk to upload.")
+    media: str = Field(
+        description="One segment of the file: base64-encoded in JSON bodies, raw bytes in multipart bodies."
+    )
     segment_index: int = Field(
-        description="The index of this segment in the upload sequence."
+        description="The segment's position in the file, counting from 0."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -440,6 +678,194 @@ class AppendMediaUploadResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class ApproveChatGroupAdminRequestActionSignatures(BaseModel):
+    """Model for ApproveChatGroupAdminRequestActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "ApproveChatGroupAdminRequestActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ApproveChatGroupAdminRequestActionSignaturesMessageEventSignature(BaseModel):
+    """Model for ApproveChatGroupAdminRequestActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "ApproveChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ApproveChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for ApproveChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ApproveChatGroupAdminRequestRequest(BaseModel):
+    """Model for ApproveChatGroupAdminRequestRequest"""
+
+    action_signatures: Optional[
+        List["ApproveChatGroupAdminRequestActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ApproveChatGroupAdminRequestResponse(BaseModel):
+    """Model for ApproveChatGroupAdminRequestResponse"""
+
+    data: Optional["ApproveChatGroupAdminRequestResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ApproveChatGroupAdminRequestResponseData(BaseModel):
+    """Model for ApproveChatGroupAdminRequestResponseData"""
+
+    approved: bool = Field(description="Whether the admin request was approved.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArchiveChatConversationActionSignatures(BaseModel):
+    """Model for ArchiveChatConversationActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "ArchiveChatConversationActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArchiveChatConversationActionSignaturesMessageEventSignature(BaseModel):
+    """Model for ArchiveChatConversationActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "ArchiveChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArchiveChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for ArchiveChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArchiveChatConversationRequest(BaseModel):
+    """Model for ArchiveChatConversationRequest"""
+
+    action_signatures: Optional[List["ArchiveChatConversationActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signatures for this action, forwarded in the order they are sent.",
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArchiveChatConversationResponse(BaseModel):
+    """Model for ArchiveChatConversationResponse"""
+
+    data: Optional["ArchiveChatConversationResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ArchiveChatConversationResponseData(BaseModel):
+    """Model for ArchiveChatConversationResponseData"""
+
+    archived: bool = Field(
+        description="Whether the conversation is archived for the authenticated user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class ArticleCreateDraftContentState(BaseModel):
     """Model for ArticleCreateDraftContentState"""
 
@@ -447,7 +873,7 @@ class ArticleCreateDraftContentState(BaseModel):
         description="The text blocks that make up the article body."
     )
     entities: List["ArticleCreateDraftContentStateEntities"] = Field(
-        description="Non-text entities referenced by blocks (links, embedded posts, images, emoji,          markdown/code/tables, dividers, LaTeX). Full set matches article storage."
+        description="Non-text entities referenced by blocks (links, embedded posts, images, emoji, markdown/code/tables, dividers, LaTeX). Full set matches article storage."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -457,27 +883,32 @@ class ArticleCreateDraftContentStateBlocks(BaseModel):
     """Model for ArticleCreateDraftContentStateBlocks"""
 
     text: str = Field(
-        description="The text content of this block. For latex entities, this holds the LaTeX source;          for divider/markdown/image/post atomic placeholders, typically a single space."
+        description="The text content of this block. For latex entities, this holds the LaTeX source; for divider/markdown/image/post atomic placeholders, typically a single space."
     )
     type: Literal[
         "unstyled",
         "header-one",
         "header-two",
-        "header-three",
         "unordered-list-item",
         "ordered-list-item",
         "blockquote",
         "atomic",
     ] = Field(
-        description="The block type. Use atomic for non-text embeds (image, post, markdown, divider, latex)."
+        description="The block type. Articles have two heading levels, header-one and header-two. Use atomic for non-text embeds (image, post, markdown, divider, latex)."
     )
     data: Optional["ArticleCreateDraftContentStateBlocksData"] = Field(default=None)
     entity_ranges: Optional[
         List["ArticleCreateDraftContentStateBlocksEntityRanges"]
-    ] = Field(default=None, description="References to entries in entities.")
+    ] = Field(
+        default=None,
+        description='Entity references. Each item has offset, length and key, the entity\'s key as an integer (0 for "0").',
+    )
     inline_style_ranges: Optional[
         List["ArticleCreateDraftContentStateBlocksInlineStyleRanges"]
-    ] = Field(default=None, description="Inline formatting ranges.")
+    ] = Field(
+        default=None,
+        description="Inline styles. Each item has offset, length and style: bold, italic or strikethrough, in lowercase.",
+    )
     key: Optional[str] = Field(default=None, description="Optional block key.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -545,7 +976,7 @@ class ArticleCreateDraftContentStateBlocksDataUrls(BaseModel):
 class ArticleCreateDraftContentStateBlocksEntityRanges(BaseModel):
     """Model for ArticleCreateDraftContentStateBlocksEntityRanges"""
 
-    key: int = Field(description="Index into the entities array.")
+    key: int = Field(description="The key of the referenced entity, as an integer.")
     length: int = Field(description="Length of the entity range.")
     offset: int = Field(description="Start offset in the text.")
 
@@ -567,7 +998,9 @@ class ArticleCreateDraftContentStateBlocksInlineStyleRanges(BaseModel):
 class ArticleCreateDraftContentStateEntities(BaseModel):
     """Model for ArticleCreateDraftContentStateEntities"""
 
-    key: str = Field(description="The entity key referenced by entity_ranges.")
+    key: str = Field(
+        description='The entity\'s key, a string such as "0". entity_ranges refer to it as an integer.'
+    )
     value: "ArticleCreateDraftContentStateEntitiesValue"
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -582,7 +1015,7 @@ class ArticleCreateDraftContentStateEntitiesValue(BaseModel):
     )
     type: Literal["post", "link", "image", "emoji", "markdown", "divider", "latex"] = (
         Field(
-            description="The entity type. markdown carries code blocks, GFM tables, and other Markdown;          emoji maps to backend TWEMOJI (Twemoji is internal); divider is a horizontal rule;          latex renders TeX from the block text. Tables are not a separate enum value — use          type markdown with a pipe table in data.markdown."
+            description="The entity type. markdown carries code blocks, GFM tables, and other Markdown; emoji maps to backend TWEMOJI (Twemoji is internal); divider is a horizontal rule; latex renders TeX from the block text. Tables are not a separate enum value — use type markdown with a pipe table in data.markdown."
         )
     )
 
@@ -633,7 +1066,7 @@ class ArticleCreateDraftCoverMedia(BaseModel):
 
 
 class ArticleCreateDraftRequest(BaseModel):
-    """Model for ArticleCreateDraftRequest"""
+    """Create a draft Article."""
 
     content_state: "ArticleCreateDraftContentState"
     title: str = Field(description="The title of the Article.")
@@ -698,22 +1131,268 @@ class BlockUsersDmsResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class Broadcast(BaseModel):
+    """Model for Broadcast"""
+
+    available_for_replay: Optional[bool] = Field(default=None)
+    broadcast_id: Optional[str] = Field(default=None)
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    created_at_ms: Optional[str] = Field(default=None)
+    end_ms: Optional[str] = Field(default=None)
+    height: Optional[int] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    image_url: Optional[str] = Field(default=None)
+    image_url_medium: Optional[str] = Field(default=None)
+    image_url_small: Optional[str] = Field(default=None)
+    is_high_latency: Optional[bool] = Field(default=None)
+    language: Optional[str] = Field(default=None)
+    live_category_id: Optional[str] = Field(
+        default=None,
+        description="Id of the live category the host picked for the broadcast, as listed by GET /2/broadcasts/categories. Omitted when the broadcast has none.",
+    )
+    media_key: Optional[str] = Field(default=None)
+    scheduled_end_ms: Optional[str] = Field(default=None)
+    scheduled_start_ms: Optional[str] = Field(default=None)
+    share_url: Optional[str] = Field(default=None)
+    source_id: Optional[str] = Field(
+        default=None,
+        description="Id of the source the broadcast streams from, as returned by GET /2/sources.",
+    )
+    start_ms: Optional[str] = Field(default=None)
+    state: Optional[str] = Field(default=None)
+    title: Optional[str] = Field(default=None)
+    total_watched: Optional[str] = Field(default=None)
+    total_watching: Optional[str] = Field(default=None)
+    tweet_id: Optional[str] = Field(default=None)
+    twitter_user_id: Optional[str] = Field(default=None)
+    updated_at_ms: Optional[str] = Field(default=None)
+    width: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class BroadcastChatMessage(BaseModel):
+    """Model for BroadcastChatMessage"""
+
+    author_id: Optional[str] = Field(default=None)
+    author_name: Optional[str] = Field(default=None)
+    author_username: Optional[str] = Field(default=None)
+    broadcast_id: Optional[str] = Field(default=None)
+    created_at_ms: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    relay_source: Optional[str] = Field(default=None)
+    reply_to: Optional[str] = Field(default=None)
+    text: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class BroadcastChatMute(BaseModel):
+    """Model for BroadcastChatMute"""
+
+    end_at_ms: Optional[str] = Field(
+        default=None,
+        description="The Unix timestamp in milliseconds when the mute expires. Absent for indefinite mutes.",
+    )
+    user_id: Optional[str] = Field(default=None, description="The muted user's ID.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Call(BaseModel):
+    """Model for Call"""
+
+    conversation_id: Optional[str] = Field(
+        default=None, description="XChat conversation the call belongs to, if any."
+    )
+    created_at: Optional[str] = Field(
+        default=None, description="Creation time (RFC 3339)."
+    )
+    host_id: Optional[str] = Field(
+        default=None, description="X user id of the call's host."
+    )
+    id: Optional[str] = Field(
+        default=None, description="Unique identifier of the call; also its join secret."
+    )
+    join_policy: Optional[str] = Field(
+        default=None,
+        description="Who may join: open (anyone with the link), closed (the host admits people), or trusted (the host's Verified Organization).",
+    )
+    join_url: Optional[str] = Field(
+        default=None, description="Link people open to join the call on X."
+    )
+    participant_count: Optional[int] = Field(
+        default=None, description="People in the call right now."
+    )
+    title: Optional[str] = Field(default=None, description="Title of the call.")
+    viewer_may_join: Optional[bool] = Field(
+        default=None,
+        description="Whether the authenticated user may join without asking the host.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CancelScheduledCallResponse(BaseModel):
+    """Model for CancelScheduledCallResponse"""
+
+    data: Optional["CancelScheduledCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CancelScheduledCallResponseData(BaseModel):
+    """Model for CancelScheduledCallResponseData"""
+
+    cancelled: Optional[bool] = Field(
+        default=None, description="Whether the occurrences are cancelled."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class ChatConversation(BaseModel):
     """Model for ChatConversation"""
 
     admin_ids: Optional[List[str]] = Field(default=None)
+    admin_settings: Optional["ChatConversationAdminSettings"] = Field(
+        default=None,
+        description="Group actions restricted to admins. true means only admins can perform the action.",
+    )
     created_at: Optional[str] = Field(default=None)
     group_avatar_url: Optional[str] = Field(default=None)
+    group_description: Optional[str] = Field(
+        default=None,
+        description="The group description, encrypted with the conversation key like group_name.",
+    )
+    group_description_key_version: Optional[str] = Field(
+        default=None,
+        description="The conversation key version that group_description is encrypted with.",
+    )
     group_name: Optional[str] = Field(default=None)
     id: Optional[str] = Field(default=None)
+    invite: Optional["ChatConversationInvite"] = Field(
+        default=None, description="An active invite link for a group Chat conversation."
+    )
+    is_archived: Optional[bool] = Field(
+        default=None,
+        description="Whether the authenticated user archived this conversation.",
+    )
     is_muted: Optional[bool] = Field(default=None)
+    last_read_event_id: Optional[str] = Field(
+        default=None,
+        description="The event ID you have read up to: the seen_until_sequence_id of your latest read receipt. Absent when you have no read receipt.",
+    )
     member_ids: Optional[List[str]] = Field(default=None)
     message_ttl_ms: Optional[int] = Field(default=None)
+    newest_event_id: Optional[str] = Field(
+        default=None,
+        description="The ID of the latest notifying message in the conversation.",
+    )
     participant_ids: Optional[List[str]] = Field(default=None)
+    pending_member_ids: Optional["ChatConversationPendingMemberIds"] = Field(
+        default=None,
+        description="Unique identifiers of Users who asked to join this group and are awaiting approval. Returned only to callers who can add members.",
+    )
     screen_capture_blocking_enabled: Optional[bool] = Field(default=None)
     screen_capture_detection_enabled: Optional[bool] = Field(default=None)
     type: Optional[str] = Field(default=None)
+    unread: Optional[bool] = Field(
+        default=None,
+        description="Whether the conversation is unread for you: its latest notifying message was sent by someone else after last_read_event_id, or you have no read receipt. Marking the conversation unread does not set it.",
+    )
     updated_at: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatConversationAdminSettings(BaseModel):
+    """Group actions restricted to admins. true means only admins can perform the action."""
+
+    add_member: Optional[Optional[bool]] = Field(
+        default=None, description="Whether only admins may add members."
+    )
+    block_screen_capture: Optional[Optional[bool]] = Field(
+        default=None,
+        description="Whether only admins may block screen capture. Through the API, only admins can change\nscreen capture in a group, whatever this setting says.",
+    )
+    edit_group_info: Optional[Optional[bool]] = Field(
+        default=None, description="Whether only admins may edit group info."
+    )
+    edit_message_ttl: Optional[Optional[bool]] = Field(
+        default=None, description="Whether only admins may edit the message TTL."
+    )
+    send_message: Optional[Optional[bool]] = Field(
+        default=None, description="Whether only admins may send messages."
+    )
+    start_call: Optional[Optional[bool]] = Field(
+        default=None, description="Whether only admins may start a call."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatConversationInvite(BaseModel):
+    """An active invite link for a group Chat conversation."""
+
+    invite_url: str = Field(description="The shareable invite link.")
+    admin_user_id: Optional[Optional[str]] = Field(
+        default=None,
+        description="Unique identifier of the admin who turned on the invite link.",
+    )
+    expires_at: Optional[Optional[str]] = Field(
+        default=None, description="When the invite link stops working."
+    )
+    token: Optional[Optional[str]] = Field(
+        default=None, description="Token identifying this invite link."
+    )
+    welcome_message: Optional[Optional[str]] = Field(
+        default=None,
+        description="Message shown to Users who join through the invite link.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatGroupInvite(BaseModel):
+    """Model for ChatGroupInvite"""
+
+    conversation_id: Optional[str] = Field(
+        default=None, description="ID of the group conversation the link joins."
+    )
+    expires_at: Optional[str] = Field(
+        default=None,
+        description="When the link expires (ISO 8601). Absent when the link does not expire.",
+    )
+    group_avatar_url: Optional[str] = Field(
+        default=None,
+        description="Group avatar URL shown on the invite preview, stored unencrypted. Absent when the backend flags the avatar as NSFW.",
+    )
+    group_name: Optional[str] = Field(
+        default=None,
+        description="Group name shown on the invite preview, stored unencrypted.",
+    )
+    invite_url: Optional[str] = Field(
+        default=None, description="Shareable invite link."
+    )
+    join_state: Optional[str] = Field(
+        default=None,
+        description="The authenticated user's relationship to the group: `member`, `not_member`, `removed`, or `requested`.",
+    )
+    member_count: Optional[int] = Field(
+        default=None, description="Number of members in the group."
+    )
+    token: Optional[str] = Field(
+        default=None,
+        description="Invite token. Together with the conversation ID it identifies the link.",
+    )
+    welcome_message: Optional[str] = Field(
+        default=None, description="Message shown to people who open the link."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -831,14 +1510,185 @@ class ChatMessageEvent(BaseModel):
     """Model for ChatMessageEvent"""
 
     conversation_id: Optional[str] = Field(default=None)
-    conversation_token: Optional[str] = Field(default=None)
+    conversation_key_version: Optional[str] = Field(
+        default=None,
+        description="The version of the conversation key that encrypts the event's contents. Absent when the event is not encrypted, such as a message sent before the conversation was encrypted.",
+    )
+    conversation_token: Optional[str] = Field(
+        default=None,
+        description="Usually present on encrypted events; unencrypted events have none.",
+    )
     created_at: Optional[str] = Field(default=None)
     encoded_event: Optional[str] = Field(default=None)
     id: Optional[str] = Field(default=None)
     is_trusted: Optional[bool] = Field(default=None)
-    message_event_signature: Optional[Dict[str, Any]] = Field(default=None)
+    message_event_signature: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Usually present on encrypted events; unencrypted events have none. Treat an encrypted event without one as unverified.",
+    )
     previous_id: Optional[str] = Field(default=None)
     sender_id: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMessageRequest(BaseModel):
+    """Model for ChatMessageRequest"""
+
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="The 1:1 conversation ID: both user IDs joined by a hyphen.",
+    )
+    conversation_key_events: Optional["ChatMessageRequestConversationKeyEvents"] = (
+        Field(
+            default=None,
+            description="The conversation key change events needed to decrypt `message_events`.",
+        )
+    )
+    encoded_message_create_event: Optional[str] = Field(
+        default=None,
+        description="The message that previews the request, as an encoded message event. Its contents are end-to-end encrypted unless the conversation is unencrypted.",
+    )
+    has_more_events: Optional[bool] = Field(
+        default=None,
+        description="Whether the conversation has older message events than `message_events`.",
+    )
+    message_events: Optional["ChatMessageRequestMessageEvents"] = Field(
+        default=None,
+        description="The conversation's latest message events, newest first, as encoded message events. Their contents are end-to-end encrypted unless the conversation is unencrypted.",
+    )
+    sender_id: Optional[str] = Field(
+        default=None, description="The user ID of the user who sent the request."
+    )
+    sender_recently_modified_profile: Optional[bool] = Field(
+        default=None,
+        description="Whether the sender recently changed their name or avatar, a possible sign of impersonation.",
+    )
+    social_proof_user_ids: Optional["ChatMessageRequestSocialProofUserIds"] = Field(
+        default=None,
+        description="IDs of users the authenticated user follows who also follow the sender.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatMessageRequestDetail(BaseModel):
+    """Model for ChatMessageRequestDetail"""
+
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="The 1:1 conversation ID: both user IDs joined by a hyphen.",
+    )
+    conversation_key_events: Optional[
+        "ChatMessageRequestDetailConversationKeyEvents"
+    ] = Field(
+        default=None,
+        description="The conversation key change events needed to decrypt `message_events`.",
+    )
+    has_more_events: Optional[bool] = Field(
+        default=None,
+        description="Whether older message events may exist. Always `true` when `message_events` isn't empty.",
+    )
+    message_events: Optional["ChatMessageRequestDetailMessageEvents"] = Field(
+        default=None,
+        description="The newest message events, newest first, as encoded message events. Their contents are end-to-end encrypted unless the conversation is unencrypted.",
+    )
+    message_request_state: Optional[str] = Field(
+        default=None,
+        description="`received` while the other user's request is pending, `sent` while the authenticated user's request is pending, `none` otherwise.",
+    )
+    participant_id: Optional[str] = Field(
+        default=None,
+        description="The other user in the conversation: the sender when `message_request_state` is `received`.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatPermissionsUnavailableProblem(BaseModel):
+    """Model for ChatPermissionsUnavailableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/chat-permissions-unavailable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatPinnedMessage(BaseModel):
+    """Model for ChatPinnedMessage"""
+
+    encoded_event: Optional[str] = Field(
+        default=None,
+        description="Base64-encoded Thrift pin event with end-to-end encrypted contents.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatSettings(BaseModel):
+    """Model for ChatSettings"""
+
+    allow_dms_from: Optional[str] = Field(
+        default=None,
+        description="Who can send the user messages: `all` (anyone), `verified` (verified accounts only), or `following` (accounts the user follows).",
+    )
+    always_allow_dms_from_subscribers: Optional[bool] = Field(
+        default=None,
+        description="Whether the user's subscribers can always message them regardless of allow_dms_from.",
+    )
+    av_settings: Optional["ChatSettingsAvSettings"] = Field(
+        default=None, description="Audio and video call settings."
+    )
+    dm_quality_filter: Optional[str] = Field(
+        default=None,
+        description="Low-quality message request filter: `enabled` (low-quality requests go to a separate folder) or `disabled` (all requests stay in the main inbox).",
+    )
+    dm_receipt_settings: Optional[str] = Field(
+        default=None,
+        description="Read receipts: `all_enabled` (send and receive read receipts) or `all_disabled` (neither).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatSettingsAvSettingsAvCallPermissions(BaseModel):
+    """Nested model for ChatSettingsAvSettingsAvCallPermissions"""
+
+    accept_calls_from_addressbook: Optional[Optional[bool]] = Field(
+        default=None,
+        description="Whether the user accepts calls from address-book contacts.",
+    )
+    accept_calls_from_everyone: Optional[Optional[bool]] = Field(
+        default=None, description="Whether the user accepts calls from anyone."
+    )
+    accept_calls_from_following: Optional[Optional[bool]] = Field(
+        default=None,
+        description="Whether the user accepts calls from accounts they follow.",
+    )
+    accept_calls_from_verified: Optional[Optional[bool]] = Field(
+        default=None,
+        description="Whether the user accepts calls from verified accounts.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ChatSettingsAvSettings(BaseModel):
+    """Audio and video call settings."""
+
+    av_call_permissions: Optional[
+        Optional["ChatSettingsAvSettingsAvCallPermissions"]
+    ] = Field(
+        default=None, description="Who may place audio or video calls to the user."
+    )
+    has_av_calls_enabled: Optional[Optional[bool]] = Field(
+        default=None, description="Whether audio and video calls are enabled."
+    )
+    has_enhanced_call_privacy_enabled: Optional[Optional[bool]] = Field(
+        default=None, description="Whether enhanced call privacy is enabled."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -914,6 +1764,9 @@ class CreateActivitySubscriptionFilter(BaseModel):
         description="Optional direction filter for directional events. Not supported for mute.* or block.* events.",
     )
     keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    qualifiers: Optional[Dict[str, Any]] = Field(
+        default=None, description="Optional event-specific string predicates."
+    )
     user_id: Optional[str] = Field(
         default=None,
         description="User the subscription is scoped to. For mute.* and block.* events, this must be the authenticated source user.",
@@ -938,11 +1791,24 @@ class CreateActivitySubscriptionRequest(BaseModel):
         "news.new",
         "follow.follow",
         "follow.unfollow",
+        "subscriptions.subscribe",
+        "subscriptions.unsubscribe",
         "spaces.start",
         "spaces.end",
+        "broadcast.start",
+        "broadcast.end",
+        "broadcast.chat",
+        "broadcast.chat.remove",
         "chat.received",
         "chat.sent",
+        "chat.conversation.join",
         "chat.conversation_join",
+        "chat.conversation.member_added",
+        "chat.conversation.member_removed",
+        "chat.conversation.admin_added",
+        "chat.conversation.admin_removed",
+        "chat.update.group_name",
+        "chat.update.restrictions",
         "dm.sent",
         "dm.received",
         "dm.indicate_typing",
@@ -950,13 +1816,22 @@ class CreateActivitySubscriptionRequest(BaseModel):
         "post.create",
         "post.delete",
         "post.mention.create",
+        "post.reply.create",
+        "post.quote.create",
+        "post.repost.create",
         "like.create",
         "mute.mute",
         "mute.unmute",
         "block.block",
         "block.unblock",
-    ] = Field(description="Activity event type in dot notation.")
+    ] = Field(
+        description="Activity event type in dot notation. `chat.conversation_join` is a deprecated alias of `chat.conversation.join`; responses always use the canonical name."
+    )
     filter: "CreateActivitySubscriptionFilter"
+    expires_at: Optional[str] = Field(
+        default=None,
+        description="Optional RFC 3339 expiration time. Re-creating the same subscription refreshes this value; omitting it makes the subscription permanent.",
+    )
     tag: Optional[str] = Field(default=None, description="Optional caller-defined tag.")
     webhook_id: Optional[str] = Field(
         default=None, description="Webhook to deliver the subscription events to."
@@ -993,6 +1868,9 @@ class CreateActivitySubscriptionResponseDataSubscription(BaseModel):
     event_type: Optional[str] = Field(
         default=None, description="Activity event type in dot notation."
     )
+    expires_at: Optional[str] = Field(
+        default=None, description="Subscription expiration time."
+    )
     filter: Optional["CreateActivitySubscriptionResponseDataSubscriptionFilter"] = (
         Field(default=None)
     )
@@ -1018,8 +1896,203 @@ class CreateActivitySubscriptionResponseDataSubscriptionFilter(BaseModel):
         description="Optional direction filter for directional events. Not present for mute.* or block.* events.",
     )
     keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    qualifiers: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Event-specific string predicates applied to the subscription.",
+    )
     user_id: Optional[str] = Field(
         default=None, description="User the subscription is scoped to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateBotRequest(BaseModel):
+    """Model for CreateBotRequest"""
+
+    handle: str = Field(
+        description="The bot's handle (X screen name): 5-15 characters, letters, numbers, or underscores."
+    )
+    display_name: Optional[str] = Field(
+        default=None, description="The bot's display name; defaults to the handle."
+    )
+    org_only: Optional[bool] = Field(
+        default=None,
+        description="Whether only members of the bot's developer account can add it to group chats. An org-only bot has no public profile and doesn't appear in public search. Everyone in its developer account should be able to message it, so leave its Direct Messages open to everyone rather than premium senders only. Defaults to false. Applies only when the request creates the bot: a handle that already names one of the project's bots keeps that bot's setting, which the response's org_only reports.",
+    )
+    scopes: Optional[List[str]] = Field(
+        default=None,
+        description="Scopes for the bot's bearer token. Broadcast moderation additionally supports broadcast.read and broadcast.write. Defaults to the XChat scope set (dm.read, dm.write, tweet.read, users.read, media.write).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateBotResponse(BaseModel):
+    """Model for CreateBotResponse"""
+
+    data: Optional["CreateBotResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateBotResponseData(BaseModel):
+    """Model for CreateBotResponseData"""
+
+    id: str = Field(description="Unique identifier of the bot's User account.")
+    token: str = Field(
+        description="The bot's bearer token. Returned exactly once; store it securely."
+    )
+    name: Optional[str] = Field(default=None, description="The bot's display name.")
+    org_only: Optional[bool] = Field(
+        default=None,
+        description="Whether the bot is org only. For a handle that already names one of the project's bots, this is that bot's current setting. Absent when X couldn't read the setting back.",
+    )
+    scopes: Optional[List[str]] = Field(
+        default=None, description="Scopes granted to the bot's bearer token."
+    )
+    token_expires_at_ms: Optional[int] = Field(
+        default=None,
+        description="Expiry of the bot's bearer token, in epoch milliseconds.",
+    )
+    username: Optional[str] = Field(
+        default=None, description="The bot's X handle (screen name)."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateBroadcastRequest(BaseModel):
+    """Model for CreateBroadcastRequest"""
+
+    source_id: str = Field(
+        description="Id of the source to go live on: a source's `id` (19 digits) from GET /2/sources."
+    )
+    additional_source_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Ids of further sources to go live on together with `source_id`, one per video format, at most 2, each a source's `id` from GET /2/sources. `source_id` comes first; duplicates are ignored.",
+    )
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    live_category_id: Optional[str] = Field(
+        default=None,
+        description="The live category the host picked, e.g. `gaming`. Ids come from GET /2/broadcasts/categories; an unknown id is a 400. Ignored when the source already has a live broadcast.",
+    )
+    locale: Optional[str] = Field(
+        default=None, description="Broadcast language, e.g. `en`."
+    )
+    should_not_tweet: Optional[bool] = Field(
+        default=None,
+        description="Skip the Post announcing the broadcast. Defaults to false.",
+    )
+    title: Optional[str] = Field(
+        default=None,
+        description="Broadcast title. Defaults to the user's display name.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateBroadcastResponse(BaseModel):
+    """Model for CreateBroadcastResponse"""
+
+    data: Optional["CreateBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateBroadcastResponseData(BaseModel):
+    """Model for CreateBroadcastResponseData"""
+
+    broadcast_id: str = Field(description="Broadcast id; the same as `id`.")
+    id: str = Field(description="Broadcast id.")
+    share_url: str = Field(description="The broadcast's watch page.")
+    state: str = Field(description="Broadcast state, `RUNNING` once live.")
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    language: Optional[str] = Field(default=None, description="Broadcast language.")
+    live_category_id: Optional[str] = Field(
+        default=None,
+        description="The broadcast's live category. Missing when it has none.",
+    )
+    media_key: Optional[str] = Field(
+        default=None, description="Media key of the broadcast."
+    )
+    start_ms: Optional[str] = Field(
+        default=None,
+        description="Start time, milliseconds since Unix epoch (decimal string).",
+    )
+    title: Optional[str] = Field(default=None, description="Broadcast title.")
+    tweet_id: Optional[str] = Field(
+        default=None,
+        description="Id of the Post announcing the broadcast. Missing when the Post hasn't been created yet, was suppressed with `should_not_tweet`, or could not be created.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateCallRequest(BaseModel):
+    """Model for CreateCallRequest"""
+
+    audio_only: Optional[bool] = Field(
+        default=None, description="Start the call without video."
+    )
+    conversation_id: Optional[str] = Field(
+        default=None, description="XChat conversation to start the call in."
+    )
+    join_policy: Optional[Literal["open", "closed", "trusted"]] = Field(
+        default=None,
+        description="open (default): anyone with the link joins; closed: the host admits each person; trusted: members of the host's Verified Organization join, others ask.",
+    )
+    title: Optional[str] = Field(
+        default=None, description="Title shown to participants."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateCallResponse(BaseModel):
+    """Model for CreateCallResponse"""
+
+    data: Optional["CreateCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateCallResponseData(BaseModel):
+    """Model for CreateCallResponseData"""
+
+    id: str = Field(description="Unique identifier of the call; also its join secret.")
+    conversation_id: Optional[str] = Field(
+        default=None, description="XChat conversation the call belongs to, if any."
+    )
+    created_at: Optional[str] = Field(
+        default=None, description="Creation time (RFC 3339)."
+    )
+    host_id: Optional[str] = Field(
+        default=None, description="X user id of the call's host."
+    )
+    join_policy: Optional[str] = Field(
+        default=None,
+        description="Who may join: open (anyone with the link), closed (the host admits people), or trusted (the host's Verified Organization).",
+    )
+    join_url: Optional[str] = Field(
+        default=None, description="Link people open to join the call on X."
+    )
+    participant_count: Optional[int] = Field(
+        default=None, description="People in the call right now."
+    )
+    title: Optional[str] = Field(default=None, description="Title of the call.")
+    viewer_may_join: Optional[bool] = Field(
+        default=None,
+        description="Whether the authenticated user may join without asking the host.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -1029,7 +2102,7 @@ class CreateChatConversationActionSignatures(BaseModel):
     """Model for CreateChatConversationActionSignatures"""
 
     encoded_message_event_detail: str = Field(
-        description="Base64-encoded message event detail."
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
     )
     message_event_signature: (
         "CreateChatConversationActionSignaturesMessageEventSignature"
@@ -1091,15 +2164,13 @@ class CreateChatConversationActionSignaturesMessageEventSignatureMessageSigningK
 class CreateChatConversationConversationParticipantKeys(BaseModel):
     """Model for CreateChatConversationConversationParticipantKeys"""
 
-    encrypted_conversation_key: Optional[str] = Field(
-        default=None,
-        description="Conversation key encrypted with this participant's public key.",
+    encrypted_conversation_key: str = Field(
+        description="Conversation key encrypted with this participant's public key."
     )
-    public_key_version: Optional[str] = Field(
-        default=None,
-        description="Version of the participant's public key used for encryption.",
+    public_key_version: str = Field(
+        description="Version of the participant's public key used for encryption."
     )
-    user_id: Optional[str] = Field(default=None, description="Participant user ID.")
+    user_id: str = Field(description="Participant user ID.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1118,7 +2189,8 @@ class CreateChatConversationRequest(BaseModel):
         description="User IDs of group members to include in the conversation."
     )
     action_signatures: Optional[List["CreateChatConversationActionSignatures"]] = Field(
-        default=None, description="Cryptographic signatures for the action."
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
     )
     base64_encoded_key_rotation: Optional[str] = Field(
         default=None, description="Base64-encoded key rotation payload."
@@ -1162,6 +2234,195 @@ class CreateChatConversationResponseData(BaseModel):
     conversation_key_change_sequence_id: Optional[str] = Field(
         default=None, description="Sequence ID of the conversation key change."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupAdminRequestActionSignatures(BaseModel):
+    """Model for CreateChatGroupAdminRequestActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "CreateChatGroupAdminRequestActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupAdminRequestActionSignaturesMessageEventSignature(BaseModel):
+    """Model for CreateChatGroupAdminRequestActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "CreateChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for CreateChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupAdminRequestRequest(BaseModel):
+    """Model for CreateChatGroupAdminRequestRequest"""
+
+    action_signatures: Optional[List["CreateChatGroupAdminRequestActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signatures for this action, forwarded in the order they are sent.",
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupAdminRequestResponse(BaseModel):
+    """Model for CreateChatGroupAdminRequestResponse"""
+
+    data: Optional["CreateChatGroupAdminRequestResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupAdminRequestResponseData(BaseModel):
+    """Model for CreateChatGroupAdminRequestResponseData"""
+
+    requested: bool = Field(description="Whether the admin request was created.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupJoinRequestActionSignatures(BaseModel):
+    """Model for CreateChatGroupJoinRequestActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "CreateChatGroupJoinRequestActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupJoinRequestActionSignaturesMessageEventSignature(BaseModel):
+    """Model for CreateChatGroupJoinRequestActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "CreateChatGroupJoinRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupJoinRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for CreateChatGroupJoinRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupJoinRequestRequest(BaseModel):
+    """Model for CreateChatGroupJoinRequestRequest"""
+
+    token: str = Field(
+        description="The 10-character invite token from the group's invite link."
+    )
+    action_signatures: Optional[List["CreateChatGroupJoinRequestActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signatures for this action, forwarded in the order they are sent.",
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupJoinRequestResponse(BaseModel):
+    """Model for CreateChatGroupJoinRequestResponse"""
+
+    data: Optional["CreateChatGroupJoinRequestResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateChatGroupJoinRequestResponseData(BaseModel):
+    """Model for CreateChatGroupJoinRequestResponseData"""
+
+    requested: bool = Field(description="Whether the join request was created.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1535,7 +2796,7 @@ class CreateMediaMetadataRequest(BaseModel):
     """Model for CreateMediaMetadataRequest"""
 
     id: str = Field(description="The media id the metadata is attached to.")
-    metadata: Optional["CreateMediaMetadataMetadata"] = Field(default=None)
+    metadata: "CreateMediaMetadataMetadata"
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1563,13 +2824,11 @@ class CreateMediaMetadataResponseData(BaseModel):
 class CreateMediaSubtitlesRequest(BaseModel):
     """Model for CreateMediaSubtitlesRequest"""
 
-    id: Optional[str] = Field(
-        default=None, description="The media id of the video the subtitles belong to."
+    id: str = Field(description="The media id of the video the subtitles belong to.")
+    media_category: Literal["AmplifyVideo", "TweetVideo"] = Field(
+        description="The media category of the target media."
     )
-    media_category: Optional[Literal["AmplifyVideo", "TweetVideo"]] = Field(
-        default=None, description="The media category of the target media."
-    )
-    subtitles: Optional["CreateMediaSubtitlesSubtitles"] = Field(default=None)
+    subtitles: "CreateMediaSubtitlesSubtitles"
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1613,6 +2872,230 @@ class CreateMediaSubtitlesSubtitles(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class CreatePostDraftClip(BaseModel):
+    """Model for CreatePostDraftClip"""
+
+    end_seconds: int = Field(
+        description="Second of the video at which the clip ends. A clip is 5 to 60 seconds long and at most 30% of the video."
+    )
+    post_id: str = Field(
+        description="The ID of the Post whose video is clipped. The Post must have exactly one video, longer than 2 minutes."
+    )
+    start_seconds: int = Field(
+        description="Second of the video at which the clip starts."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftEditOptions(BaseModel):
+    """Model for CreatePostDraftEditOptions"""
+
+    previous_post_id: str = Field(description="The ID of the Post being edited.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftGeo(BaseModel):
+    """Model for CreatePostDraftGeo"""
+
+    place_id: str = Field(description="Place ID for geo tagging.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftMedia(BaseModel):
+    """Model for CreatePostDraftMedia"""
+
+    media_ids: List[str] = Field(
+        description="Media IDs to attach to the Post, in the order given."
+    )
+    call_to_actions: Optional["CreatePostDraftMediaCallToActions"] = Field(default=None)
+    description: Optional[str] = Field(
+        default=None,
+        description="Description for the media, rendered on the Post card for video and Amplify content.",
+    )
+    embeddable: Optional[bool] = Field(
+        default=None,
+        description="When true, the media's asset URLs do not expire and external syndicated playback is allowed.",
+    )
+    preview_media_id: Optional[str] = Field(
+        default=None, description="Media id whose asset is used as the preview image."
+    )
+    tagged_user_ids: Optional[List[str]] = Field(
+        default=None, description="User IDs tagged in the media."
+    )
+    title: Optional[str] = Field(
+        default=None,
+        description="Title for the media, rendered on the Post card for video and Amplify content.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftMediaCallToActions(BaseModel):
+    """Model for CreatePostDraftMediaCallToActions"""
+
+    app_install: Optional["CreatePostDraftMediaCallToActionsAppInstall"] = Field(
+        default=None
+    )
+    visit_site: Optional["CreatePostDraftMediaCallToActionsVisitSite"] = Field(
+        default=None
+    )
+    watch_now: Optional["CreatePostDraftMediaCallToActionsWatchNow"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftMediaCallToActionsAppInstall(BaseModel):
+    """Model for CreatePostDraftMediaCallToActionsAppInstall"""
+
+    app_store_id: Optional[str] = Field(
+        default=None, description="Apple App Store iPhone app id."
+    )
+    ipad_app_store_id: Optional[str] = Field(
+        default=None, description="Apple App Store iPad app id."
+    )
+    play_store_id: Optional[str] = Field(
+        default=None, description="Google Play Store app id."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftMediaCallToActionsVisitSite(BaseModel):
+    """Model for CreatePostDraftMediaCallToActionsVisitSite"""
+
+    url: str = Field(description="HTTPS URL the CTA links to.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftMediaCallToActionsWatchNow(BaseModel):
+    """Model for CreatePostDraftMediaCallToActionsWatchNow"""
+
+    url: str = Field(description="HTTPS URL the CTA links to.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftPoll(BaseModel):
+    """Model for CreatePostDraftPoll"""
+
+    duration_minutes: int = Field(description="Duration of the poll in minutes.")
+    options: List[str] = Field(
+        description="Poll options (2-4 choices, 1-25 characters each)."
+    )
+    reply_settings: Optional[
+        Literal["following", "mentionedUsers", "subscribers", "verified"]
+    ] = Field(
+        default=None,
+        description="Who can reply to the poll Tweet. Accepted for compatibility; it carries no backend argument and is dropped before the mutation is issued (see `translate_body`).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftReply(BaseModel):
+    """Model for CreatePostDraftReply"""
+
+    in_reply_to_tweet_id: str = Field(
+        description="The ID of the tweet being replied to."
+    )
+    auto_populate_reply_metadata: Optional[bool] = Field(
+        default=None,
+        description="If true, reply metadata is automatically populated. Accepted for compatibility; it carries no backend argument and is dropped before the mutation is issued (see `translate_body`).",
+    )
+    exclude_reply_user_ids: Optional[List[str]] = Field(
+        default=None, description="User IDs to exclude from the reply thread."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftRequest(BaseModel):
+    """Model for CreatePostDraftRequest"""
+
+    card_uri: Optional[str] = Field(default=None, description="Card URI parameter.")
+    clip: Optional["CreatePostDraftClip"] = Field(default=None)
+    community_id: Optional[str] = Field(
+        default=None, description="Community to post the tweet to."
+    )
+    direct_message_deep_link: Optional[str] = Field(
+        default=None, description="Direct message deep link."
+    )
+    edit_options: Optional["CreatePostDraftEditOptions"] = Field(default=None)
+    for_super_followers_only: Optional[bool] = Field(
+        default=None, description="Restrict tweet to super followers."
+    )
+    geo: Optional["CreatePostDraftGeo"] = Field(default=None)
+    made_with_ai: Optional[bool] = Field(
+        default=None, description="Disclose that the tweet contains AI-generated media."
+    )
+    media: Optional["CreatePostDraftMedia"] = Field(default=None)
+    nullcast: Optional[bool] = Field(
+        default=None,
+        description="If true, the tweet is not shown in the public timeline.",
+    )
+    paid_partnership: Optional[bool] = Field(
+        default=None, description="Disclose that the tweet is a paid partnership."
+    )
+    poll: Optional["CreatePostDraftPoll"] = Field(default=None)
+    quote_tweet_id: Optional[str] = Field(
+        default=None, description="Tweet ID to quote."
+    )
+    reply: Optional["CreatePostDraftReply"] = Field(default=None)
+    reply_settings: Optional[
+        Literal["following", "mentionedUsers", "subscribers", "verified"]
+    ] = Field(default=None, description="Who can reply to this tweet.")
+    share_with_followers: Optional[bool] = Field(
+        default=None,
+        description="Share an exclusive (super-follower) tweet with all followers.",
+    )
+    text: Optional[str] = Field(
+        default=None,
+        description="Text of the Post. Required unless media is provided. At most 280 characters unless the account has X Premium.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftResponse(BaseModel):
+    """Model for CreatePostDraftResponse"""
+
+    data: Optional["CreatePostDraftResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostDraftResponseData(BaseModel):
+    """Model for CreatePostDraftResponseData"""
+
+    id: str = Field(description="Unique identifier of the saved draft.")
+    text: str = Field(description="The text of the saved draft.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreatePostsClip(BaseModel):
+    """Model for CreatePostsClip"""
+
+    end_seconds: int = Field(
+        description="Second of the video at which the clip ends. A clip is 5 to 60 seconds long and at most 30% of the video."
+    )
+    post_id: str = Field(
+        description="The ID of the Post whose video is clipped. The Post must have exactly one video, longer than 2 minutes."
+    )
+    start_seconds: int = Field(
+        description="Second of the video at which the clip starts."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class CreatePostsEditOptions(BaseModel):
     """Model for CreatePostsEditOptions"""
 
@@ -1632,7 +3115,9 @@ class CreatePostsGeo(BaseModel):
 class CreatePostsMedia(BaseModel):
     """Model for CreatePostsMedia"""
 
-    media_ids: List[str] = Field(description="Media IDs to attach to the tweet.")
+    media_ids: List[str] = Field(
+        description="Media IDs to attach to the Post, in the order given."
+    )
     call_to_actions: Optional["CreatePostsMediaCallToActions"] = Field(default=None)
     description: Optional[str] = Field(
         default=None,
@@ -1738,6 +3223,7 @@ class CreatePostsRequest(BaseModel):
     """Model for CreatePostsRequest"""
 
     card_uri: Optional[str] = Field(default=None, description="Card URI parameter.")
+    clip: Optional["CreatePostsClip"] = Field(default=None)
     community_id: Optional[str] = Field(
         default=None, description="Community to post the tweet to."
     )
@@ -1774,7 +3260,7 @@ class CreatePostsRequest(BaseModel):
     )
     text: Optional[str] = Field(
         default=None,
-        description="Text of the tweet. Required unless media is provided.  Defaulted to an empty string so it is always sent: the backend's `tweet_text` variable is non-null and rejects an absent value.",
+        description="Text of the Post. Required unless media is provided. At most 280 characters unless the account has X Premium.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -1813,20 +3299,18 @@ class CreateScheduledBroadcastRecurrence(BaseModel):
 class CreateScheduledBroadcastRequest(BaseModel):
     """Model for CreateScheduledBroadcastRequest"""
 
-    scheduled_end_ms: str = Field(
-        description="End time, ms since Unix epoch (decimal string)."
-    )
     scheduled_start_ms: str = Field(
         description="Start time, ms since Unix epoch (decimal string)."
     )
     source_id: str = Field(
-        description="Ingest / source id to bind (same as sources `rtmp_stream_key`)."
+        description="Source to bind: a source's `id` from GET /2/sources. A stream key is also accepted but deprecated; stream keys stop being accepted when the /2/users/:id/sources and /2/users/:id/broadcasts routes reach end of life on January 1, 2027."
     )
     available_for_replay: Optional[bool] = Field(
         default=None, description="Enable replay."
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Chat permission option (numeric string)."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(default=None, description="Description.")
     is_locked: Optional[bool] = Field(default=None, description="Lock the broadcast.")
@@ -1836,8 +3320,13 @@ class CreateScheduledBroadcastRequest(BaseModel):
         description="If true, do not auto-publish at start; call POST .../live when ready.",
     )
     recurrence: Optional["CreateScheduledBroadcastRecurrence"] = Field(default=None)
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Optional end time, ms since Unix epoch (decimal string). Omit for an open-ended broadcast.",
+    )
     telecast_id: Optional[str] = Field(
-        default=None, description="Optional telecast id (numeric string)."
+        default=None,
+        description="Deprecated: telecast associations are being retired and this field will be ignored.",
     )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Pre-live slate media id (numeric string)."
@@ -1864,10 +3353,11 @@ class CreateScheduledBroadcastResponseData(BaseModel):
     )
     broadcast_id: Optional[str] = Field(
         default=None,
-        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+        description="Alphanumeric broadcast id (path `:id` for get/update/delete/live).",
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Optional chat permission option."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(
         default=None, description="Optional description."
@@ -1878,7 +3368,7 @@ class CreateScheduledBroadcastResponseData(BaseModel):
         description="When true, coordinator will not auto-publish; call POST .../live when ready.",
     )
     recurring_schedule_id: Optional[str] = Field(
-        default=None, description="Set when this occurrence belongs to a recurrence."
+        default=None, description="Deprecated: always null for new schedules."
     )
     scheduled_broadcast_id: Optional[str] = Field(
         default=None,
@@ -1893,13 +3383,15 @@ class CreateScheduledBroadcastResponseData(BaseModel):
         description="Scheduled start, milliseconds since Unix epoch (decimal string).",
     )
     source_id: Optional[str] = Field(
-        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+        default=None,
+        description="Id of the bound source, as returned by GET /2/sources. Omitted when unknown.",
     )
     state: Optional[str] = Field(
-        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+        default=None,
+        description="Scheduler state: `Created` or `Scheduled` before start, then `Running`, `Ended`, or `Error`.",
     )
     telecast_id: Optional[str] = Field(
-        default=None, description="Optional telecast association."
+        default=None, description="Deprecated: always null for new schedules."
     )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Optional pre-live slate media id."
@@ -1907,6 +3399,257 @@ class CreateScheduledBroadcastResponseData(BaseModel):
     title: Optional[str] = Field(
         default=None, description="Broadcast title / status text."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateSourceRequest(BaseModel):
+    """Model for CreateSourceRequest"""
+
+    name: str = Field(description="Label for the source.")
+    region: str = Field(
+        description="Ingest region, as returned by GET /2/region. us-west-1 and us-west-2 ingest in US West; us-east-1, us-east-2, ca-central-1, sa-east-1, eu-west-1, eu-west-2, eu-west-3, eu-central-1, eu-north-1, ap-south-1, ap-northeast-1, ap-northeast-2, ap-southeast-1 and ap-southeast-2 ingest in US East. The response's `region` is the serving location (`us-east-1` or `us-west-2`)."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateSourceResponse(BaseModel):
+    """Model for CreateSourceResponse"""
+
+    data: Optional["CreateSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateSourceResponseData(BaseModel):
+    """Model for CreateSourceResponseData"""
+
+    id: str = Field(
+        description="Source id, 19 decimal digits; the `source_id` that POST /2/broadcasts and scheduled broadcasts take. Not a credential: read the stream key with GET /2/sources/:id/stream_key."
+    )
+    stream_key: str = Field(
+        description="Stream key. A credential: anyone with it can stream to the source."
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    region: Optional[str] = Field(
+        default=None,
+        description="Region of the ingest location serving the source: `us-east-1` or `us-west-2`. Sources created before October 31, 2026 keep the AWS region they were created in.",
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="Ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None,
+        description="RTMPS ingest URL (port 443). Configure your encoder with this URL and the source's stream key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserBroadcastRequest(BaseModel):
+    """Model for CreateUserBroadcastRequest"""
+
+    source_id: str = Field(description="The source's `rtmp_stream_key`.")
+    is_low_latency: Optional[Union[bool, str, int]] = Field(
+        default=None, description="Ignored."
+    )
+    region: Optional[str] = Field(
+        default=None, description="Ignored: the source sets the region."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserBroadcastResponse(BaseModel):
+    """Model for CreateUserBroadcastResponse"""
+
+    data: Optional["CreateUserBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserBroadcastResponseData(BaseModel):
+    """Model for CreateUserBroadcastResponseData"""
+
+    broadcast: "CreateUserBroadcastResponseDataBroadcast"
+    share_url: str = Field(description="The broadcast's watch page.")
+    video_access: "CreateUserBroadcastResponseDataVideoAccess"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserBroadcastResponseDataBroadcast(BaseModel):
+    """Model for CreateUserBroadcastResponseDataBroadcast"""
+
+    id: str = Field(description="Broadcast id; equal to `broadcast_id`.")
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether a replay is available."
+    )
+    broadcast_id: Optional[str] = Field(default=None, description="Broadcast id.")
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    end_ms: Optional[str] = Field(
+        default=None,
+        description="End time, milliseconds since Unix epoch (decimal string).",
+    )
+    height: Optional[int] = Field(default=None, description="Video height in pixels.")
+    image_url: Optional[str] = Field(default=None, description="Thumbnail URL.")
+    image_url_medium: Optional[str] = Field(
+        default=None, description="Medium thumbnail URL."
+    )
+    image_url_small: Optional[str] = Field(
+        default=None, description="Small thumbnail URL."
+    )
+    is_high_latency: Optional[bool] = Field(
+        default=None, description="Whether the broadcast is high latency."
+    )
+    language: Optional[str] = Field(default=None, description="Broadcast language.")
+    media_id: Optional[str] = Field(
+        default=None, description="Numeric media id from `media_key`."
+    )
+    media_key: Optional[str] = Field(
+        default=None, description="Media key of the broadcast's video."
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end time, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start time, milliseconds since Unix epoch (decimal string).",
+    )
+    start_ms: Optional[str] = Field(
+        default=None,
+        description="Start time, milliseconds since Unix epoch (decimal string).",
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="`NOT_STARTED`, `RUNNING`, `TIMED_OUT`, `ENDED`, `PRE_PUBLISHED` or `CANCELED`.",
+    )
+    status: Optional[str] = Field(default=None, description="Broadcast title.")
+    total_watched: Optional[str] = Field(
+        default=None, description="Total viewers (decimal string)."
+    )
+    total_watching: Optional[str] = Field(
+        default=None, description="Current viewers (decimal string)."
+    )
+    tweet_id: Optional[str] = Field(
+        default=None, description="Id of the Post announcing the broadcast."
+    )
+    twitter_user_id: Optional[str] = Field(default=None, description="Owner's user id.")
+    updated_at_ms: Optional[str] = Field(
+        default=None,
+        description="Last update time, milliseconds since Unix epoch (decimal string).",
+    )
+    width: Optional[int] = Field(default=None, description="Video width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserSourceRequest(BaseModel):
+    """Model for CreateUserSourceRequest"""
+
+    name: str = Field(description="Label for the source.")
+    region: Optional[str] = Field(
+        default=None,
+        description="Ingest data center, `atla` or `pdxa` (default). The AWS regions us-west-1 and us-west-2 map to `pdxa`; us-east-1, us-east-2, ca-central-1, sa-east-1, eu-west-1, eu-west-2, eu-west-3, eu-central-1, eu-north-1, ap-south-1, ap-northeast-1, ap-northeast-2, ap-southeast-1 and ap-southeast-2 map to `atla`.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserSourceResponse(BaseModel):
+    """Model for CreateUserSourceResponse"""
+
+    data: Optional["CreateUserSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserSourceResponseData(BaseModel):
+    """Model for CreateUserSourceResponseData"""
+
+    source: "CreateUserSourceResponseDataSource"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserSourceResponseDataSource(BaseModel):
+    """Model for CreateUserSourceResponseDataSource"""
+
+    id: str = Field(description="Source id; also the RTMP stream key.")
+    creation_origin: Optional["CreateUserSourceResponseDataSourceCreationOrigin"] = (
+        Field(default=None)
+    )
+    creation_time: Optional[int] = Field(
+        default=None, description="Creation time, ms since Unix epoch."
+    )
+    is360: Optional[bool] = Field(
+        default=None, description="Whether the source streams 360° video."
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    owner_id: Optional[int] = Field(
+        default=None,
+        description="Owner's numeric user id. Exceeds the exact integer range of many JSON parsers.",
+    )
+    rtmp_region: Optional[str] = Field(
+        default=None,
+        description="Ingest region as an AWS region name, e.g. `us-east-1` or `us-west-2`. Accepted as `region` when creating a source.",
+    )
+    rtmp_stream_key: Optional[str] = Field(
+        default=None, description="Stream key; equal to `id`."
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="RTMP ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None, description="RTMPS ingest URL (port 443)."
+    )
+    video_service: Optional["CreateUserSourceResponseDataSourceVideoService"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserSourceResponseDataSourceCreationOrigin(BaseModel):
+    """Model for CreateUserSourceResponseDataSourceCreationOrigin"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUserSourceResponseDataSourceVideoService(BaseModel):
+    """Model for CreateUserSourceResponseDataSourceVideoService"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -1938,33 +3681,19 @@ class CreateUsersBookmarkFolderResponseData(BaseModel):
 
 
 class CreateUsersBookmarkRequest(BaseModel):
-    """Model for CreateUsersBookmarkRequest"""
+    """At least one of `tweet_id`, `tweet_ids` is required."""
 
-    tweet_id: str = Field(
-        description="The ID of the Post to add to the user's Bookmarks."
-    )
     folder_id: Optional[str] = Field(
         default=None,
-        description="Optional ID of the Bookmark folder to add the Post to. When omitted, the Post is added to the user's top-level Bookmarks only.",
+        description="Optional ID of the Bookmark folder to add the Post(s) to. When omitted, Posts are added to the user's top-level Bookmarks only. A bulk request uses this one folder for every ID.",
     )
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateUsersBookmarkResponse(BaseModel):
-    """Model for CreateUsersBookmarkResponse"""
-
-    data: Optional["CreateUsersBookmarkResponseData"] = Field(default=None)
-    errors: Optional[List["Problem"]] = Field(default=None)
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class CreateUsersBookmarkResponseData(BaseModel):
-    """Model for CreateUsersBookmarkResponseData"""
-
-    bookmarked: bool = Field(
-        description="Indicates whether the Post is bookmarked by the user."
+    tweet_id: Optional[str] = Field(
+        default=None,
+        description="The ID of the Post to add to the user's Bookmarks. Mutually exclusive with `tweet_ids`.",
+    )
+    tweet_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Post IDs to add to the user's Bookmarks. At most 25. Mutually exclusive with `tweet_id`.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -2182,11 +3911,246 @@ class DeleteAllConnectionsResponseDataResults(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class DeleteBotResponse(BaseModel):
+    """Model for DeleteBotResponse"""
+
+    data: Optional["DeleteBotResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteBotResponseData(BaseModel):
+    """Model for DeleteBotResponseData"""
+
+    deleted: bool = Field(description="Whether the bot was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteBroadcastChatMessageResponse(BaseModel):
+    """Model for DeleteBroadcastChatMessageResponse"""
+
+    data: Optional["DeleteBroadcastChatMessageResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteBroadcastChatMessageResponseData(BaseModel):
+    """Model for DeleteBroadcastChatMessageResponseData"""
+
+    deleted: bool = Field(description="Whether the chat message was removed.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteBroadcastResponse(BaseModel):
+    """Model for DeleteBroadcastResponse"""
+
+    data: Optional["DeleteBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteBroadcastResponseData(BaseModel):
+    """Model for DeleteBroadcastResponseData"""
+
+    deleted: bool = Field(description="Whether the broadcast was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationActionSignatures(BaseModel):
+    """Model for DeleteChatConversationActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "DeleteChatConversationActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationActionSignaturesMessageEventSignature(BaseModel):
+    """Model for DeleteChatConversationActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "DeleteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for DeleteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationMessageTtlActionSignatures(BaseModel):
+    """Model for DeleteChatConversationMessageTtlActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "DeleteChatConversationMessageTtlActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationMessageTtlActionSignaturesMessageEventSignature(BaseModel):
+    """Model for DeleteChatConversationMessageTtlActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "DeleteChatConversationMessageTtlActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationMessageTtlActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for DeleteChatConversationMessageTtlActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationMessageTtlRequest(BaseModel):
+    """Model for DeleteChatConversationMessageTtlRequest"""
+
+    action_signatures: Optional[
+        List["DeleteChatConversationMessageTtlActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationMessageTtlResponse(BaseModel):
+    """Model for DeleteChatConversationMessageTtlResponse"""
+
+    data: Optional["DeleteChatConversationMessageTtlResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationMessageTtlResponseData(BaseModel):
+    """Model for DeleteChatConversationMessageTtlResponseData"""
+
+    deleted: bool = Field(description="Whether the message lifetime was removed.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationRequest(BaseModel):
+    """Model for DeleteChatConversationRequest"""
+
+    action_signatures: Optional[List["DeleteChatConversationActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationResponse(BaseModel):
+    """Model for DeleteChatConversationResponse"""
+
+    data: Optional["DeleteChatConversationResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationResponseData(BaseModel):
+    """Model for DeleteChatConversationResponseData"""
+
+    deleted: bool = Field(description="Whether the conversation was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class DeleteChatMessagesActionSignatures(BaseModel):
     """Model for DeleteChatMessagesActionSignatures"""
 
     encoded_message_event_detail: str = Field(
-        description="Base64-encoded message event detail."
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
     )
     message_event_signature: "DeleteChatMessagesActionSignaturesMessageEventSignature"
     message_id: str = Field(
@@ -2247,7 +4211,7 @@ class DeleteChatMessagesRequest(BaseModel):
     """Model for DeleteChatMessagesRequest"""
 
     action_signatures: List["DeleteChatMessagesActionSignatures"] = Field(
-        description="Cryptographic signatures for the action."
+        description="Signatures for this action, forwarded in the order they are sent."
     )
     delete_message_action: Literal["delete_for_all", "delete_for_self"] = Field(
         description="delete_for_all removes the messages for every participant; delete_for_self removes them only from the authenticated user's view."
@@ -2295,6 +4259,15 @@ class DeleteCommunityNotesResponseData(BaseModel):
     deleted: bool = Field(
         description="Indicates whether the Community Note was deleted."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteComplianceJobsByIdResponse(BaseModel):
+    """Model for DeleteComplianceJobsByIdResponse"""
+
+    data: Optional["ComplianceJob"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -2440,6 +4413,25 @@ class DeleteMediaSubtitlesResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class DeletePostDraftResponse(BaseModel):
+    """Model for DeletePostDraftResponse"""
+
+    data: Optional["DeletePostDraftResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeletePostDraftResponseData(BaseModel):
+    """Model for DeletePostDraftResponseData"""
+
+    deleted: bool = Field(
+        description="Whether the draft is gone from the user's drafts."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class DeletePostsResponse(BaseModel):
     """Model for DeletePostsResponse"""
 
@@ -2470,6 +4462,49 @@ class DeleteScheduledBroadcastResponseData(BaseModel):
     """Model for DeleteScheduledBroadcastResponseData"""
 
     deleted: bool = Field(description="Whether the scheduled broadcast was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteSourceResponse(BaseModel):
+    """Model for DeleteSourceResponse"""
+
+    data: Optional["DeleteSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteSourceResponseData(BaseModel):
+    """Model for DeleteSourceResponseData"""
+
+    deleted: bool = Field(description="Whether the source was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteUserBroadcastResponse(BaseModel):
+    """Model for DeleteUserBroadcastResponse"""
+
+    data: Optional["DeleteUserBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteUserBroadcastResponseData(BaseModel):
+    """Model for DeleteUserBroadcastResponseData"""
+
+    success: bool = Field(description="Always `true` on success.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteUserSourceResponse(BaseModel):
+    """Model for DeleteUserSourceResponse"""
+
+    data: Optional["DeleteUserSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -2527,6 +4562,97 @@ class DeleteWebhooksStreamLinkResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class DisableChatGroupInviteActionSignatures(BaseModel):
+    """Model for DisableChatGroupInviteActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "DisableChatGroupInviteActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DisableChatGroupInviteActionSignaturesMessageEventSignature(BaseModel):
+    """Model for DisableChatGroupInviteActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "DisableChatGroupInviteActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DisableChatGroupInviteActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for DisableChatGroupInviteActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DisableChatGroupInviteRequest(BaseModel):
+    """Model for DisableChatGroupInviteRequest"""
+
+    action_signatures: Optional[List["DisableChatGroupInviteActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DisableChatGroupInviteResponse(BaseModel):
+    """Model for DisableChatGroupInviteResponse"""
+
+    data: Optional["DisableChatGroupInviteResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DisableChatGroupInviteResponseData(BaseModel):
+    """Model for DisableChatGroupInviteResponseData"""
+
+    disabled: bool = Field(description="Whether the invite link was turned off.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class DisallowedResourceProblem(BaseModel):
     """Model for DisallowedResourceProblem"""
 
@@ -2536,6 +4662,105 @@ class DisallowedResourceProblem(BaseModel):
     resource_id: Optional[str] = Field(default=None)
     resource_type: Optional[str] = Field(default=None)
     section: Optional[str] = Field(default=None)
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmBadAttachmentProblem(BaseModel):
+    """Model for DmBadAttachmentProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-bad-attachment"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmBadCtaProblem(BaseModel):
+    """Model for DmBadCtaProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-bad-cta"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmBadCustomProfileProblem(BaseModel):
+    """Model for DmBadCustomProfileProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-bad-custom-profile"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmBadMediaProblem(BaseModel):
+    """Model for DmBadMediaProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-bad-media"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmBadQuickReplyProblem(BaseModel):
+    """Model for DmBadQuickReplyProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-bad-quick-reply"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmBadUrlProblem(BaseModel):
+    """Model for DmBadUrlProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-bad-url"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmConversationNameTooLongProblem(BaseModel):
+    """Model for DmConversationNameTooLongProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-conversation-name-too-long"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmConversationNotFoundProblem(BaseModel):
+    """Model for DmConversationNotFoundProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-conversation-not-found"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmDuplicateProblem(BaseModel):
+    """Model for DmDuplicateProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-duplicate"]
     status: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -2642,6 +4867,573 @@ class DmEventEntities(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class DmInactiveDeviceProblem(BaseModel):
+    """Model for DmInactiveDeviceProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-inactive-device"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmNotDeliveredProblem(BaseModel):
+    """Model for DmNotDeliveredProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-not-delivered"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmNotFoundProblem(BaseModel):
+    """Model for DmNotFoundProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-not-found"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmNotOwnerProblem(BaseModel):
+    """Model for DmNotOwnerProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-not-owner"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmParticipantNotAddedProblem(BaseModel):
+    """Model for DmParticipantNotAddedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-participant-not-added"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmParticipantNotFoundProblem(BaseModel):
+    """Model for DmParticipantNotFoundProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-participant-not-found"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmParticipantRestrictedProblem(BaseModel):
+    """Model for DmParticipantRestrictedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-participant-restricted"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmParticipantUnavailableProblem(BaseModel):
+    """Model for DmParticipantUnavailableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-participant-unavailable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRateLimitedProblem(BaseModel):
+    """Model for DmRateLimitedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-rate-limited"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientBlocksSenderProblem(BaseModel):
+    """Model for DmRecipientBlocksSenderProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-blocks-sender"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientCannotReceiveProblem(BaseModel):
+    """Model for DmRecipientCannotReceiveProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-cannot-receive"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientEncryptedUnavailableProblem(BaseModel):
+    """Model for DmRecipientEncryptedUnavailableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-encrypted-unavailable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientNotAcceptingProblem(BaseModel):
+    """Model for DmRecipientNotAcceptingProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-not-accepting"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientNotFoundProblem(BaseModel):
+    """Model for DmRecipientNotFoundProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-not-found"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientRestrictsGroupsProblem(BaseModel):
+    """Model for DmRecipientRestrictsGroupsProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-restricts-groups"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRecipientUnavailableProblem(BaseModel):
+    """Model for DmRecipientUnavailableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-recipient-unavailable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmRequestInProgressProblem(BaseModel):
+    """Model for DmRequestInProgressProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-request-in-progress"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSafetyLimitedProblem(BaseModel):
+    """Model for DmSafetyLimitedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-safety-limited"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSafetyRejectedProblem(BaseModel):
+    """Model for DmSafetyRejectedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-safety-rejected"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderBlocksRecipientProblem(BaseModel):
+    """Model for DmSenderBlocksRecipientProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-blocks-recipient"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderDeclinedDmsProblem(BaseModel):
+    """Model for DmSenderDeclinedDmsProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-declined-dms"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderDmsClosedProblem(BaseModel):
+    """Model for DmSenderDmsClosedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-dms-closed"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderEncryptedUnavailableProblem(BaseModel):
+    """Model for DmSenderEncryptedUnavailableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-encrypted-unavailable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderNotInConversationProblem(BaseModel):
+    """Model for DmSenderNotInConversationProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-not-in-conversation"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderNotPermittedProblem(BaseModel):
+    """Model for DmSenderNotPermittedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-not-permitted"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderNotVerifiedProblem(BaseModel):
+    """Model for DmSenderNotVerifiedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-not-verified"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderPhoneRequiredProblem(BaseModel):
+    """Model for DmSenderPhoneRequiredProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-phone-required"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderReadOnlyProblem(BaseModel):
+    """Model for DmSenderReadOnlyProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-read-only"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmSenderUnavailableProblem(BaseModel):
+    """Model for DmSenderUnavailableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-sender-unavailable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmTextEmptyProblem(BaseModel):
+    """Model for DmTextEmptyProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-text-empty"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmTextTooLongProblem(BaseModel):
+    """Model for DmTextTooLongProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-text-too-long"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmTooFewParticipantsProblem(BaseModel):
+    """Model for DmTooFewParticipantsProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-too-few-participants"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmTooManyParticipantsProblem(BaseModel):
+    """Model for DmTooManyParticipantsProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-too-many-participants"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DmUnsupportedMessageProblem(BaseModel):
+    """Model for DmUnsupportedMessageProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/dm-unsupported-message"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DuplicateRuleProblem(BaseModel):
+    """Model for DuplicateRuleProblem"""
+
+    title: str
+    type: Literal["https://api.twitter.com/2/problems/duplicate-rules"]
+    value: str
+    detail: Optional[str] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnableChatGroupInviteActionSignatures(BaseModel):
+    """Model for EnableChatGroupInviteActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "EnableChatGroupInviteActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnableChatGroupInviteActionSignaturesMessageEventSignature(BaseModel):
+    """Model for EnableChatGroupInviteActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "EnableChatGroupInviteActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnableChatGroupInviteActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for EnableChatGroupInviteActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnableChatGroupInviteRequest(BaseModel):
+    """Model for EnableChatGroupInviteRequest"""
+
+    action_signatures: Optional[List["EnableChatGroupInviteActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+    affiliate_user_id: Optional[str] = Field(
+        default=None,
+        description="ID of the affiliate account to associate with the link.",
+    )
+    decrypted_avatar_url: Optional[str] = Field(
+        default=None,
+        description="Group avatar URL (https) to show on the invite preview.",
+    )
+    decrypted_title: Optional[str] = Field(
+        default=None, description="Group name to show on the invite preview."
+    )
+    invite_url: Optional[str] = Field(
+        default=None,
+        description="Invite link built by the client, in the form https://x.com/i/chat/group_join/<conversation_id>/<token>, where the token is exactly 10 letters, digits, '-' or '_'. The conversation segment must match the path ID. It is part of the signed payload, so it is required when action_signatures is sent.",
+    )
+    validity_duration_msec: Optional[str] = Field(
+        default=None,
+        description="How long the link stays valid, in milliseconds, from the time of the request. With action_signatures, send validity_expiry_timestamp_msec instead.",
+    )
+    validity_expiry_timestamp_msec: Optional[str] = Field(
+        default=None,
+        description="When the link expires, in epoch milliseconds. Must be in the future. If validity_duration_msec is also sent, the two must agree within a minute.",
+    )
+    welcome_message: Optional[str] = Field(
+        default=None, description="Message shown to people who open the link."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnableChatGroupInviteResponse(BaseModel):
+    """Model for EnableChatGroupInviteResponse"""
+
+    data: Optional["EnableChatGroupInviteResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnableChatGroupInviteResponseData(BaseModel):
+    """Model for EnableChatGroupInviteResponseData"""
+
+    conversation_id: Optional[str] = Field(
+        default=None, description="ID of the group conversation the link joins."
+    )
+    expires_at: Optional[str] = Field(
+        default=None,
+        description="When the link expires (ISO 8601). Absent when the link does not expire.",
+    )
+    group_avatar_url: Optional[str] = Field(
+        default=None,
+        description="Group avatar URL shown on the invite preview, stored unencrypted. Absent when the backend flags the avatar as NSFW.",
+    )
+    group_name: Optional[str] = Field(
+        default=None,
+        description="Group name shown on the invite preview, stored unencrypted.",
+    )
+    invite_url: Optional[str] = Field(
+        default=None, description="Shareable invite link."
+    )
+    token: Optional[str] = Field(
+        default=None,
+        description="Invite token. Together with the conversation ID it identifies the link.",
+    )
+    welcome_message: Optional[str] = Field(
+        default=None, description="Message shown to people who open the link."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EncryptionRequiredProblem(BaseModel):
+    """Model for EncryptionRequiredProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/encryption-required"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnsureAccountRequest(BaseModel):
+    """Model for EnsureAccountRequest"""
+
+    metadata: Optional[str] = Field(
+        default=None,
+        description="Optional provisioning-credit metadata (an opaque string, e.g. a subscription tier) to claim for the account, attributed to the calling app. Omit to just ensure the account.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnsureAccountResponse(BaseModel):
+    """Model for EnsureAccountResponse"""
+
+    data: Optional["EnsureAccountResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class EnsureAccountResponseData(BaseModel):
+    """Model for EnsureAccountResponseData"""
+
+    account_id: str = Field(description="Unique identifier of the developer account.")
+    created: bool = Field(description="Whether this request created the account.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class Error(BaseModel):
     """Model for Error"""
 
@@ -2682,6 +5474,7 @@ class EvaluateCommunityNotesResponseData(BaseModel):
 class Expansions(BaseModel):
     """Model for Expansions"""
 
+    calls: Optional[List["Call"]] = Field(default=None)
     media: Optional[List["Media"]] = Field(default=None)
     places: Optional[List["Place"]] = Field(default=None)
     polls: Optional[List["Poll"]] = Field(default=None)
@@ -2939,6 +5732,9 @@ class GetActivitySubscriptionsResponseData(BaseModel):
     event_type: Optional[str] = Field(
         default=None, description="Activity event type in dot notation."
     )
+    expires_at: Optional[str] = Field(
+        default=None, description="Subscription expiration time."
+    )
     filter: Optional["GetActivitySubscriptionsResponseDataFilter"] = Field(default=None)
     subscription_id: Optional[str] = Field(
         default=None, description="Unique identifier of the subscription."
@@ -2962,9 +5758,156 @@ class GetActivitySubscriptionsResponseDataFilter(BaseModel):
         description="Optional direction filter for directional events. Not present for mute.* or block.* events.",
     )
     keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    qualifiers: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Event-specific string predicates applied to the subscription.",
+    )
     user_id: Optional[str] = Field(
         default=None, description="User the subscription is scoped to."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAmplifyProgramPostsResponse(BaseModel):
+    """Model for GetAmplifyProgramPostsResponse"""
+
+    data: Optional[List["GetAmplifyProgramPostsResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAmplifyProgramPostsResponseData(BaseModel):
+    """Model for GetAmplifyProgramPostsResponseData"""
+
+    added_at: str = Field(
+        description="When the post was published into the program (ISO 8601)."
+    )
+    post_id: str = Field(description="Identifier of the post.")
+    promotion_ends_at: Optional[str] = Field(
+        default=None,
+        description="When promotion of the post ends (ISO 8601), when one was set.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAmplifyProgramResponse(BaseModel):
+    """Model for GetAmplifyProgramResponse"""
+
+    data: Optional["GetAmplifyProgramResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAmplifyProgramResponseData(BaseModel):
+    """Model for GetAmplifyProgramResponseData"""
+
+    advertiser_ids: List[str] = Field(
+        description="Advertiser account ids sponsoring the program."
+    )
+    id: str = Field(description="Identifier of the program.")
+    name: str = Field(description="Display name of the program.")
+    publisher_ids: List[str] = Field(
+        description="User ids of the publishers enrolled in the program."
+    )
+    state: Union[Literal["active", "inactive", "deleted"], str] = Field(
+        description="Lifecycle state of the program. Only `active` programs accept posts."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAmplifyProgramsResponse(BaseModel):
+    """Model for GetAmplifyProgramsResponse"""
+
+    data: Optional[List["GetAmplifyProgramsResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetAmplifyProgramsResponseData(BaseModel):
+    """Model for GetAmplifyProgramsResponseData"""
+
+    advertiser_ids: List[str] = Field(
+        description="Advertiser account ids sponsoring the program."
+    )
+    id: str = Field(description="Identifier of the program.")
+    name: str = Field(description="Display name of the program.")
+    publisher_ids: List[str] = Field(
+        description="User ids of the publishers enrolled in the program."
+    )
+    state: Union[Literal["active", "inactive", "deleted"], str] = Field(
+        description="Lifecycle state of the program. Only `active` programs accept posts."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetBotsResponseMeta(BaseModel):
+    """Nested model for GetBotsResponseMeta"""
+
+    max_bots: Optional[int] = Field(default=None)
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetBotsResponse(BaseModel):
+    """Model for GetBotsResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetBotsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetBroadcastChatResponseMeta(BaseModel):
+    """Nested model for GetBroadcastChatResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetBroadcastChatResponse(BaseModel):
+    """Model for GetBroadcastChatResponse"""
+
+    data: Optional[List["BroadcastChatMessage"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetBroadcastChatResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetBroadcastResponse(BaseModel):
+    """Model for GetBroadcastResponse"""
+
+    data: Optional["Broadcast"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetCallResponse(BaseModel):
+    """Model for GetCallResponse"""
+
+    data: Optional["Call"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -2990,6 +5933,31 @@ class GetChatConversationEventsResponse(BaseModel):
     data: Optional[List["ChatMessageEvent"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     meta: Optional["GetChatConversationEventsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatConversationPinnedMessagesResponseMeta(BaseModel):
+    """Nested model for GetChatConversationPinnedMessagesResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatConversationPinnedMessagesResponse(BaseModel):
+    """Model for GetChatConversationPinnedMessagesResponse"""
+
+    data: Optional[List["ChatPinnedMessage"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetChatConversationPinnedMessagesResponseMeta"] = Field(
+        default=None
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -3026,6 +5994,127 @@ class GetChatConversationsResponse(BaseModel):
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
     meta: Optional["GetChatConversationsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatGroupAdminRequestsResponseMeta(BaseModel):
+    """Nested model for GetChatGroupAdminRequestsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+    total_count: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatGroupAdminRequestsResponse(BaseModel):
+    """Model for GetChatGroupAdminRequestsResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetChatGroupAdminRequestsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatGroupInviteResponse(BaseModel):
+    """Model for GetChatGroupInviteResponse"""
+
+    data: Optional["ChatGroupInvite"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatMessageRequestResponse(BaseModel):
+    """Model for GetChatMessageRequestResponse"""
+
+    data: Optional["ChatMessageRequestDetail"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatMessageRequestsResponseMeta(BaseModel):
+    """Nested model for GetChatMessageRequestsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+    total_count: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatMessageRequestsResponse(BaseModel):
+    """Model for GetChatMessageRequestsResponse"""
+
+    data: Optional[List["ChatMessageRequest"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetChatMessageRequestsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatModeratorsResponseMeta(BaseModel):
+    """Nested model for GetChatModeratorsResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatModeratorsResponse(BaseModel):
+    """Model for GetChatModeratorsResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetChatModeratorsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatMutedUsersResponseMeta(BaseModel):
+    """Nested model for GetChatMutedUsersResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatMutedUsersResponse(BaseModel):
+    """Model for GetChatMutedUsersResponse"""
+
+    data: Optional[List["BroadcastChatMute"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetChatMutedUsersResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetChatSettingsResponse(BaseModel):
+    """Model for GetChatSettingsResponse"""
+
+    data: Optional["ChatSettings"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -3087,6 +6176,25 @@ class GetConnectionHistoryResponse(BaseModel):
     data: Optional[List["Connection"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
     meta: Optional["GetConnectionHistoryResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetDeveloperAccountResponse(BaseModel):
+    """Model for GetDeveloperAccountResponse"""
+
+    data: Optional["GetDeveloperAccountResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetDeveloperAccountResponseData(BaseModel):
+    """Model for GetDeveloperAccountResponseData"""
+
+    account_id: str = Field(description="Unique identifier of the developer account.")
+    created_at: str = Field(description="Creation time of the account (ISO 8601).")
+    name: str = Field(description="Display name of the developer account.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -3304,6 +6412,54 @@ class GetMediaByMediaKeysResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class GetMediaLibraryCategoriesResponse(BaseModel):
+    """Model for GetMediaLibraryCategoriesResponse"""
+
+    data: Optional["GetMediaLibraryCategoriesResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetMediaLibraryCategoriesResponseData(BaseModel):
+    """Model for GetMediaLibraryCategoriesResponseData"""
+
+    advertiser_categories: List[
+        "GetMediaLibraryCategoriesResponseDataAdvertiserCategories"
+    ] = Field(description="Advertiser categories that can be blocked.")
+    video_categories: List["GetMediaLibraryCategoriesResponseDataVideoCategories"] = (
+        Field(description="Video categories a library item can be assigned.")
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetMediaLibraryCategoriesResponseDataAdvertiserCategories(BaseModel):
+    """Model for GetMediaLibraryCategoriesResponseDataAdvertiserCategories"""
+
+    description: str = Field(
+        description="Human readable name, localized to `lang` when a translation exists."
+    )
+    id: int = Field(
+        description="Identifier used in `monetization.video_category_ids` / `monetization.blocked_advertiser_category_ids`."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetMediaLibraryCategoriesResponseDataVideoCategories(BaseModel):
+    """Model for GetMediaLibraryCategoriesResponseDataVideoCategories"""
+
+    description: str = Field(
+        description="Human readable name, localized to `lang` when a translation exists."
+    )
+    id: int = Field(
+        description="Identifier used in `monetization.video_category_ids` / `monetization.blocked_advertiser_category_ids`."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class GetMediaUploadStatusResponse(BaseModel):
     """Model for GetMediaUploadStatusResponse"""
 
@@ -3379,6 +6535,130 @@ class GetNewsResponse(BaseModel):
 
     data: Optional["News"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponseMeta(BaseModel):
+    """Nested model for GetPostDraftsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponse(BaseModel):
+    """Model for GetPostDraftsResponse"""
+
+    data: Optional[List["GetPostDraftsResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetPostDraftsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponseData(BaseModel):
+    """Model for GetPostDraftsResponseData"""
+
+    id: str = Field(description="Unique identifier of the draft.")
+    text: str = Field(
+        description="The text of the draft. Empty for a draft that only has media."
+    )
+    created_at: Optional[str] = Field(
+        default=None, description="When the draft was saved (RFC 3339)."
+    )
+    made_with_ai: Optional[bool] = Field(
+        default=None, description="Whether the draft discloses AI-generated media."
+    )
+    media: Optional["GetPostDraftsResponseDataMedia"] = Field(default=None)
+    paid_partnership: Optional[bool] = Field(
+        default=None, description="Whether the draft discloses a paid partnership."
+    )
+    quote_tweet_id: Optional[str] = Field(
+        default=None, description="The ID of the Post this Post quotes."
+    )
+    reply: Optional["GetPostDraftsResponseDataReply"] = Field(default=None)
+    thread: Optional[List["GetPostDraftsResponseDataThread"]] = Field(
+        default=None,
+        description="For a draft that is a thread, the Posts after the first one, in order. Each replies to the Post before it.",
+    )
+    unsupported_content: Optional[
+        List[
+            Union[
+                Literal[
+                    "text_formatting",
+                    "inline_media",
+                    "media_tags",
+                    "possibly_sensitive",
+                    "attachment",
+                    "cashtag_attachment",
+                ],
+                str,
+            ]
+        ]
+    ] = Field(
+        default=None,
+        description="Parts of the draft that the other fields do not carry. Present only when the draft holds more than is listed.",
+    )
+    updated_at: Optional[str] = Field(
+        default=None, description="When the draft last changed (RFC 3339)."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponseDataMedia(BaseModel):
+    """Model for GetPostDraftsResponseDataMedia"""
+
+    media_ids: List[str] = Field(
+        description="Media IDs attached to the Post, in order."
+    )
+    tagged_user_ids: Optional[List[str]] = Field(
+        default=None, description="IDs of the users tagged in any of the media."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponseDataReply(BaseModel):
+    """Model for GetPostDraftsResponseDataReply"""
+
+    in_reply_to_tweet_id: str = Field(
+        description="The ID of the Post the draft replies to."
+    )
+    exclude_reply_user_ids: Optional[List[str]] = Field(
+        default=None, description="IDs of the users the reply does not mention."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponseDataThread(BaseModel):
+    """Model for GetPostDraftsResponseDataThread"""
+
+    text: str = Field(description="The text of the Post. Empty when it only has media.")
+    media: Optional["GetPostDraftsResponseDataThreadMedia"] = Field(default=None)
+    quote_tweet_id: Optional[str] = Field(
+        default=None, description="The ID of the Post this Post quotes."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetPostDraftsResponseDataThreadMedia(BaseModel):
+    """Model for GetPostDraftsResponseDataThreadMedia"""
+
+    media_ids: List[str] = Field(
+        description="Media IDs attached to the Post, in order."
+    )
+    tagged_user_ids: Optional[List[str]] = Field(
+        default=None, description="IDs of the users tagged in any of the media."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -3590,6 +6870,16 @@ class GetPostsRepostsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class GetRegionResponse(BaseModel):
+    """Model for GetRegionResponse"""
+
+    region: Union[Literal["us-east-1", "us-west-2"], str] = Field(
+        description="Ingest region. Pass it as `region` when creating a stream source."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class GetRuleCountsResponse(BaseModel):
     """Model for GetRuleCountsResponse"""
 
@@ -3703,10 +6993,11 @@ class GetScheduledBroadcastResponseData(BaseModel):
     )
     broadcast_id: Optional[str] = Field(
         default=None,
-        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+        description="Alphanumeric broadcast id (path `:id` for get/update/delete/live).",
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Optional chat permission option."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(
         default=None, description="Optional description."
@@ -3717,7 +7008,7 @@ class GetScheduledBroadcastResponseData(BaseModel):
         description="When true, coordinator will not auto-publish; call POST .../live when ready.",
     )
     recurring_schedule_id: Optional[str] = Field(
-        default=None, description="Set when this occurrence belongs to a recurrence."
+        default=None, description="Deprecated: always null for new schedules."
     )
     scheduled_broadcast_id: Optional[str] = Field(
         default=None,
@@ -3732,19 +7023,88 @@ class GetScheduledBroadcastResponseData(BaseModel):
         description="Scheduled start, milliseconds since Unix epoch (decimal string).",
     )
     source_id: Optional[str] = Field(
-        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+        default=None,
+        description="Id of the bound source, as returned by GET /2/sources. Omitted when unknown.",
     )
     state: Optional[str] = Field(
-        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+        default=None,
+        description="Scheduler state: `Created` or `Scheduled` before start, then `Running`, `Ended`, or `Error`.",
     )
     telecast_id: Optional[str] = Field(
-        default=None, description="Optional telecast association."
+        default=None, description="Deprecated: always null for new schedules."
     )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Optional pre-live slate media id."
     )
     title: Optional[str] = Field(
         default=None, description="Broadcast title / status text."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetScheduledCallResponse(BaseModel):
+    """Model for GetScheduledCallResponse"""
+
+    data: Optional["ScheduledCall"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSourceResponse(BaseModel):
+    """Model for GetSourceResponse"""
+
+    data: Optional["GetSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSourceResponseData(BaseModel):
+    """Model for GetSourceResponseData"""
+
+    id: str = Field(
+        description="Source id, 19 decimal digits; the `source_id` that POST /2/broadcasts and scheduled broadcasts take. Not a credential: read the stream key with GET /2/sources/:id/stream_key."
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    region: Optional[str] = Field(
+        default=None,
+        description="Region of the ingest location serving the source: `us-east-1` or `us-west-2`. Sources created before October 31, 2026 keep the AWS region they were created in.",
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="Ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None,
+        description="RTMPS ingest URL (port 443). Configure your encoder with this URL and the source's stream key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSourceStreamKeyResponse(BaseModel):
+    """Model for GetSourceStreamKeyResponse"""
+
+    data: Optional["GetSourceStreamKeyResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetSourceStreamKeyResponseData(BaseModel):
+    """Model for GetSourceStreamKeyResponseData"""
+
+    id: str = Field(description="Source id.")
+    stream_key: str = Field(
+        description="Stream key. A credential: anyone with it can stream to the source."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -3845,10 +7205,28 @@ class GetSpacesPostsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class GetTrendsByWoeidResponseMeta(BaseModel):
+    """Nested model for GetTrendsByWoeidResponseMeta"""
+
+    location: Optional[Dict[str, Any]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class GetTrendsByWoeidResponse(BaseModel):
     """Model for GetTrendsByWoeidResponse"""
 
     data: Optional[List["Trend"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["GetTrendsByWoeidResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetTrendsLocationsResponse(BaseModel):
+    """Model for GetTrendsLocationsResponse"""
+
+    data: Optional[List["TrendLocation"]] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -3863,11 +7241,223 @@ class GetTrendsPersonalizedTrendsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class GetUsageCreditsResponse(BaseModel):
+    """Model for GetUsageCreditsResponse"""
+
+    data: Optional["GetUsageCreditsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsageCreditsResponseData(BaseModel):
+    """Model for GetUsageCreditsResponseData"""
+
+    free_balance: float = Field(
+        description="USD remaining across unexpired free grants."
+    )
+    free_grants: List["GetUsageCreditsResponseDataFreeGrants"] = Field(
+        description="Unexpired free grants, soonest expiry first."
+    )
+    prepaid_balance: float = Field(
+        description="Purchased (prepaid) USD balance. May be negative when paid usage has overdrawn this bucket."
+    )
+    total_balance: float = Field(
+        description="Spendable USD remaining, clamped at 0.00: total_balance = max(0, prepaid_balance + free_balance)."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsageCreditsResponseDataFreeGrants(BaseModel):
+    """Model for GetUsageCreditsResponseDataFreeGrants"""
+
+    amount: float = Field(description="USD remaining in this free grant.")
+    expires_at: Optional[str] = Field(
+        default=None,
+        description="When this grant expires (RFC 3339). Omitted if the grant never expires or the expiry is unknown.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class GetUsageResponse(BaseModel):
     """Model for GetUsageResponse"""
 
     data: Optional["Usage"] = Field(default=None)
     errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserBroadcastResponse(BaseModel):
+    """Model for GetUserBroadcastResponse"""
+
+    data: Optional["GetUserBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserBroadcastResponseData(BaseModel):
+    """Model for GetUserBroadcastResponseData"""
+
+    broadcast: "GetUserBroadcastResponseDataBroadcast"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserBroadcastResponseDataBroadcast(BaseModel):
+    """Model for GetUserBroadcastResponseDataBroadcast"""
+
+    id: str = Field(description="Broadcast id; equal to `broadcast_id`.")
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether a replay is available."
+    )
+    broadcast_id: Optional[str] = Field(default=None, description="Broadcast id.")
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    end_ms: Optional[str] = Field(
+        default=None,
+        description="End time, milliseconds since Unix epoch (decimal string).",
+    )
+    height: Optional[int] = Field(default=None, description="Video height in pixels.")
+    image_url: Optional[str] = Field(default=None, description="Thumbnail URL.")
+    image_url_medium: Optional[str] = Field(
+        default=None, description="Medium thumbnail URL."
+    )
+    image_url_small: Optional[str] = Field(
+        default=None, description="Small thumbnail URL."
+    )
+    is_high_latency: Optional[bool] = Field(
+        default=None, description="Whether the broadcast is high latency."
+    )
+    language: Optional[str] = Field(default=None, description="Broadcast language.")
+    media_id: Optional[str] = Field(
+        default=None, description="Numeric media id from `media_key`."
+    )
+    media_key: Optional[str] = Field(
+        default=None, description="Media key of the broadcast's video."
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end time, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start time, milliseconds since Unix epoch (decimal string).",
+    )
+    start_ms: Optional[str] = Field(
+        default=None,
+        description="Start time, milliseconds since Unix epoch (decimal string).",
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="`NOT_STARTED`, `RUNNING`, `TIMED_OUT`, `ENDED`, `PRE_PUBLISHED` or `CANCELED`.",
+    )
+    status: Optional[str] = Field(default=None, description="Broadcast title.")
+    total_watched: Optional[str] = Field(
+        default=None, description="Total viewers (decimal string)."
+    )
+    total_watching: Optional[str] = Field(
+        default=None, description="Current viewers (decimal string)."
+    )
+    tweet_id: Optional[str] = Field(
+        default=None, description="Id of the Post announcing the broadcast."
+    )
+    twitter_user_id: Optional[str] = Field(default=None, description="Owner's user id.")
+    updated_at_ms: Optional[str] = Field(
+        default=None,
+        description="Last update time, milliseconds since Unix epoch (decimal string).",
+    )
+    width: Optional[int] = Field(default=None, description="Video width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserSourceResponse(BaseModel):
+    """Model for GetUserSourceResponse"""
+
+    data: Optional["GetUserSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserSourceResponseData(BaseModel):
+    """Model for GetUserSourceResponseData"""
+
+    source: "GetUserSourceResponseDataSource"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserSourceResponseDataSource(BaseModel):
+    """Model for GetUserSourceResponseDataSource"""
+
+    id: str = Field(description="Source id; also the RTMP stream key.")
+    creation_origin: Optional["GetUserSourceResponseDataSourceCreationOrigin"] = Field(
+        default=None
+    )
+    creation_time: Optional[int] = Field(
+        default=None, description="Creation time, ms since Unix epoch."
+    )
+    is360: Optional[bool] = Field(
+        default=None, description="Whether the source streams 360° video."
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    owner_id: Optional[int] = Field(
+        default=None,
+        description="Owner's numeric user id. Exceeds the exact integer range of many JSON parsers.",
+    )
+    rtmp_region: Optional[str] = Field(
+        default=None,
+        description="Ingest region as an AWS region name, e.g. `us-east-1` or `us-west-2`. Accepted as `region` when creating a source.",
+    )
+    rtmp_stream_key: Optional[str] = Field(
+        default=None, description="Stream key; equal to `id`."
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="RTMP ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None, description="RTMPS ingest URL (port 443)."
+    )
+    video_service: Optional["GetUserSourceResponseDataSourceVideoService"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserSourceResponseDataSourceCreationOrigin(BaseModel):
+    """Model for GetUserSourceResponseDataSourceCreationOrigin"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUserSourceResponseDataSourceVideoService(BaseModel):
+    """Model for GetUserSourceResponseDataSourceVideoService"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -4161,6 +7751,60 @@ class GetUsersListMembershipsResponse(BaseModel):
     errors: Optional[List["Problem"]] = Field(default=None)
     includes: Optional["Expansions"] = Field(default=None)
     meta: Optional["GetUsersListMembershipsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMeFollowersResponseMeta(BaseModel):
+    """Nested model for GetUsersMeFollowersResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMeFollowersResponse(BaseModel):
+    """Model for GetUsersMeFollowersResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersMeFollowersResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMeFollowingResponseMeta(BaseModel):
+    """Nested model for GetUsersMeFollowingResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    previous_token: Optional[str] = Field(
+        default=None, description="Pagination token for the previous page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class GetUsersMeFollowingResponse(BaseModel):
+    """Model for GetUsersMeFollowingResponse"""
+
+    data: Optional[List["User"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["GetUsersMeFollowingResponseMeta"] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -4464,10 +8108,11 @@ class GoLiveScheduledBroadcastResponseData(BaseModel):
     )
     broadcast_id: Optional[str] = Field(
         default=None,
-        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+        description="Alphanumeric broadcast id (path `:id` for get/update/delete/live).",
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Optional chat permission option."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(
         default=None, description="Optional description."
@@ -4478,7 +8123,7 @@ class GoLiveScheduledBroadcastResponseData(BaseModel):
         description="When true, coordinator will not auto-publish; call POST .../live when ready.",
     )
     recurring_schedule_id: Optional[str] = Field(
-        default=None, description="Set when this occurrence belongs to a recurrence."
+        default=None, description="Deprecated: always null for new schedules."
     )
     scheduled_broadcast_id: Optional[str] = Field(
         default=None,
@@ -4493,13 +8138,15 @@ class GoLiveScheduledBroadcastResponseData(BaseModel):
         description="Scheduled start, milliseconds since Unix epoch (decimal string).",
     )
     source_id: Optional[str] = Field(
-        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+        default=None,
+        description="Id of the bound source, as returned by GET /2/sources. Omitted when unknown.",
     )
     state: Optional[str] = Field(
-        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+        default=None,
+        description="Scheduler state: `Created` or `Scheduled` before start, then `Running`, `Ended`, or `Error`.",
     )
     telecast_id: Optional[str] = Field(
-        default=None, description="Optional telecast association."
+        default=None, description="Deprecated: always null for new schedules."
     )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Optional pre-live slate media id."
@@ -4651,6 +8298,135 @@ class InvalidRequestProblem(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class InvalidRuleProblem(BaseModel):
+    """Model for InvalidRuleProblem"""
+
+    details: List[str]
+    title: str
+    type: Literal["https://api.twitter.com/2/problems/invalid-rules"]
+    detail: Optional[str] = Field(default=None)
+    value: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class JoinCallMedia(BaseModel):
+    """Model for JoinCallMedia"""
+
+    audio: Optional["JoinCallMediaAudio"] = Field(default=None)
+    type: Optional[Literal["websocket"]] = Field(
+        default=None,
+        description="websocket (default): your agent over the media WebSocket.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class JoinCallMediaAudio(BaseModel):
+    """Model for JoinCallMediaAudio"""
+
+    encoding: Optional[Literal["pcm16"]] = Field(
+        default=None,
+        description="Audio encoding on the media WebSocket (PCM16 little-endian mono).",
+    )
+    sample_rate: Optional[int] = Field(
+        default=None, description="8000, 16000, 24000 (default) or 48000."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class JoinCallRequest(BaseModel):
+    """Model for JoinCallRequest"""
+
+    media: Optional["JoinCallMedia"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class JoinCallResponse(BaseModel):
+    """Model for JoinCallResponse"""
+
+    data: Optional["JoinCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class JoinCallResponseData(BaseModel):
+    """Model for JoinCallResponseData"""
+
+    session_id: str = Field(description="Media session id.")
+    admission: Optional[str] = Field(
+        default=None,
+        description="immediate, or requires_approval when the host must admit the session.",
+    )
+    call: Optional["JoinCallResponseDataCall"] = Field(default=None)
+    expires_at: Optional[str] = Field(
+        default=None, description="When media_token expires (RFC 3339)."
+    )
+    media_token: Optional[str] = Field(
+        default=None, description="Bearer token for media_url; single use, short-lived."
+    )
+    media_type: Optional[str] = Field(default=None, description="websocket.")
+    media_url: Optional[str] = Field(
+        default=None, description="Where to open the media WebSocket."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class JoinCallResponseDataCall(BaseModel):
+    """Model for JoinCallResponseDataCall"""
+
+    id: str = Field(description="Unique identifier of the call; also its join secret.")
+    conversation_id: Optional[str] = Field(
+        default=None, description="XChat conversation the call belongs to, if any."
+    )
+    created_at: Optional[str] = Field(
+        default=None, description="Creation time (RFC 3339)."
+    )
+    host_id: Optional[str] = Field(
+        default=None, description="X user id of the call's host."
+    )
+    join_policy: Optional[str] = Field(
+        default=None,
+        description="Who may join: open (anyone with the link), closed (the host admits people), or trusted (the host's Verified Organization).",
+    )
+    join_url: Optional[str] = Field(
+        default=None, description="Link people open to join the call on X."
+    )
+    participant_count: Optional[int] = Field(
+        default=None, description="People in the call right now."
+    )
+    title: Optional[str] = Field(default=None, description="Title of the call.")
+    viewer_may_join: Optional[bool] = Field(
+        default=None,
+        description="Whether the authenticated user may join without asking the host.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LeaveCallResponse(BaseModel):
+    """Model for LeaveCallResponse"""
+
+    data: Optional["LeaveCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class LeaveCallResponseData(BaseModel):
+    """Model for LeaveCallResponseData"""
+
+    left: Optional[bool] = Field(
+        default=None, description="Whether the user left the call."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class LikeComplianceSchema(BaseModel):
     """Model for LikeComplianceSchema"""
 
@@ -4725,6 +8501,60 @@ class XList(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class ListBroadcastsResponseMeta(BaseModel):
+    """Nested model for ListBroadcastsResponseMeta"""
+
+    next_token: Optional[str] = Field(
+        default=None, description="Pagination token for the next page of results."
+    )
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListBroadcastsResponse(BaseModel):
+    """Model for ListBroadcastsResponse"""
+
+    data: Optional[List["Broadcast"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["ListBroadcastsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListLiveCategoriesResponseMeta(BaseModel):
+    """Nested model for ListLiveCategoriesResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListLiveCategoriesResponse(BaseModel):
+    """Model for ListLiveCategoriesResponse"""
+
+    data: Optional[List["ListLiveCategoriesResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["ListLiveCategoriesResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListLiveCategoriesResponseData(BaseModel):
+    """Model for ListLiveCategoriesResponseData"""
+
+    id: str = Field(
+        description="Category id, e.g. `gaming`. Permanent. Pass it as `live_category_id` on POST /2/broadcasts."
+    )
+    name: str = Field(description="Display name, e.g. `Gaming`. Can change.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class ListScheduledBroadcastsResponse(BaseModel):
     """Model for ListScheduledBroadcastsResponse"""
 
@@ -4742,10 +8572,11 @@ class ListScheduledBroadcastsResponseData(BaseModel):
     )
     broadcast_id: Optional[str] = Field(
         default=None,
-        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+        description="Alphanumeric broadcast id (path `:id` for get/update/delete/live).",
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Optional chat permission option."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(
         default=None, description="Optional description."
@@ -4756,7 +8587,7 @@ class ListScheduledBroadcastsResponseData(BaseModel):
         description="When true, coordinator will not auto-publish; call POST .../live when ready.",
     )
     recurring_schedule_id: Optional[str] = Field(
-        default=None, description="Set when this occurrence belongs to a recurrence."
+        default=None, description="Deprecated: always null for new schedules."
     )
     scheduled_broadcast_id: Optional[str] = Field(
         default=None,
@@ -4771,13 +8602,15 @@ class ListScheduledBroadcastsResponseData(BaseModel):
         description="Scheduled start, milliseconds since Unix epoch (decimal string).",
     )
     source_id: Optional[str] = Field(
-        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+        default=None,
+        description="Id of the bound source, as returned by GET /2/sources. Omitted when unknown.",
     )
     state: Optional[str] = Field(
-        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+        default=None,
+        description="Scheduler state: `Created` or `Scheduled` before start, then `Running`, `Ended`, or `Error`.",
     )
     telecast_id: Optional[str] = Field(
-        default=None, description="Optional telecast association."
+        default=None, description="Deprecated: always null for new schedules."
     )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Optional pre-live slate media id."
@@ -4789,11 +8622,329 @@ class ListScheduledBroadcastsResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class ListScheduledCallsResponseMeta(BaseModel):
+    """Nested model for ListScheduledCallsResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListScheduledCallsResponse(BaseModel):
+    """Model for ListScheduledCallsResponse"""
+
+    data: Optional[List["ScheduledCall"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    includes: Optional["Expansions"] = Field(default=None)
+    meta: Optional["ListScheduledCallsResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListSourcesResponseMeta(BaseModel):
+    """Nested model for ListSourcesResponseMeta"""
+
+    result_count: Optional[int] = Field(
+        default=None, description="Number of items in the data array."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListSourcesResponse(BaseModel):
+    """Model for ListSourcesResponse"""
+
+    data: Optional[List["ListSourcesResponseData"]] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+    meta: Optional["ListSourcesResponseMeta"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListSourcesResponseData(BaseModel):
+    """Model for ListSourcesResponseData"""
+
+    id: str = Field(
+        description="Source id, 19 decimal digits; the `source_id` that POST /2/broadcasts and scheduled broadcasts take. Not a credential: read the stream key with GET /2/sources/:id/stream_key."
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    region: Optional[str] = Field(
+        default=None,
+        description="Region of the ingest location serving the source: `us-east-1` or `us-west-2`. Sources created before October 31, 2026 keep the AWS region they were created in.",
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="Ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None,
+        description="RTMPS ingest URL (port 443). Configure your encoder with this URL and the source's stream key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserBroadcastsResponse(BaseModel):
+    """Model for ListUserBroadcastsResponse"""
+
+    data: Optional["ListUserBroadcastsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserBroadcastsResponseData(BaseModel):
+    """Model for ListUserBroadcastsResponseData"""
+
+    broadcasts: List["ListUserBroadcastsResponseDataBroadcasts"]
+    next_token: Optional["ListUserBroadcastsResponseDataNextToken"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserBroadcastsResponseDataBroadcasts(BaseModel):
+    """Model for ListUserBroadcastsResponseDataBroadcasts"""
+
+    id: str = Field(description="Broadcast id; equal to `broadcast_id`.")
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether a replay is available."
+    )
+    broadcast_id: Optional[str] = Field(default=None, description="Broadcast id.")
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    end_ms: Optional[str] = Field(
+        default=None,
+        description="End time, milliseconds since Unix epoch (decimal string).",
+    )
+    height: Optional[int] = Field(default=None, description="Video height in pixels.")
+    image_url: Optional[str] = Field(default=None, description="Thumbnail URL.")
+    image_url_medium: Optional[str] = Field(
+        default=None, description="Medium thumbnail URL."
+    )
+    image_url_small: Optional[str] = Field(
+        default=None, description="Small thumbnail URL."
+    )
+    is_high_latency: Optional[bool] = Field(
+        default=None, description="Whether the broadcast is high latency."
+    )
+    language: Optional[str] = Field(default=None, description="Broadcast language.")
+    media_id: Optional[str] = Field(
+        default=None, description="Numeric media id from `media_key`."
+    )
+    media_key: Optional[str] = Field(
+        default=None, description="Media key of the broadcast's video."
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end time, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start time, milliseconds since Unix epoch (decimal string).",
+    )
+    start_ms: Optional[str] = Field(
+        default=None,
+        description="Start time, milliseconds since Unix epoch (decimal string).",
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="`NOT_STARTED`, `RUNNING`, `TIMED_OUT`, `ENDED`, `PRE_PUBLISHED` or `CANCELED`.",
+    )
+    status: Optional[str] = Field(default=None, description="Broadcast title.")
+    total_watched: Optional[str] = Field(
+        default=None, description="Total viewers (decimal string)."
+    )
+    total_watching: Optional[str] = Field(
+        default=None, description="Current viewers (decimal string)."
+    )
+    tweet_id: Optional[str] = Field(
+        default=None, description="Id of the Post announcing the broadcast."
+    )
+    twitter_user_id: Optional[str] = Field(default=None, description="Owner's user id.")
+    updated_at_ms: Optional[str] = Field(
+        default=None,
+        description="Last update time, milliseconds since Unix epoch (decimal string).",
+    )
+    width: Optional[int] = Field(default=None, description="Video width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserBroadcastsResponseDataNextToken(BaseModel):
+    """Model for ListUserBroadcastsResponseDataNextToken"""
+
+    offset: str = Field(description="Pass as `pagination_token` to read the next page.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserSourcesResponse(BaseModel):
+    """Model for ListUserSourcesResponse"""
+
+    data: Optional["ListUserSourcesResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserSourcesResponseData(BaseModel):
+    """Model for ListUserSourcesResponseData"""
+
+    sources: List["ListUserSourcesResponseDataSources"]
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserSourcesResponseDataSources(BaseModel):
+    """Model for ListUserSourcesResponseDataSources"""
+
+    id: str = Field(description="Source id; also the RTMP stream key.")
+    creation_origin: Optional["ListUserSourcesResponseDataSourcesCreationOrigin"] = (
+        Field(default=None)
+    )
+    creation_time: Optional[int] = Field(
+        default=None, description="Creation time, ms since Unix epoch."
+    )
+    is360: Optional[bool] = Field(
+        default=None, description="Whether the source streams 360° video."
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    owner_id: Optional[int] = Field(
+        default=None,
+        description="Owner's numeric user id. Exceeds the exact integer range of many JSON parsers.",
+    )
+    rtmp_region: Optional[str] = Field(
+        default=None,
+        description="Ingest region as an AWS region name, e.g. `us-east-1` or `us-west-2`. Accepted as `region` when creating a source.",
+    )
+    rtmp_stream_key: Optional[str] = Field(
+        default=None, description="Stream key; equal to `id`."
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="RTMP ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None, description="RTMPS ingest URL (port 443)."
+    )
+    video_service: Optional["ListUserSourcesResponseDataSourcesVideoService"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserSourcesResponseDataSourcesCreationOrigin(BaseModel):
+    """Model for ListUserSourcesResponseDataSourcesCreationOrigin"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ListUserSourcesResponseDataSourcesVideoService(BaseModel):
+    """Model for ListUserSourcesResponseDataSourcesVideoService"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationReadActionSignatures(BaseModel):
+    """Model for MarkChatConversationReadActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "MarkChatConversationReadActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationReadActionSignaturesMessageEventSignature(BaseModel):
+    """Model for MarkChatConversationReadActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "MarkChatConversationReadActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationReadActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for MarkChatConversationReadActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class MarkChatConversationReadRequest(BaseModel):
     """Model for MarkChatConversationReadRequest"""
 
-    seen_until_sequence_id: str = Field(
-        description="The sequence ID of the last message to mark as read up to."
+    action_signatures: Optional[List["MarkChatConversationReadActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signature over the read receipt (a MarkConversationReadEvent). Omit to send it unsigned.",
+        )
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -4816,6 +8967,23 @@ class MarkChatConversationReadResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class MarkChatConversationUnreadResponse(BaseModel):
+    """Model for MarkChatConversationUnreadResponse"""
+
+    data: Optional["MarkChatConversationUnreadResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MarkChatConversationUnreadResponseData(BaseModel):
+    """Model for MarkChatConversationUnreadResponseData"""
+
+    success: bool = Field(description="Whether the conversation was marked unread.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class Media(BaseModel):
     """Model for Media"""
 
@@ -4829,7 +8997,7 @@ class Media(BaseModel):
     )
     organic_metrics: Optional["MediaOrganicMetrics"] = Field(
         default=None,
-        description="Organic nonpublic engagement metrics for the media at the time of the request.",
+        description="Lifetime organic engagement metrics for the media at the time of the request.\nOnly available to the user who uploaded the video.",
     )
     preview_image_url: Optional[str] = Field(default=None)
     promoted_metrics: Optional["MediaPromotedMetrics"] = Field(
@@ -4839,6 +9007,10 @@ class Media(BaseModel):
     public_metrics: Optional["MediaPublicMetrics"] = Field(
         default=None,
         description="Public engagement metrics for the media at the time of the request.",
+    )
+    revenue: Optional["MediaRevenue"] = Field(
+        default=None,
+        description="Lifetime revenue earned by the media. Only available to the user who\nuploaded the video, and only to apps holding the `media.library.read` scope.",
     )
     type: Optional[str] = Field(default=None)
     url: Optional[str] = Field(default=None)
@@ -4902,8 +9074,16 @@ class MediaNonPublicMetrics(BaseModel):
 
 
 class MediaOrganicMetrics(BaseModel):
-    """Organic nonpublic engagement metrics for the media at the time of the request."""
+    """Lifetime organic engagement metrics for the media at the time of the request.
+    Only available to the user who uploaded the video."""
 
+    cta_url_click_count: Optional[Optional[int]] = Field(
+        default=None, description="Number of clicks on the video's call-to-action URL."
+    )
+    cta_watch_click_count: Optional[Optional[int]] = Field(
+        default=None,
+        description='Number of clicks on the video\'s "watch" call to action.',
+    )
     playback_0_count: Optional[Optional[int]] = Field(
         default=None,
         description="Number of users who started playback (0% quartile) of this video.",
@@ -4925,8 +9105,11 @@ class MediaOrganicMetrics(BaseModel):
         description="Number of users who watched at least 75% of this video.",
     )
     view_count: Optional[Optional[int]] = Field(
+        default=None, description="The number of organic views of this video."
+    )
+    watch_time_ms: Optional[Optional[int]] = Field(
         default=None,
-        description="The number of organic views of this video. Null when the backend returns quartile data without a view count.",
+        description="Total time this video has been watched, in milliseconds.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -4968,6 +9151,20 @@ class MediaPublicMetrics(BaseModel):
 
     view_count: int = Field(
         description="The number of times this video has been viewed."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MediaRevenue(BaseModel):
+    """Lifetime revenue earned by the media. Only available to the user who
+    uploaded the video, and only to apps holding the `media.library.read` scope."""
+
+    amount_micros: int = Field(
+        description="Revenue earned by this video, in micro-units (1/1,000,000) of `currency_code`."
+    )
+    currency_code: str = Field(
+        description="ISO 4217 code of the currency `amount_micros` is denominated in."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -5062,6 +9259,177 @@ class MediaUploadResponseDataVideo(BaseModel):
     video_type: Optional[str] = Field(
         default=None, description="MIME type of the processed video."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MessageRequestNotSupportedProblem(BaseModel):
+    """Model for MessageRequestNotSupportedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/message-request-not-supported"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteBroadcastChatUserRequest(BaseModel):
+    """Model for MuteBroadcastChatUserRequest"""
+
+    user_id: str = Field(description="The user to mute.")
+    end_at_ms: Optional[str] = Field(
+        default=None,
+        description="The Unix timestamp in milliseconds when the mute expires. Omit this field to mute indefinitely.",
+    )
+    message_id: Optional[str] = Field(
+        default=None, description="A chat message to remove while muting the user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteBroadcastChatUserResponse(BaseModel):
+    """Model for MuteBroadcastChatUserResponse"""
+
+    data: Optional["MuteBroadcastChatUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteBroadcastChatUserResponseData(BaseModel):
+    """Model for MuteBroadcastChatUserResponseData"""
+
+    muted: bool = Field(description="Whether the user is muted in this broadcast chat.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatConversationActionSignatures(BaseModel):
+    """Model for MuteChatConversationActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: "MuteChatConversationActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatConversationActionSignaturesMessageEventSignature(BaseModel):
+    """Model for MuteChatConversationActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "MuteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for MuteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatConversationRequest(BaseModel):
+    """Model for MuteChatConversationRequest"""
+
+    action_signatures: Optional[List["MuteChatConversationActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatConversationResponse(BaseModel):
+    """Model for MuteChatConversationResponse"""
+
+    data: Optional["MuteChatConversationResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatConversationResponseData(BaseModel):
+    """Model for MuteChatConversationResponseData"""
+
+    muted: bool = Field(
+        description="Whether the conversation is muted for the authenticated user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatUserRequest(BaseModel):
+    """Model for MuteChatUserRequest"""
+
+    user_id: str = Field(description="The user to mute.")
+    broadcast_id: Optional[str] = Field(
+        default=None,
+        description="A broadcast whose host's chats the user is muted in. Required with `message_id`.",
+    )
+    end_at_ms: Optional[str] = Field(
+        default=None,
+        description="The Unix timestamp in milliseconds when the mute expires. Omit this field to mute indefinitely.",
+    )
+    message_id: Optional[str] = Field(
+        default=None,
+        description="A chat message in `broadcast_id` to remove while muting the user.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatUserResponse(BaseModel):
+    """Model for MuteChatUserResponse"""
+
+    data: Optional["MuteChatUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class MuteChatUserResponseData(BaseModel):
+    """Model for MuteChatUserResponseData"""
+
+    muted: bool = Field(description="Whether the user is muted in this broadcast chat.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6064,7 +10432,7 @@ class PostWithheld(BaseModel):
     country_codes: List[str] = Field(
         description="Uppercase ISO 3166-1 alpha-2 country codes where this content is withheld."
     )
-    scope: Optional[Optional[Literal["post", "user"]]] = Field(
+    scope: Optional[Optional[Union[Literal["post", "user"], str]]] = Field(
         default=None, description="Whether the withholding applies to a Post or a User."
     )
 
@@ -6096,6 +10464,495 @@ class PublicKey(BaseModel):
     public_key: Optional[str] = Field(default=None)
     public_key_version: Optional[str] = Field(default=None)
     signing_public_key: Optional[str] = Field(default=None)
+    user_id: Optional[str] = Field(
+        default=None,
+        description="ID of the user the key belongs to. Returned by Get Public Keys for Multiple Users.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RecipientNotMessageableProblem(BaseModel):
+    """Model for RecipientNotMessageableProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/recipient-not-messageable"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RecipientXchatSetupRequiredProblem(BaseModel):
+    """Model for RecipientXchatSetupRequiredProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/recipient-xchat-setup-required"]
+    status: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupAdminRequestActionSignatures(BaseModel):
+    """Model for RejectChatGroupAdminRequestActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "RejectChatGroupAdminRequestActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupAdminRequestActionSignaturesMessageEventSignature(BaseModel):
+    """Model for RejectChatGroupAdminRequestActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "RejectChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for RejectChatGroupAdminRequestActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupAdminRequestRequest(BaseModel):
+    """Model for RejectChatGroupAdminRequestRequest"""
+
+    action_signatures: Optional[List["RejectChatGroupAdminRequestActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signatures for this action, forwarded in the order they are sent.",
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupAdminRequestResponse(BaseModel):
+    """Model for RejectChatGroupAdminRequestResponse"""
+
+    data: Optional["RejectChatGroupAdminRequestResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupAdminRequestResponseData(BaseModel):
+    """Model for RejectChatGroupAdminRequestResponseData"""
+
+    rejected: bool = Field(description="Whether the admin request was rejected.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupJoinRequestsActionSignatures(BaseModel):
+    """Model for RejectChatGroupJoinRequestsActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "RejectChatGroupJoinRequestsActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupJoinRequestsActionSignaturesMessageEventSignature(BaseModel):
+    """Model for RejectChatGroupJoinRequestsActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "RejectChatGroupJoinRequestsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupJoinRequestsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for RejectChatGroupJoinRequestsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupJoinRequestsRequest(BaseModel):
+    """Model for RejectChatGroupJoinRequestsRequest"""
+
+    user_ids: List[str] = Field(
+        description="List of user IDs whose join requests to reject."
+    )
+    action_signatures: Optional[List["RejectChatGroupJoinRequestsActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signatures for this action, forwarded in the order they are sent.",
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupJoinRequestsResponse(BaseModel):
+    """Model for RejectChatGroupJoinRequestsResponse"""
+
+    data: Optional["RejectChatGroupJoinRequestsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RejectChatGroupJoinRequestsResponseData(BaseModel):
+    """Model for RejectChatGroupJoinRequestsResponseData"""
+
+    rejected: bool = Field(description="Whether the join requests were rejected.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupAdminsActionSignatures(BaseModel):
+    """Model for RemoveChatGroupAdminsActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "RemoveChatGroupAdminsActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupAdminsActionSignaturesMessageEventSignature(BaseModel):
+    """Model for RemoveChatGroupAdminsActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "RemoveChatGroupAdminsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupAdminsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for RemoveChatGroupAdminsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupAdminsRequest(BaseModel):
+    """Model for RemoveChatGroupAdminsRequest"""
+
+    user_ids: List[str] = Field(
+        description="List of admin user IDs to revoke admin rights from."
+    )
+    action_signatures: Optional[List["RemoveChatGroupAdminsActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupAdminsResponse(BaseModel):
+    """Model for RemoveChatGroupAdminsResponse"""
+
+    data: Optional["RemoveChatGroupAdminsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupAdminsResponseData(BaseModel):
+    """Model for RemoveChatGroupAdminsResponseData"""
+
+    removed: bool = Field(description="Whether the admins were removed.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersActionSignatures(BaseModel):
+    """Model for RemoveChatGroupMembersActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "RemoveChatGroupMembersActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersActionSignaturesMessageEventSignature(BaseModel):
+    """Model for RemoveChatGroupMembersActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "RemoveChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for RemoveChatGroupMembersActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersGroupKeyRotationData(BaseModel):
+    """Model for RemoveChatGroupMembersGroupKeyRotationData"""
+
+    base64_encoded_key_rotation: Optional[str] = Field(
+        default=None, description="Base64-encoded key rotation payload."
+    )
+    conversation_key_version: Optional[str] = Field(
+        default=None, description="Version of the new rotated conversation key."
+    )
+    conversation_participant_keys: Optional[
+        List["RemoveChatGroupMembersGroupKeyRotationDataConversationParticipantKeys"]
+    ] = Field(
+        default=None, description="Encrypted conversation keys for each participant."
+    )
+    encrypted_avatar: Optional[str] = Field(
+        default=None, description="Re-encrypted group avatar with new conversation key."
+    )
+    encrypted_description: Optional[str] = Field(
+        default=None,
+        description="Re-encrypted group description with new conversation key.",
+    )
+    encrypted_title: Optional[str] = Field(
+        default=None, description="Re-encrypted group title with new conversation key."
+    )
+    rotated_pmk_bundle: Optional[
+        List["RemoveChatGroupMembersGroupKeyRotationDataRotatedPmkBundle"]
+    ] = Field(
+        default=None,
+        description="Message keys re-encrypted with the rotated conversation key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersGroupKeyRotationDataConversationParticipantKeys(BaseModel):
+    """Model for RemoveChatGroupMembersGroupKeyRotationDataConversationParticipantKeys"""
+
+    encrypted_conversation_key: str = Field(
+        description="Conversation key encrypted with this participant's public key."
+    )
+    public_key_version: str = Field(
+        description="Version of the participant's public key used for encryption."
+    )
+    user_id: str = Field(description="Participant user ID.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersGroupKeyRotationDataRotatedPmkBundle(BaseModel):
+    """Model for RemoveChatGroupMembersGroupKeyRotationDataRotatedPmkBundle"""
+
+    base64_encoded_encrypted_pmk: str = Field(
+        description="Base64-encoded message key, encrypted with the new conversation key."
+    )
+    message_sequence_id: str = Field(
+        description="Sequence ID of the message the key belongs to."
+    )
+    pme_sequence_id: Optional[str] = Field(
+        default=None, description="Sequence ID of the key's origin event."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersRequest(BaseModel):
+    """Model for RemoveChatGroupMembersRequest"""
+
+    user_ids: List[str] = Field(
+        description="List of user IDs to remove from the group conversation."
+    )
+    action_signatures: Optional[List["RemoveChatGroupMembersActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+    group_key_rotation_data: Optional["RemoveChatGroupMembersGroupKeyRotationData"] = (
+        Field(default=None)
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersResponse(BaseModel):
+    """Model for RemoveChatGroupMembersResponse"""
+
+    data: Optional["RemoveChatGroupMembersResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatGroupMembersResponseData(BaseModel):
+    """Model for RemoveChatGroupMembersResponseData"""
+
+    removed: bool = Field(description="Whether the members were removed.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatModeratorResponse(BaseModel):
+    """Model for RemoveChatModeratorResponse"""
+
+    data: Optional["RemoveChatModeratorResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveChatModeratorResponseData(BaseModel):
+    """Model for RemoveChatModeratorResponseData"""
+
+    moderator_user_ids: List[str] = Field(
+        description="The user IDs currently appointed as chat moderators."
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6115,6 +10972,23 @@ class RemoveListsMemberByUserIdResponseData(BaseModel):
     is_member: bool = Field(
         description="Indicates whether the user is a member of the List."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveMediaFromLibraryResponse(BaseModel):
+    """Model for RemoveMediaFromLibraryResponse"""
+
+    data: Optional["RemoveMediaFromLibraryResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RemoveMediaFromLibraryResponseData(BaseModel):
+    """Model for RemoveMediaFromLibraryResponseData"""
+
+    deleted: bool = Field(description="Whether the library item was removed.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6173,6 +11047,106 @@ class ResourceUnavailableProblem(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class RespondToScheduledCallRequest(BaseModel):
+    """Model for RespondToScheduledCallRequest"""
+
+    response: Literal["accepted", "declined", "tentative"] = Field(
+        description="The answer to the invitation."
+    )
+    occurrence_start_time: Optional[str] = Field(
+        default=None,
+        description="Start of the occurrence that scope this or this_and_following refers to (RFC 3339).",
+    )
+    scope: Optional[Literal["all", "this", "this_and_following"]] = Field(
+        default=None,
+        description="Which occurrences of a recurring call: all (the default without occurrence_start_time), this (the default with it), or this_and_following.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RespondToScheduledCallResponse(BaseModel):
+    """Model for RespondToScheduledCallResponse"""
+
+    data: Optional["RespondToScheduledCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RespondToScheduledCallResponseData(BaseModel):
+    """Model for RespondToScheduledCallResponseData"""
+
+    response: Optional[str] = Field(
+        default=None, description="The answer now on the invitation."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RevokeBotTokenResponse(BaseModel):
+    """Model for RevokeBotTokenResponse"""
+
+    data: Optional["RevokeBotTokenResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RevokeBotTokenResponseData(BaseModel):
+    """Model for RevokeBotTokenResponseData"""
+
+    revoked: bool = Field(description="Whether the bot's token was revoked.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RotateBotTokenRequest(BaseModel):
+    """Model for RotateBotTokenRequest"""
+
+    scopes: Optional[List[str]] = Field(
+        default=None,
+        description="Scopes for the new bearer token. Broadcast moderation additionally supports broadcast.read and broadcast.write. Defaults to the XChat scope set (dm.read, dm.write, tweet.read, users.read, media.write).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RotateBotTokenResponse(BaseModel):
+    """Model for RotateBotTokenResponse"""
+
+    data: Optional["RotateBotTokenResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class RotateBotTokenResponseData(BaseModel):
+    """Model for RotateBotTokenResponseData"""
+
+    id: str = Field(description="Unique identifier of the bot's User account.")
+    token: str = Field(
+        description="The bot's new bearer token. Returned exactly once; store it securely. Every previously issued token for this bot is invalidated."
+    )
+    name: Optional[str] = Field(
+        default=None,
+        description="The bot's display name. May be absent for an org-only bot.",
+    )
+    scopes: Optional[List[str]] = Field(
+        default=None, description="Scopes granted to the new bearer token."
+    )
+    token_expires_at_ms: Optional[int] = Field(
+        default=None,
+        description="Expiry of the new bearer token, in epoch milliseconds.",
+    )
+    username: Optional[str] = Field(
+        default=None,
+        description="The bot's X handle (screen name). May be absent for an org-only bot.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class RulesCount(BaseModel):
     """Model for RulesCount"""
 
@@ -6199,6 +11173,164 @@ class RulesCountClientAppRulesCount(BaseModel):
     client_app_id: Optional[Optional[str]] = Field(
         default=None, description="Unique identifier of the client application."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ScheduleCallRequest(BaseModel):
+    """Model for ScheduleCallRequest"""
+
+    start_time: str = Field(
+        description="When the call starts (RFC 3339); not in the past."
+    )
+    description: Optional[str] = Field(
+        default=None, description="What the call is about."
+    )
+    duration_minutes: Optional[int] = Field(
+        default=None,
+        description="How long the call lasts, in minutes. Defaults to 30; at most 31 days.",
+    )
+    invitee_ids: Optional[List[str]] = Field(
+        default=None, description="X user ids of the people to invite."
+    )
+    notify_invitees: Optional[bool] = Field(
+        default=None,
+        description="Whether invitees get an email about the call. Defaults to true.",
+    )
+    recurrence: Optional[str] = Field(
+        default=None,
+        description="RFC 5545 RRULE to repeat the call by, such as FREQ=WEEKLY;BYDAY=MO; the RRULE: prefix is optional.",
+    )
+    time_zone: Optional[str] = Field(
+        default=None,
+        description="IANA time zone the recurrence follows, such as America/Los_Angeles.",
+    )
+    title: Optional[str] = Field(default=None, description="Title invitees see.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ScheduleCallResponse(BaseModel):
+    """Model for ScheduleCallResponse"""
+
+    data: Optional["ScheduleCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ScheduleCallResponseData(BaseModel):
+    """Model for ScheduleCallResponseData"""
+
+    calendar: Optional[str] = Field(
+        default=None,
+        description="Where the call lives: x (X Calls), or outlook for a Microsoft Outlook calendar the user linked to X, whose calls are changed there.",
+    )
+    call_id: Optional[str] = Field(
+        default=None, description="The X call people join; also its join secret."
+    )
+    description: Optional[str] = Field(
+        default=None, description="What the call is about."
+    )
+    end_time: Optional[str] = Field(
+        default=None, description="End of this occurrence (RFC 3339)."
+    )
+    id: Optional[str] = Field(
+        default=None,
+        description="Unique identifier of the scheduled call: what PUT, DELETE and rsvp take. Calls on linked calendars have none.",
+    )
+    invitees: Optional[List["ScheduleCallResponseDataInvitees"]] = Field(
+        default=None,
+        description="Everyone invited, except the organizer. Not set for linked calendars.",
+    )
+    join_url: Optional[str] = Field(
+        default=None, description="Link people open to join the call on X."
+    )
+    occurrence_start_time: Optional[str] = Field(
+        default=None,
+        description="For a recurring call, this occurrence's original start (RFC 3339): pass it as occurrence_start_time to change, cancel or answer just this occurrence.",
+    )
+    organizer_id: Optional[str] = Field(
+        default=None, description="X user id of the call's organizer."
+    )
+    recurrence: Optional[str] = Field(
+        default=None,
+        description="RFC 5545 RRULE the call repeats by, such as FREQ=WEEKLY;BYDAY=MO.",
+    )
+    start_time: Optional[str] = Field(
+        default=None, description="Start of this occurrence (RFC 3339)."
+    )
+    status: Optional[str] = Field(
+        default=None, description="scheduled, or cancelled for a cancelled occurrence."
+    )
+    time_zone: Optional[str] = Field(
+        default=None, description="IANA time zone the recurrence follows."
+    )
+    title: Optional[str] = Field(default=None, description="Title of the call.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ScheduleCallResponseDataInvitees(BaseModel):
+    """Model for ScheduleCallResponseDataInvitees"""
+
+    id: Optional[str] = Field(default=None, description="X user id of the invitee.")
+    response: Optional[str] = Field(
+        default=None,
+        description="accepted, declined, tentative, or none for no answer yet.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class ScheduledCall(BaseModel):
+    """Model for ScheduledCall"""
+
+    calendar: Optional[str] = Field(
+        default=None,
+        description="Where the call lives: x (X Calls), or outlook for a Microsoft Outlook calendar the user linked to X, whose calls are changed there.",
+    )
+    call_id: Optional[str] = Field(
+        default=None, description="The X call people join; also its join secret."
+    )
+    description: Optional[str] = Field(
+        default=None, description="What the call is about."
+    )
+    end_time: Optional[str] = Field(
+        default=None, description="End of this occurrence (RFC 3339)."
+    )
+    id: Optional[str] = Field(
+        default=None,
+        description="Unique identifier of the scheduled call: what PUT, DELETE and rsvp take. Calls on linked calendars have none.",
+    )
+    invitees: Optional["ScheduledCallInvitees"] = Field(
+        default=None,
+        description="Everyone invited, except the organizer. Not set for linked calendars.",
+    )
+    join_url: Optional[str] = Field(
+        default=None, description="Link people open to join the call on X."
+    )
+    occurrence_start_time: Optional[str] = Field(
+        default=None,
+        description="For a recurring call, this occurrence's original start (RFC 3339): pass it as occurrence_start_time to change, cancel or answer just this occurrence.",
+    )
+    organizer_id: Optional[str] = Field(
+        default=None, description="X user id of the call's organizer."
+    )
+    recurrence: Optional[str] = Field(
+        default=None,
+        description="RFC 5545 RRULE the call repeats by, such as FREQ=WEEKLY;BYDAY=MO.",
+    )
+    start_time: Optional[str] = Field(
+        default=None, description="Start of this occurrence (RFC 3339)."
+    )
+    status: Optional[str] = Field(
+        default=None, description="scheduled, or cancelled for a cancelled occurrence."
+    )
+    time_zone: Optional[str] = Field(
+        default=None, description="IANA time zone the recurrence follows."
+    )
+    title: Optional[str] = Field(default=None, description="Title of the call.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6405,6 +11537,14 @@ class SendBroadcastChatRequest(BaseModel):
     """Model for SendBroadcastChatRequest"""
 
     text: str = Field(description="The chat message text.")
+    relay_source: Optional[str] = Field(
+        default=None,
+        description="The platform this message was relayed from, shown as that platform's icon next to the message: `youtube`, `twitch`, `kick`, `facebook`, `rumble`, `tiktok` or `instagram`. Only apps approved for chat relay may set it.",
+    )
+    reply_to: Optional[str] = Field(
+        default=None,
+        description="Message id to reply to, returned as timestamp when sent.",
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6429,19 +11569,62 @@ class SendBroadcastChatResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
-class SendChatMessageRequest(BaseModel):
-    """Model for SendChatMessageRequest"""
+class SendChatMessageContent(BaseModel):
+    """Model for SendChatMessageContent"""
 
-    encoded_message_create_event: str = Field(
-        description="Base64-encoded Thrift MessageCreateEvent containing encrypted message contents."
+    message: Optional["SendChatMessageContentMessage"] = Field(default=None)
+    reaction_add: Optional["SendChatMessageContentReactionAdd"] = Field(default=None)
+    reaction_remove: Optional["SendChatMessageContentReactionRemove"] = Field(
+        default=None
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatMessageContentMessage(BaseModel):
+    """Model for SendChatMessageContentMessage"""
+
+    text: str = Field(description="Text of the message.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatMessageContentReactionAdd(BaseModel):
+    """Model for SendChatMessageContentReactionAdd"""
+
+    emoji: str = Field(description="Emoji of the reaction.")
+    event_id: str = Field(description="ID of the message event the reaction is on.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatMessageContentReactionRemove(BaseModel):
+    """Model for SendChatMessageContentReactionRemove"""
+
+    emoji: str = Field(description="Emoji of the reaction.")
+    event_id: str = Field(description="ID of the message event the reaction is on.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class SendChatMessageRequest(BaseModel):
+    """At least one of `encoded_message_create_event`, `content` is required."""
+
     message_id: str = Field(description="Unique identifier for this message.")
+    content: Optional["SendChatMessageContent"] = Field(default=None)
     conversation_token: Optional[str] = Field(
         default=None, description="Optional conversation token."
+    )
+    encoded_message_create_event: Optional[str] = Field(
+        default=None,
+        description="Default. The end-to-end encrypted message: a base64 Thrift MessageCreateEvent from the Chat XDK.",
     )
     encoded_message_event_signature: Optional[str] = Field(
         default=None,
         description="Base64-encoded Thrift MessageEventSignature for message verification.",
+    )
+    xdk_version: Optional[str] = Field(
+        default=None, description="Version of the Chat XDK that produced the payload."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -6658,6 +11841,129 @@ class Trend(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class TrendLocation(BaseModel):
+    """Model for TrendLocation"""
+
+    country: Optional[str] = Field(
+        default=None,
+        description="The country the location is in. Omitted for a location that is not in one country, such as Worldwide.",
+    )
+    country_code: Optional[str] = Field(
+        default=None,
+        description="The two-letter code of the location's country, such as `US`. Omitted when `country` is.",
+    )
+    name: Optional[str] = Field(default=None, description="The location's name.")
+    parent_id: Optional[int] = Field(
+        default=None,
+        description="The WOEID of the location that contains this one, such as a town's country. Omitted for a location with no parent.",
+    )
+    place_type: Optional[str] = Field(
+        default=None,
+        description="The kind of place: `town`, `country`, or `supername` (Worldwide). Omitted for a location whose kind is not known.",
+    )
+    woeid: Optional[int] = Field(
+        default=None,
+        description="The location's WOEID. Pass it to `GET /2/trends/by/woeid/{woeid}`.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationActionSignatures(BaseModel):
+    """Model for UnarchiveChatConversationActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "UnarchiveChatConversationActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationActionSignaturesMessageEventSignature(BaseModel):
+    """Model for UnarchiveChatConversationActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UnarchiveChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UnarchiveChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationRequest(BaseModel):
+    """Model for UnarchiveChatConversationRequest"""
+
+    action_signatures: Optional[List["UnarchiveChatConversationActionSignatures"]] = (
+        Field(
+            default=None,
+            description="Signatures for this action, forwarded in the order they are sent.",
+        )
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationResponse(BaseModel):
+    """Model for UnarchiveChatConversationResponse"""
+
+    data: Optional["UnarchiveChatConversationResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationResponseData(BaseModel):
+    """Model for UnarchiveChatConversationResponseData"""
+
+    archived: bool = Field(
+        description="Whether the conversation is archived for the authenticated user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class UnblockUsersDmsResponse(BaseModel):
     """Model for UnblockUsersDmsResponse"""
 
@@ -6673,6 +11979,17 @@ class UnblockUsersDmsResponseData(BaseModel):
     blocked: bool = Field(
         description="Indicates whether the target user is DM-blocked."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnencryptedSendNotAllowedProblem(BaseModel):
+    """Model for UnencryptedSendNotAllowedProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/unencrypted-send-not-allowed"]
+    status: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6744,6 +12061,133 @@ class UnlikePostResponseData(BaseModel):
     """Model for UnlikePostResponseData"""
 
     liked: bool = Field(description="Whether the Post is liked.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteBroadcastChatUserResponse(BaseModel):
+    """Model for UnmuteBroadcastChatUserResponse"""
+
+    data: Optional["UnmuteBroadcastChatUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteBroadcastChatUserResponseData(BaseModel):
+    """Model for UnmuteBroadcastChatUserResponseData"""
+
+    muted: bool = Field(description="Whether the user is muted in this broadcast chat.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatConversationActionSignatures(BaseModel):
+    """Model for UnmuteChatConversationActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "UnmuteChatConversationActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatConversationActionSignaturesMessageEventSignature(BaseModel):
+    """Model for UnmuteChatConversationActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UnmuteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UnmuteChatConversationActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatConversationRequest(BaseModel):
+    """Model for UnmuteChatConversationRequest"""
+
+    action_signatures: Optional[List["UnmuteChatConversationActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatConversationResponse(BaseModel):
+    """Model for UnmuteChatConversationResponse"""
+
+    data: Optional["UnmuteChatConversationResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatConversationResponseData(BaseModel):
+    """Model for UnmuteChatConversationResponseData"""
+
+    muted: bool = Field(
+        description="Whether the conversation is muted for the authenticated user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatUserResponse(BaseModel):
+    """Model for UnmuteChatUserResponse"""
+
+    data: Optional["UnmuteChatUserResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnmuteChatUserResponseData(BaseModel):
+    """Model for UnmuteChatUserResponseData"""
+
+    muted: bool = Field(description="Whether the user is muted in this broadcast chat.")
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -6843,6 +12287,9 @@ class UpdateActivitySubscriptionResponseDataSubscription(BaseModel):
     event_type: Optional[str] = Field(
         default=None, description="Activity event type in dot notation."
     )
+    expires_at: Optional[str] = Field(
+        default=None, description="Subscription expiration time."
+    )
     filter: Optional["UpdateActivitySubscriptionResponseDataSubscriptionFilter"] = (
         Field(default=None)
     )
@@ -6868,8 +12315,810 @@ class UpdateActivitySubscriptionResponseDataSubscriptionFilter(BaseModel):
         description="Optional direction filter for directional events. Not present for mute.* or block.* events.",
     )
     keyword: Optional[str] = Field(default=None, description="Optional keyword filter.")
+    qualifiers: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Event-specific string predicates applied to the subscription.",
+    )
     user_id: Optional[str] = Field(
         default=None, description="User the subscription is scoped to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBotRequest(BaseModel):
+    """Model for UpdateBotRequest"""
+
+    display_name: Optional[str] = Field(default=None, description="New display name.")
+    dm_permission: Optional[Literal["everyone", "premium", "no_one"]] = Field(
+        default=None,
+        description="Who may send the bot Direct Messages: everyone, or premium for verified senders only. Premium isn't meant for org-only bots, since everyone in an org-only bot's developer account should be able to message it, verified or not; requesting premium for one may be refused with a 400. The no_one value is deprecated and kept only so bots that already use it can keep it; choosing it for any other bot may be refused with a 400.",
+    )
+    handle: Optional[str] = Field(
+        default=None,
+        description="New handle (X screen name): 5-15 characters, letters, numbers, or underscores.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBotResponse(BaseModel):
+    """Model for UpdateBotResponse"""
+
+    data: Optional["UpdateBotResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBotResponseData(BaseModel):
+    """Model for UpdateBotResponseData"""
+
+    updated: bool = Field(description="Whether the bot was updated.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBroadcastRequest(BaseModel):
+    """Model for UpdateBroadcastRequest"""
+
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    live_category_id: Optional[str] = Field(
+        default=None,
+        description="New live category, e.g. `gaming`. Ids come from GET /2/broadcasts/categories; an unknown id is a 400. An empty string removes the broadcast's category.",
+    )
+    title: Optional[str] = Field(default=None, description="New broadcast title.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBroadcastResponse(BaseModel):
+    """Model for UpdateBroadcastResponse"""
+
+    data: Optional["UpdateBroadcastResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBroadcastResponseData(BaseModel):
+    """Model for UpdateBroadcastResponseData"""
+
+    broadcast_id: str = Field(description="Broadcast id; the same as `id`.")
+    id: str = Field(description="Broadcast id.")
+    share_url: str = Field(description="The broadcast's watch page.")
+    state: str = Field(description="Broadcast state, `RUNNING` once live.")
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    language: Optional[str] = Field(default=None, description="Broadcast language.")
+    live_category_id: Optional[str] = Field(
+        default=None,
+        description="The broadcast's live category. Missing when it has none.",
+    )
+    media_key: Optional[str] = Field(
+        default=None, description="Media key of the broadcast."
+    )
+    start_ms: Optional[str] = Field(
+        default=None,
+        description="Start time, milliseconds since Unix epoch (decimal string).",
+    )
+    title: Optional[str] = Field(default=None, description="Broadcast title.")
+    tweet_id: Optional[str] = Field(
+        default=None,
+        description="Id of the Post announcing the broadcast. Missing when the Post hasn't been created yet, was suppressed with `should_not_tweet`, or could not be created.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBroadcastStateRequest(BaseModel):
+    """Model for UpdateBroadcastStateRequest"""
+
+    state: str = Field(description="`END`. `PUBLISH` is not supported.")
+    chat_option: Optional[int] = Field(
+        default=None, description="Not allowed with `END`."
+    )
+    locale: Optional[str] = Field(default=None, description="Not allowed with `END`.")
+    should_not_tweet: Optional[bool] = Field(
+        default=None, description="Not allowed with `END`."
+    )
+    title: Optional[str] = Field(default=None, description="Not allowed with `END`.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBroadcastStateResponse(BaseModel):
+    """Model for UpdateBroadcastStateResponse"""
+
+    data: Optional["UpdateBroadcastStateResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateBroadcastStateResponseData(BaseModel):
+    """Model for UpdateBroadcastStateResponseData"""
+
+    id: str = Field(description="Broadcast id.")
+    state: str = Field(description="Always `ENDED`.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationMessageTtlActionSignatures(BaseModel):
+    """Model for UpdateChatConversationMessageTtlActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "UpdateChatConversationMessageTtlActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationMessageTtlActionSignaturesMessageEventSignature(BaseModel):
+    """Model for UpdateChatConversationMessageTtlActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UpdateChatConversationMessageTtlActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationMessageTtlActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UpdateChatConversationMessageTtlActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationMessageTtlRequest(BaseModel):
+    """Model for UpdateChatConversationMessageTtlRequest"""
+
+    message_ttl_ms: str = Field(
+        description="How long new messages last, in milliseconds."
+    )
+    action_signatures: Optional[
+        List["UpdateChatConversationMessageTtlActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationMessageTtlResponse(BaseModel):
+    """Model for UpdateChatConversationMessageTtlResponse"""
+
+    data: Optional["UpdateChatConversationMessageTtlResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationMessageTtlResponseData(BaseModel):
+    """Model for UpdateChatConversationMessageTtlResponseData"""
+
+    updated: bool = Field(description="Whether the message lifetime was set.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureBlockingActionSignatures(BaseModel):
+    """Model for UpdateChatConversationScreenCaptureBlockingActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: "UpdateChatConversationScreenCaptureBlockingActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureBlockingActionSignaturesMessageEventSignature(
+    BaseModel
+):
+    """Model for UpdateChatConversationScreenCaptureBlockingActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UpdateChatConversationScreenCaptureBlockingActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureBlockingActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UpdateChatConversationScreenCaptureBlockingActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureDetectionActionSignatures(BaseModel):
+    """Model for UpdateChatConversationScreenCaptureDetectionActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: "UpdateChatConversationScreenCaptureDetectionActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureDetectionActionSignaturesMessageEventSignature(
+    BaseModel
+):
+    """Model for UpdateChatConversationScreenCaptureDetectionActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UpdateChatConversationScreenCaptureDetectionActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureDetectionActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UpdateChatConversationScreenCaptureDetectionActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureRequest(BaseModel):
+    """At least one of `blocking`, `detection` is required."""
+
+    blocking: Optional[bool] = Field(
+        default=None,
+        description="Whether participants are prevented from taking screenshots.",
+    )
+    blocking_action_signatures: Optional[
+        List["UpdateChatConversationScreenCaptureBlockingActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for the screenshot blocking change, forwarded in the order they are sent.",
+    )
+    detection: Optional[bool] = Field(
+        default=None,
+        description="Whether participants are notified when someone takes a screenshot.",
+    )
+    detection_action_signatures: Optional[
+        List["UpdateChatConversationScreenCaptureDetectionActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for the screenshot detection change, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureResponse(BaseModel):
+    """Model for UpdateChatConversationScreenCaptureResponse"""
+
+    data: Optional["UpdateChatConversationScreenCaptureResponseData"] = Field(
+        default=None
+    )
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatConversationScreenCaptureResponseData(BaseModel):
+    """Model for UpdateChatConversationScreenCaptureResponseData"""
+
+    blocking: Optional[bool] = Field(
+        default=None, description="The screenshot blocking setting, when changed."
+    )
+    detection: Optional[bool] = Field(
+        default=None, description="The screenshot detection setting, when changed."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupActionSignatures(BaseModel):
+    """Model for UpdateChatGroupActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: "UpdateChatGroupActionSignaturesMessageEventSignature"
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupActionSignaturesMessageEventSignature(BaseModel):
+    """Model for UpdateChatGroupActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UpdateChatGroupActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UpdateChatGroupActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupAdminSettingsActionSignatures(BaseModel):
+    """Model for UpdateChatGroupAdminSettingsActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "UpdateChatGroupAdminSettingsActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupAdminSettingsActionSignaturesMessageEventSignature(BaseModel):
+    """Model for UpdateChatGroupAdminSettingsActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UpdateChatGroupAdminSettingsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupAdminSettingsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UpdateChatGroupAdminSettingsActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupAdminSettingsRequest(BaseModel):
+    """At least one of `add_member`, `edit_group_info`, `send_message`, `start_call`, `edit_message_ttl`, `block_screen_capture` is required."""
+
+    action_signatures: Optional[
+        List["UpdateChatGroupAdminSettingsActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+    add_member: Optional[bool] = Field(
+        default=None, description="When true, only admins can add members."
+    )
+    block_screen_capture: Optional[bool] = Field(
+        default=None,
+        description="When true, only admins can change screen capture blocking. Through the API, only admins can change screen capture in a group, whatever this setting says.",
+    )
+    edit_group_info: Optional[bool] = Field(
+        default=None,
+        description="When true, only admins can edit the group name, avatar, and description.",
+    )
+    edit_message_ttl: Optional[bool] = Field(
+        default=None,
+        description="When true, only admins can change the disappearing-message timer.",
+    )
+    send_message: Optional[bool] = Field(
+        default=None, description="When true, only admins can send messages."
+    )
+    start_call: Optional[bool] = Field(
+        default=None, description="When true, only admins can start calls."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupAdminSettingsResponse(BaseModel):
+    """Model for UpdateChatGroupAdminSettingsResponse"""
+
+    data: Optional["UpdateChatGroupAdminSettingsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupAdminSettingsResponseData(BaseModel):
+    """Model for UpdateChatGroupAdminSettingsResponseData"""
+
+    updated: bool = Field(description="Whether the admin settings were updated.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupConversationParticipantKeys(BaseModel):
+    """Model for UpdateChatGroupConversationParticipantKeys"""
+
+    encrypted_conversation_key: str = Field(
+        description="Conversation key encrypted with this participant's public key."
+    )
+    public_key_version: str = Field(
+        description="Version of the participant's public key used for encryption."
+    )
+    user_id: str = Field(description="Participant user ID.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupRequest(BaseModel):
+    """Model for UpdateChatGroupRequest"""
+
+    conversation_key_version: str = Field(
+        description="Version of the conversation key the values are encrypted with."
+    )
+    modified_fields: List[
+        Literal["group_name", "group_avatar_url", "group_description"]
+    ] = Field(description="The group values this request changes.")
+    action_signatures: Optional[List["UpdateChatGroupActionSignatures"]] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+    base64_encoded_key_rotation: Optional[str] = Field(
+        default=None, description="Base64-encoded key rotation payload."
+    )
+    conversation_participant_keys: Optional[
+        List["UpdateChatGroupConversationParticipantKeys"]
+    ] = Field(
+        default=None, description="Encrypted conversation keys for each participant."
+    )
+    group_avatar_url: Optional[str] = Field(
+        default=None, description="Encrypted group avatar URL."
+    )
+    group_description: Optional[str] = Field(
+        default=None, description="Encrypted group description."
+    )
+    group_name: Optional[str] = Field(default=None, description="Encrypted group name.")
+    rotated_pmk_bundle: Optional[List["UpdateChatGroupRotatedPmkBundle"]] = Field(
+        default=None,
+        description="Message keys re-encrypted with the rotated conversation key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupResponse(BaseModel):
+    """Model for UpdateChatGroupResponse"""
+
+    data: Optional["UpdateChatGroupResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupResponseData(BaseModel):
+    """Model for UpdateChatGroupResponseData"""
+
+    updated: bool = Field(description="Whether the group was updated.")
+    conversation_key_change_sequence_id: Optional[str] = Field(
+        default=None,
+        description="Sequence ID of the key change, when the edit rotated the key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatGroupRotatedPmkBundle(BaseModel):
+    """Model for UpdateChatGroupRotatedPmkBundle"""
+
+    base64_encoded_encrypted_pmk: str = Field(
+        description="Base64-encoded message key, encrypted with the new conversation key."
+    )
+    message_sequence_id: str = Field(
+        description="Sequence ID of the message the key belongs to."
+    )
+    pme_sequence_id: Optional[str] = Field(
+        default=None, description="Sequence ID of the key's origin event."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsAvSettings(BaseModel):
+    """Model for UpdateChatSettingsAvSettings"""
+
+    av_call_permissions: Optional["UpdateChatSettingsAvSettingsAvCallPermissions"] = (
+        Field(default=None)
+    )
+    has_av_calls_enabled: Optional[bool] = Field(
+        default=None, description="Whether audio and video calls are enabled."
+    )
+    has_enhanced_call_privacy_enabled: Optional[bool] = Field(
+        default=None, description="Whether enhanced call privacy is enabled."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsAvSettingsAvCallPermissions(BaseModel):
+    """Model for UpdateChatSettingsAvSettingsAvCallPermissions"""
+
+    accept_calls_from_addressbook: Optional[bool] = Field(
+        default=None,
+        description="Whether the user accepts calls from address-book contacts.",
+    )
+    accept_calls_from_everyone: Optional[bool] = Field(
+        default=None, description="Whether the user accepts calls from anyone."
+    )
+    accept_calls_from_following: Optional[bool] = Field(
+        default=None,
+        description="Whether the user accepts calls from accounts they follow.",
+    )
+    accept_calls_from_verified: Optional[bool] = Field(
+        default=None,
+        description="Whether the user accepts calls from verified accounts.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsRequest(BaseModel):
+    """At least one of `allow_dms_from`, `always_allow_dms_from_subscribers`, `dm_quality_filter`, `dm_receipt_settings`, `av_settings` is required."""
+
+    allow_dms_from: Optional[Literal["all", "verified", "following"]] = Field(
+        default=None,
+        description="Who can send the user messages: `all` (anyone), `verified` (verified accounts only), or `following` (accounts the user follows). A bot may get a 400 for choosing `following` when it doesn't already have it, and an org-only bot for choosing `verified`.",
+    )
+    always_allow_dms_from_subscribers: Optional[bool] = Field(
+        default=None,
+        description="Whether the user's subscribers can always message them regardless of allow_dms_from.",
+    )
+    av_settings: Optional["UpdateChatSettingsAvSettings"] = Field(default=None)
+    dm_quality_filter: Optional[Literal["enabled", "disabled"]] = Field(
+        default=None,
+        description="Low-quality message request filter: `enabled` (low-quality requests go to a separate folder) or `disabled` (all requests stay in the main inbox).",
+    )
+    dm_receipt_settings: Optional[Literal["all_enabled", "all_disabled"]] = Field(
+        default=None,
+        description="Read receipts: `all_enabled` (send and receive read receipts) or `all_disabled` (neither).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsResponse(BaseModel):
+    """Model for UpdateChatSettingsResponse"""
+
+    data: Optional["UpdateChatSettingsResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsResponseData(BaseModel):
+    """Model for UpdateChatSettingsResponseData"""
+
+    allow_dms_from: Optional[Union[Literal["all", "verified", "following"], str]] = (
+        Field(
+            default=None,
+            description="Who can send the user messages: `all` (anyone), `verified` (verified accounts only), or `following` (accounts the user follows). A bot may get a 400 for choosing `following` when it doesn't already have it, and an org-only bot for choosing `verified`.",
+        )
+    )
+    always_allow_dms_from_subscribers: Optional[bool] = Field(
+        default=None,
+        description="Whether the user's subscribers can always message them regardless of allow_dms_from.",
+    )
+    av_settings: Optional["UpdateChatSettingsResponseDataAvSettings"] = Field(
+        default=None
+    )
+    dm_quality_filter: Optional[Union[Literal["enabled", "disabled"], str]] = Field(
+        default=None,
+        description="Low-quality message request filter: `enabled` (low-quality requests go to a separate folder) or `disabled` (all requests stay in the main inbox).",
+    )
+    dm_receipt_settings: Optional[
+        Union[Literal["all_enabled", "all_disabled"], str]
+    ] = Field(
+        default=None,
+        description="Read receipts: `all_enabled` (send and receive read receipts) or `all_disabled` (neither).",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsResponseDataAvSettings(BaseModel):
+    """Model for UpdateChatSettingsResponseDataAvSettings"""
+
+    av_call_permissions: Optional[
+        "UpdateChatSettingsResponseDataAvSettingsAvCallPermissions"
+    ] = Field(default=None)
+    has_av_calls_enabled: Optional[bool] = Field(
+        default=None, description="Whether audio and video calls are enabled."
+    )
+    has_enhanced_call_privacy_enabled: Optional[bool] = Field(
+        default=None, description="Whether enhanced call privacy is enabled."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateChatSettingsResponseDataAvSettingsAvCallPermissions(BaseModel):
+    """Model for UpdateChatSettingsResponseDataAvSettingsAvCallPermissions"""
+
+    accept_calls_from_addressbook: Optional[bool] = Field(
+        default=None,
+        description="Whether the user accepts calls from address-book contacts.",
+    )
+    accept_calls_from_everyone: Optional[bool] = Field(
+        default=None, description="Whether the user accepts calls from anyone."
+    )
+    accept_calls_from_following: Optional[bool] = Field(
+        default=None,
+        description="Whether the user accepts calls from accounts they follow.",
+    )
+    accept_calls_from_verified: Optional[bool] = Field(
+        default=None,
+        description="Whether the user accepts calls from verified accounts.",
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -6908,6 +13157,74 @@ class UpdateListsResponseData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class UpdateMediaInLibraryMonetization(BaseModel):
+    """Model for UpdateMediaInLibraryMonetization"""
+
+    allowed_countries: Optional[List[str]] = Field(
+        default=None,
+        description="ISO 3166-1 alpha-2 codes of the only countries the video is monetized in. Omit to monetize everywhere.",
+    )
+    blocked_advertiser_category_ids: Optional[List[int]] = Field(
+        default=None,
+        description="Advertiser categories (from the categories endpoint) whose ads may not run against the video.",
+    )
+    blocked_advertiser_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Advertiser account ids whose ads may not run against the video.",
+    )
+    enabled: Optional[bool] = Field(
+        default=None,
+        description="Whether ads may run against the video. Requires the account to be enrolled in video monetization.",
+    )
+    program_id: Optional[str] = Field(
+        default=None,
+        description="Amplify program to monetize the video through, instead of `video_category_ids`.",
+    )
+    video_category_ids: Optional[List[int]] = Field(
+        default=None,
+        description="Video category ids (from the categories endpoint) describing the content; at most one when creating. Required when enabled, unless `program_id` is set.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateMediaInLibraryRequest(BaseModel):
+    """Model for UpdateMediaInLibraryRequest"""
+
+    description: Optional[str] = Field(
+        default=None, description="Description shown with the video in the player card."
+    )
+    label: Optional[str] = Field(
+        default=None, description="Label of the item in the library."
+    )
+    monetization: Optional["UpdateMediaInLibraryMonetization"] = Field(default=None)
+    name: Optional[str] = Field(
+        default=None, description="Name of the item in the library."
+    )
+    title: Optional[str] = Field(
+        default=None, description="Title shown with the video in the player card."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateMediaInLibraryResponse(BaseModel):
+    """Model for UpdateMediaInLibraryResponse"""
+
+    data: Optional["UpdateMediaInLibraryResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateMediaInLibraryResponseData(BaseModel):
+    """Model for UpdateMediaInLibraryResponseData"""
+
+    updated: bool = Field(description="Whether the library item was updated.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class UpdateRulesAdd(BaseModel):
     """Model for UpdateRulesAdd"""
 
@@ -6922,7 +13239,7 @@ class UpdateRulesAdd(BaseModel):
 class UpdateRulesDelete(BaseModel):
     """Model for UpdateRulesDelete"""
 
-    ids: Optional[List[str]] = Field(
+    ids: Optional[List[Union[str, int]]] = Field(
         default=None, description="Rule ids (Snowflake external ids) to delete."
     )
     values: Optional[List[str]] = Field(
@@ -6994,7 +13311,8 @@ class UpdateScheduledBroadcastRequest(BaseModel):
         default=None, description="Enable replay."
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Chat permission option (numeric string)."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(default=None, description="Description.")
     is_locked: Optional[bool] = Field(default=None, description="Lock the broadcast.")
@@ -7004,9 +13322,13 @@ class UpdateScheduledBroadcastRequest(BaseModel):
         description="If true, do not auto-publish at start; call POST .../live when ready.",
     )
     roll_forward: Optional[bool] = Field(
-        default=None, description="When true, shift the head of a recurring series."
+        default=None,
+        description="Deprecated: recurring schedules are being retired and `true` will be rejected.",
     )
-    source_id: Optional[str] = Field(default=None, description="Ingest / source id.")
+    source_id: Optional[str] = Field(
+        default=None,
+        description="Source to bind: a source's `id` from GET /2/sources. A stream key is also accepted but deprecated; stream keys stop being accepted when the /2/users/:id/sources and /2/users/:id/broadcasts routes reach end of life on January 1, 2027.",
+    )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Pre-live slate media id (numeric string)."
     )
@@ -7032,10 +13354,11 @@ class UpdateScheduledBroadcastResponseData(BaseModel):
     )
     broadcast_id: Optional[str] = Field(
         default=None,
-        description="Alphanumeric UBS broadcast id (path `:id` for get/update/delete/live).",
+        description="Alphanumeric broadcast id (path `:id` for get/update/delete/live).",
     )
     chat_option: Optional[str] = Field(
-        default=None, description="Optional chat permission option."
+        default=None,
+        description="Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4` accounts the host follows, `5` the host's subscribers, `6` accounts followed by an account the host follows.",
     )
     description: Optional[str] = Field(
         default=None, description="Optional description."
@@ -7046,7 +13369,7 @@ class UpdateScheduledBroadcastResponseData(BaseModel):
         description="When true, coordinator will not auto-publish; call POST .../live when ready.",
     )
     recurring_schedule_id: Optional[str] = Field(
-        default=None, description="Set when this occurrence belongs to a recurrence."
+        default=None, description="Deprecated: always null for new schedules."
     )
     scheduled_broadcast_id: Optional[str] = Field(
         default=None,
@@ -7061,13 +13384,15 @@ class UpdateScheduledBroadcastResponseData(BaseModel):
         description="Scheduled start, milliseconds since Unix epoch (decimal string).",
     )
     source_id: Optional[str] = Field(
-        default=None, description="Bound ingest / source id (`rtmp_stream_key`)."
+        default=None,
+        description="Id of the bound source, as returned by GET /2/sources. Omitted when unknown.",
     )
     state: Optional[str] = Field(
-        default=None, description="Scheduler state (Created, Scheduled, Running, …)."
+        default=None,
+        description="Scheduler state: `Created` or `Scheduled` before start, then `Running`, `Ended`, or `Error`.",
     )
     telecast_id: Optional[str] = Field(
-        default=None, description="Optional telecast association."
+        default=None, description="Deprecated: always null for new schedules."
     )
     thumbnail_media_id: Optional[str] = Field(
         default=None, description="Optional pre-live slate media id."
@@ -7075,6 +13400,341 @@ class UpdateScheduledBroadcastResponseData(BaseModel):
     title: Optional[str] = Field(
         default=None, description="Broadcast title / status text."
     )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateScheduledCallRequest(BaseModel):
+    """At least one of `start_time`, `duration_minutes`, `title`, `description`, `invitee_ids`, `recurrence`, `time_zone` is required."""
+
+    description: Optional[str] = Field(
+        default=None, description="What the call is about."
+    )
+    duration_minutes: Optional[int] = Field(
+        default=None, description="How long the call lasts, in minutes."
+    )
+    invitee_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Everyone to invite: replaces the invite list. At most 25 of them may be people not invited yet.",
+    )
+    notify_invitees: Optional[bool] = Field(
+        default=None,
+        description="Whether invitees get an email about the change. Defaults to true.",
+    )
+    occurrence_start_time: Optional[str] = Field(
+        default=None,
+        description="Start of the occurrence that scope this or this_and_following refers to (RFC 3339).",
+    )
+    recurrence: Optional[str] = Field(
+        default=None,
+        description="RFC 5545 RRULE to repeat the call by, such as FREQ=WEEKLY;BYDAY=MO.",
+    )
+    scope: Optional[Literal["all", "this", "this_and_following"]] = Field(
+        default=None,
+        description="Which occurrences of a recurring call: all (the default without occurrence_start_time), this (the default with it), or this_and_following.",
+    )
+    start_time: Optional[str] = Field(
+        default=None,
+        description="When the call (or the chosen occurrence) starts now (RFC 3339).",
+    )
+    time_zone: Optional[str] = Field(
+        default=None, description="IANA time zone the recurrence follows."
+    )
+    title: Optional[str] = Field(default=None, description="Title invitees see.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateScheduledCallResponse(BaseModel):
+    """Model for UpdateScheduledCallResponse"""
+
+    data: Optional["UpdateScheduledCallResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateScheduledCallResponseData(BaseModel):
+    """Model for UpdateScheduledCallResponseData"""
+
+    updated: Optional[bool] = Field(
+        default=None, description="Whether the scheduled call was changed."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateSourceRequest(BaseModel):
+    """Model for UpdateSourceRequest"""
+
+    name: str = Field(description="New label for the source.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateSourceResponse(BaseModel):
+    """Model for UpdateSourceResponse"""
+
+    data: Optional["UpdateSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateSourceResponseData(BaseModel):
+    """Model for UpdateSourceResponseData"""
+
+    id: str = Field(
+        description="Source id, 19 decimal digits; the `source_id` that POST /2/broadcasts and scheduled broadcasts take. Not a credential: read the stream key with GET /2/sources/:id/stream_key."
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    region: Optional[str] = Field(
+        default=None,
+        description="Region of the ingest location serving the source: `us-east-1` or `us-west-2`. Sources created before October 31, 2026 keep the AWS region they were created in.",
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="Ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None,
+        description="RTMPS ingest URL (port 443). Configure your encoder with this URL and the source's stream key.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserBroadcastStateRequest(BaseModel):
+    """Model for UpdateUserBroadcastStateRequest"""
+
+    state: str = Field(description="`PUBLISH` or `END`.")
+    chat_option: Optional[Union[int, str]] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows. A numeric string is also accepted. `PUBLISH` only.",
+    )
+    locale: Optional[str] = Field(
+        default=None, description="Broadcast language. `PUBLISH` only."
+    )
+    should_not_tweet: Optional[Union[bool, str, int]] = Field(
+        default=None,
+        description='Skip the announcing Post. Unset keeps the broadcast\'s setting, which defaults to posting. `"true"`, `"false"`, `1` and `0` are also accepted. `PUBLISH` only.',
+    )
+    title: Optional[str] = Field(
+        default=None, description="Broadcast title. `PUBLISH` only."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserBroadcastStateResponse(BaseModel):
+    """Model for UpdateUserBroadcastStateResponse"""
+
+    data: Optional["UpdateUserBroadcastStateResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserBroadcastStateResponseData(BaseModel):
+    """Model for UpdateUserBroadcastStateResponseData"""
+
+    broadcast: Optional["UpdateUserBroadcastStateResponseDataBroadcast"] = Field(
+        default=None
+    )
+    success: Optional[bool] = Field(
+        default=None, description="`true` once `END` succeeds."
+    )
+    tweet_error: Optional[str] = Field(
+        default=None,
+        description="Why the announcing Post failed, on `PUBLISH`. Omitted when the Post went out or `should_not_tweet` was true.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserBroadcastStateResponseDataBroadcast(BaseModel):
+    """Model for UpdateUserBroadcastStateResponseDataBroadcast"""
+
+    id: str = Field(description="Broadcast id; equal to `broadcast_id`.")
+    available_for_replay: Optional[bool] = Field(
+        default=None, description="Whether a replay is available."
+    )
+    broadcast_id: Optional[str] = Field(default=None, description="Broadcast id.")
+    chat_option: Optional[int] = Field(
+        default=None,
+        description="Who can chat: 0 default, 1 chat off, 2 everyone, 3 verified accounts, 4 accounts the host follows, 5 the host's subscribers, 6 accounts followed by an account the host follows.",
+    )
+    created_at_ms: Optional[str] = Field(
+        default=None,
+        description="Creation time, milliseconds since Unix epoch (decimal string).",
+    )
+    end_ms: Optional[str] = Field(
+        default=None,
+        description="End time, milliseconds since Unix epoch (decimal string).",
+    )
+    height: Optional[int] = Field(default=None, description="Video height in pixels.")
+    image_url: Optional[str] = Field(default=None, description="Thumbnail URL.")
+    image_url_medium: Optional[str] = Field(
+        default=None, description="Medium thumbnail URL."
+    )
+    image_url_small: Optional[str] = Field(
+        default=None, description="Small thumbnail URL."
+    )
+    is_high_latency: Optional[bool] = Field(
+        default=None, description="Whether the broadcast is high latency."
+    )
+    language: Optional[str] = Field(default=None, description="Broadcast language.")
+    media_id: Optional[str] = Field(
+        default=None, description="Numeric media id from `media_key`."
+    )
+    media_key: Optional[str] = Field(
+        default=None, description="Media key of the broadcast's video."
+    )
+    scheduled_end_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled end time, milliseconds since Unix epoch (decimal string).",
+    )
+    scheduled_start_ms: Optional[str] = Field(
+        default=None,
+        description="Scheduled start time, milliseconds since Unix epoch (decimal string).",
+    )
+    start_ms: Optional[str] = Field(
+        default=None,
+        description="Start time, milliseconds since Unix epoch (decimal string).",
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="`NOT_STARTED`, `RUNNING`, `TIMED_OUT`, `ENDED`, `PRE_PUBLISHED` or `CANCELED`.",
+    )
+    status: Optional[str] = Field(default=None, description="Broadcast title.")
+    total_watched: Optional[str] = Field(
+        default=None, description="Total viewers (decimal string)."
+    )
+    total_watching: Optional[str] = Field(
+        default=None, description="Current viewers (decimal string)."
+    )
+    tweet_id: Optional[str] = Field(
+        default=None, description="Id of the Post announcing the broadcast."
+    )
+    twitter_user_id: Optional[str] = Field(default=None, description="Owner's user id.")
+    updated_at_ms: Optional[str] = Field(
+        default=None,
+        description="Last update time, milliseconds since Unix epoch (decimal string).",
+    )
+    width: Optional[int] = Field(default=None, description="Video width in pixels.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserSourceRequest(BaseModel):
+    """Model for UpdateUserSourceRequest"""
+
+    name: str = Field(description="New label for the source.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserSourceResponse(BaseModel):
+    """Model for UpdateUserSourceResponse"""
+
+    data: Optional["UpdateUserSourceResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserSourceResponseData(BaseModel):
+    """Model for UpdateUserSourceResponseData"""
+
+    source: "UpdateUserSourceResponseDataSource"
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserSourceResponseDataSource(BaseModel):
+    """Model for UpdateUserSourceResponseDataSource"""
+
+    id: str = Field(description="Source id; also the RTMP stream key.")
+    creation_origin: Optional["UpdateUserSourceResponseDataSourceCreationOrigin"] = (
+        Field(default=None)
+    )
+    creation_time: Optional[int] = Field(
+        default=None, description="Creation time, ms since Unix epoch."
+    )
+    is360: Optional[bool] = Field(
+        default=None, description="Whether the source streams 360° video."
+    )
+    is_stream_active: Optional[bool] = Field(
+        default=None,
+        description="Whether an encoder is currently sending video to the source.",
+    )
+    name: Optional[str] = Field(default=None, description="Label for the source.")
+    owner_id: Optional[int] = Field(
+        default=None,
+        description="Owner's numeric user id. Exceeds the exact integer range of many JSON parsers.",
+    )
+    rtmp_region: Optional[str] = Field(
+        default=None,
+        description="Ingest region as an AWS region name, e.g. `us-east-1` or `us-west-2`. Accepted as `region` when creating a source.",
+    )
+    rtmp_stream_key: Optional[str] = Field(
+        default=None, description="Stream key; equal to `id`."
+    )
+    rtmp_url: Optional[str] = Field(default=None, description="RTMP ingest URL.")
+    rtmps_url: Optional[str] = Field(
+        default=None, description="RTMPS ingest URL (port 443)."
+    )
+    video_service: Optional["UpdateUserSourceResponseDataSourceVideoService"] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserSourceResponseDataSourceCreationOrigin(BaseModel):
+    """Model for UpdateUserSourceResponseDataSourceCreationOrigin"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UpdateUserSourceResponseDataSourceVideoService(BaseModel):
+    """Model for UpdateUserSourceResponseDataSourceVideoService"""
+
+    name: Optional[str] = Field(default=None, description="Name, e.g. `PublicApi`.")
+    original_name: Optional[str] = Field(
+        default=None, description="Upper-case name, e.g. `PUBLIC_API`."
+    )
+    value: Optional[int] = Field(default=None, description="Numeric value.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UploadComplianceJobSubmissionRequest(BaseModel):
+    """Model for UploadComplianceJobSubmissionRequest"""
+
+    submission: str = Field(
+        description="The newline-delimited ID file, forwarded verbatim."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UploadComplianceJobSubmissionResponse(BaseModel):
+    """Model for UploadComplianceJobSubmissionResponse"""
+
+    data: Optional["ComplianceJob"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -7127,6 +13787,10 @@ class UsageDailyProjectUsage(BaseModel):
 class User(BaseModel):
     """Model for User"""
 
+    active_follower_count: Optional[int] = Field(
+        default=None,
+        description="The number of followers who were active on X in the last 24 hours. Returned only for the authenticated user when account analytics is enabled. Omitted for accounts with 50 or fewer followers. An estimate for accounts with at least 20,000 followers.",
+    )
     affiliation: Optional["UserAffiliation"] = Field(
         default=None, description="Metadata about a user's affiliation."
     )
@@ -7164,6 +13828,10 @@ class User(BaseModel):
         default=None,
         description="The friendly name of this User, as shown on their profile.",
     )
+    org_only: Optional[bool] = Field(
+        default=None,
+        description="Indicates if this User is an org-only bot, which only members of its developer account can add to group chats. Omitted when it can't be determined for you, so it is never reported as false in that case. A bot can read its own value with its own token.",
+    )
     parody: Optional[bool] = Field(
         default=None, description="Indicates if this User is a parody account."
     )
@@ -7183,8 +13851,16 @@ class User(BaseModel):
     public_metrics: Optional["UserPublicMetrics"] = Field(
         default=None, description="A list of metrics for this User."
     )
+    receives_your_chat: Optional[str] = Field(
+        default=None,
+        description="How you can send a Chat message to this User: encrypted (end-to-end, the default), unencrypted (X Chat can't encrypt your 1:1 chat, so send plaintext `content` instead), or none (you can't message them).",
+    )
     receives_your_dm: Optional[bool] = Field(
-        default=None, description="Indicates if you can send a DM to this User."
+        default=None,
+        description="Indicates if you can send a DM to this User. Omitted when the DM permission can't be determined, so it is never reported as false in that case.",
+    )
+    subscriber_count: Optional[int] = Field(
+        default=None, description="The number of Premium subscribers of this User."
     )
     subscribes_to_you: Optional[bool] = Field(
         default=None, description="Indicates if this User subscribes to you."
@@ -7584,6 +14260,52 @@ class UserWithheldComplianceSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class UsersIdBlockRequest(BaseModel):
+    """Model for UsersIdBlockRequest"""
+
+    target_user_id: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UsersIdBlockResponse(BaseModel):
+    """Model for UsersIdBlockResponse"""
+
+    data: Optional["UsersIdBlockResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UsersIdBlockResponseData(BaseModel):
+    """Model for UsersIdBlockResponseData"""
+
+    blocking: bool = Field(
+        description="Indicates whether the user is blocked by the source user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UsersIdUnblockResponse(BaseModel):
+    """Model for UsersIdUnblockResponse"""
+
+    data: Optional["UsersIdUnblockResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UsersIdUnblockResponseData(BaseModel):
+    """Model for UsersIdUnblockResponseData"""
+
+    blocking: bool = Field(
+        description="Indicates whether the source User is blocking the target User."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class ValidateAccountActivitySubscriptionResponse(BaseModel):
     """Model for ValidateAccountActivitySubscriptionResponse"""
 
@@ -7629,6 +14351,17 @@ class WebhookConfig(BaseModel):
     id: Optional[str] = Field(default=None)
     url: Optional[str] = Field(default=None)
     valid: Optional[bool] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class XchatSetupRequiredProblem(BaseModel):
+    """Model for XchatSetupRequiredProblem"""
+
+    detail: str
+    title: str
+    type: Literal["https://api.x.com/2/problems/xchat-setup-required"]
+    status: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -7693,6 +14426,24 @@ class AnalyticsTimestampedMetricsItem(BaseModel):
 # Time-bucketed engagement metrics for the Post, one entry per granularity bucket.
 AnalyticsTimestampedMetrics = List[AnalyticsTimestampedMetricsItem]
 
+# Unique identifiers of Users who asked to join this group and are awaiting approval. Returned only to callers who can add members.
+ChatConversationPendingMemberIds = List[str]
+
+# The conversation key change events needed to decrypt `message_events`.
+ChatMessageRequestConversationKeyEvents = List[str]
+
+# The conversation key change events needed to decrypt `message_events`.
+ChatMessageRequestDetailConversationKeyEvents = List[str]
+
+# The newest message events, newest first, as encoded message events. Their contents are end-to-end encrypted unless the conversation is unencrypted.
+ChatMessageRequestDetailMessageEvents = List[str]
+
+# The conversation's latest message events, newest first, as encoded message events. Their contents are end-to-end encrypted unless the conversation is unencrypted.
+ChatMessageRequestMessageEvents = List[str]
+
+# IDs of users the authenticated user follows who also follow the sender.
+ChatMessageRequestSocialProofUserIds = List[str]
+
 # Unique identifier of a Community
 CommunityId = str
 
@@ -7702,6 +14453,69 @@ CountryCode = str
 CreateAccountActivitySubscriptionRequest = Dict[str, Any]
 
 CreateMediaMetadataMetadataStickerInfoStickers = Dict[str, Any]
+
+CreateUserBroadcastResponseDataVideoAccess = Dict[str, Any]
+
+
+class CreateUsersBookmarkResponseVariant2ErrorsItem(BaseModel):
+    """Nested model for CreateUsersBookmarkResponseVariant2ErrorsItem"""
+
+    detail: Optional[str] = Field(default=None)
+    title: Optional[str] = Field(default=None)
+    tweet_id: Optional[str] = Field(
+        default=None, description="Post ID the failure applies to."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkResponseVariant2DataItem(BaseModel):
+    """Nested model for CreateUsersBookmarkResponseVariant2DataItem"""
+
+    bookmarked: bool = Field(
+        description="Indicates whether the Post is bookmarked by the user."
+    )
+    tweet_id: str = Field(description="The Post ID that was bookmarked.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkResponseVariant1Data(BaseModel):
+    """Nested model for CreateUsersBookmarkResponseVariant1Data"""
+
+    bookmarked: bool = Field(
+        description="Indicates whether the Post is bookmarked by the user."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkResponseVariant2(BaseModel):
+    """Nested model for CreateUsersBookmarkResponseVariant2"""
+
+    data: Optional[List["CreateUsersBookmarkResponseVariant2DataItem"]] = Field(
+        default=None, description="Successfully bookmarked Posts, in request order."
+    )
+    errors: Optional[List["CreateUsersBookmarkResponseVariant2ErrorsItem"]] = Field(
+        default=None, description="Per-id failures; remaining IDs are still bookmarked."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class CreateUsersBookmarkResponseVariant1(BaseModel):
+    """Nested model for CreateUsersBookmarkResponseVariant1"""
+
+    data: Optional["CreateUsersBookmarkResponseVariant1Data"] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+CreateUsersBookmarkResponse = Union[
+    CreateUsersBookmarkResponseVariant1, CreateUsersBookmarkResponseVariant2
+]
+
+DeleteUserSourceResponseData = Dict[str, Any]
 
 
 class DmEventReferencedPostsItem(BaseModel):
@@ -7975,7 +14789,7 @@ class PostReferencedPostsItem(BaseModel):
     """Nested model for PostReferencedPostsItem"""
 
     id: str = Field(description="Unique identifier of the referenced Post.")
-    type: Literal["retweeted", "quoted", "replied_to"] = Field(
+    type: Union[Literal["retweeted", "quoted", "replied_to"], str] = Field(
         description="How this Post references the other Post."
     )
 
@@ -8014,11 +14828,65 @@ Problem = Union[
     FieldHydrationFailureProblem,
     ResourceUnavailableProblem,
     DisallowedResourceProblem,
+    RecipientNotMessageableProblem,
     InternalErrorProblem,
+    ChatPermissionsUnavailableProblem,
+    EncryptionRequiredProblem,
+    MessageRequestNotSupportedProblem,
+    RecipientXchatSetupRequiredProblem,
+    UnencryptedSendNotAllowedProblem,
+    XchatSetupRequiredProblem,
+    DmBadAttachmentProblem,
+    DmBadCtaProblem,
+    DmBadCustomProfileProblem,
+    DmBadMediaProblem,
+    DmBadQuickReplyProblem,
+    DmBadUrlProblem,
+    DmConversationNameTooLongProblem,
+    DmConversationNotFoundProblem,
+    DmDuplicateProblem,
+    DmInactiveDeviceProblem,
+    DmNotDeliveredProblem,
+    DmNotFoundProblem,
+    DmNotOwnerProblem,
+    DmParticipantNotAddedProblem,
+    DmParticipantNotFoundProblem,
+    DmParticipantRestrictedProblem,
+    DmParticipantUnavailableProblem,
+    DmRateLimitedProblem,
+    DmRecipientBlocksSenderProblem,
+    DmRecipientCannotReceiveProblem,
+    DmRecipientEncryptedUnavailableProblem,
+    DmRecipientNotAcceptingProblem,
+    DmRecipientNotFoundProblem,
+    DmRecipientRestrictsGroupsProblem,
+    DmRecipientUnavailableProblem,
+    DmRequestInProgressProblem,
+    DmSafetyLimitedProblem,
+    DmSafetyRejectedProblem,
+    DmSenderBlocksRecipientProblem,
+    DmSenderDeclinedDmsProblem,
+    DmSenderDmsClosedProblem,
+    DmSenderEncryptedUnavailableProblem,
+    DmSenderNotInConversationProblem,
+    DmSenderNotPermittedProblem,
+    DmSenderNotVerifiedProblem,
+    DmSenderPhoneRequiredProblem,
+    DmSenderReadOnlyProblem,
+    DmSenderUnavailableProblem,
+    DmTextEmptyProblem,
+    DmTextTooLongProblem,
+    DmTooFewParticipantsProblem,
+    DmTooManyParticipantsProblem,
+    DmUnsupportedMessageProblem,
+    DuplicateRuleProblem,
+    InvalidRuleProblem,
 ]
 
 # Unique identifier of a PublicKey
 PublicKeyId = str
+
+RemoveMediaFromLibraryRequest = Dict[str, Any]
 
 # Unique identifier of this rule.
 RuleId = str
@@ -8041,6 +14909,21 @@ class RulesCountAllProjectClientAppsItem(BaseModel):
 
 
 RulesCountAllProjectClientApps = List[RulesCountAllProjectClientAppsItem]
+
+
+class ScheduledCallInviteesItem(BaseModel):
+    """Nested model for ScheduledCallInviteesItem"""
+
+    id: str = Field(description="X user id of the invitee.")
+    response: str = Field(
+        description="accepted, declined, tentative, or none for no answer yet."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+# Everyone invited, except the organizer. Not set for linked calendars.
+ScheduledCallInvitees = List[ScheduledCallInviteesItem]
 
 # A list of unique identifiers of the Users who host this Space.
 SpaceHostIds = List[str]
@@ -8190,13 +15073,16 @@ UsageDailyClientAppUsage = List[UsageDailyClientAppUsageItem]
 
 # Returns detailed information about the relationship between two users.
 UserConnectionStatus = List[
-    Literal[
-        "blocking",
-        "follow_request_received",
-        "follow_request_sent",
-        "followed_by",
-        "following",
-        "muting",
+    Union[
+        Literal[
+            "blocking",
+            "follow_request_received",
+            "follow_request_sent",
+            "followed_by",
+            "following",
+            "muting",
+        ],
+        str,
     ]
 ]
 

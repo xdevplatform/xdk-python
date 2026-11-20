@@ -23,3 +23,7 @@ GetByWoeidResponse = schemas.GetTrendsByWoeidResponse
 
 # Response model for get_personalized
 GetPersonalizedResponse = schemas.GetTrendsPersonalizedTrendsResponse
+
+
+# Response model for get_locations
+GetLocationsResponse = schemas.GetTrendsLocationsResponse

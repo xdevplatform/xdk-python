@@ -17,5 +17,9 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for get_credits
+GetCreditsResponse = schemas.GetUsageCreditsResponse
+
+
 # Response model for get
 GetResponse = schemas.GetUsageResponse

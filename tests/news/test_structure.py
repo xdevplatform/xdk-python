@@ -68,7 +68,7 @@ class TestNewsStructure:
             ), f"Required parameter '{required_param}' missing from get"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
-            "news.fields",
+            "news_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -115,7 +115,7 @@ class TestNewsStructure:
         optional_params = [
             "max_results",
             "max_age_hours",
-            "news.fields",
+            "news_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:

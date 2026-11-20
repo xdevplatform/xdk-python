@@ -48,7 +48,7 @@ class ArticlesClient:
             ArticlePublishResponse: Response data
         """
         url = self.client.base_url + "/2/articles/{article_id}/publish"
-        url = url.replace("{article_id}", str(article_id))
+        url = url.replace("{article_id}", urllib.parse.quote(str(article_id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -190,9 +190,9 @@ class ArticlesClient:
         self, body: ArticleCreateDraftRequest
     ) -> ArticleCreateDraftResponse:
         """
-        Create draft Article
+        Create Draft Article
         Creates a new Article draft that can later be published.
-        body: Request body
+        body: Create a draft Article.
         Returns:
             ArticleCreateDraftResponse: Response data
         """

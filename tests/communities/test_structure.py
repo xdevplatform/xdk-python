@@ -70,7 +70,7 @@ class TestCommunitiesStructure:
             ), f"Required parameter '{required_param}' missing from get_by_id"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
-            "community.fields",
+            "community_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -118,7 +118,7 @@ class TestCommunitiesStructure:
             "max_results",
             "next_token",
             "pagination_token",
-            "community.fields",
+            "community_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:

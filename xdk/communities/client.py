@@ -55,7 +55,8 @@ class CommunitiesClient:
         ] = None,
     ) -> GetByIdResponse:
         """
-        Get Communities by ID
+        Get Community by ID
+        Retrieves details of a specific Community by its ID.
         Args:
             id: id
             community_fields: A comma separated list of Community fields to display.
@@ -63,7 +64,7 @@ class CommunitiesClient:
             GetByIdResponse: Response data
         """
         url = self.client.base_url + "/2/communities/{id}"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -237,6 +238,7 @@ class CommunitiesClient:
     ) -> Iterator[SearchResponse]:
         """
         Search Communities
+        Retrieves a list of Communities matching the specified search query.
         Args:
             query: query
             max_results: max_results
@@ -424,25 +426,31 @@ class CommunitiesClient:
             page_response = SearchResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -450,7 +458,13 @@ class CommunitiesClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done

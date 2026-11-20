@@ -61,6 +61,14 @@ class OAuth2PKCEAuth:
         self.code_verifier = None
         self.code_challenge = None
         # Set up OAuth2 session if we have a token
+        if (
+            self.token
+            and isinstance(self.token, dict)
+            and "expires_in" in self.token
+            and self.token["expires_in"]
+            and "expires_at" not in self.token
+        ):
+            self.token["expires_at"] = time.time() + self.token["expires_in"]
         if token and client_id:
             self._setup_oauth_session()
 
@@ -236,6 +244,13 @@ class OAuth2PKCEAuth:
         # which causes an unauthorized_client error.
         auth = HTTPBasicAuth(self.client_id, self.client_secret)
         self.token = self.oauth2_session.refresh_token(refresh_url, auth=auth)
+        if (
+            self.token
+            and "expires_in" in self.token
+            and self.token["expires_in"]
+            and "expires_at" not in self.token
+        ):
+            self.token["expires_at"] = time.time() + self.token["expires_in"]
         return self.token
 
 
@@ -272,7 +287,9 @@ class OAuth2PKCEAuth:
         Returns:
             bool: True if the token is expired, False otherwise.
         """
-        if not self.token or "expires_at" not in self.token:
+        if not self.token:
             return True
+        if "expires_at" not in self.token:
+            return False
         # Add a 10-second buffer to avoid edge cases
         return time.time() > (self.token["expires_at"] - 10)

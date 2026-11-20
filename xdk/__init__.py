@@ -15,7 +15,7 @@ from .client import Client
 from .paginator import Cursor, cursor, PaginationError
 from .streaming import StreamConfig, StreamError, StreamErrorType, StreamState
 
-__version__ = "0.1.0"
+__version__ = "0.11.0"
 __all__ = [
     "Client",
     "Cursor",

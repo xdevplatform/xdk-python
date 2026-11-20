@@ -24,31 +24,81 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    GetConversationEventsResponse,
-    AddConversationKeysRequest,
-    AddConversationKeysResponse,
-    SendMessageRequest,
-    SendMessageResponse,
-    GetConversationsResponse,
     MediaUploadInitializeRequest,
     MediaUploadInitializeResponse,
-    AddUserPublicKeyRequest,
-    AddUserPublicKeyResponse,
-    DeleteMessagesRequest,
-    DeleteMessagesResponse,
-    CreateConversationRequest,
-    CreateConversationResponse,
-    MediaUploadAppendRequest,
-    MediaUploadAppendResponse,
-    GetConversationResponse,
-    MarkConversationReadRequest,
-    MarkConversationReadResponse,
-    MediaUploadFinalizeRequest,
-    MediaUploadFinalizeResponse,
-    SendTypingIndicatorResponse,
+    UpdateGroupAdminSettingsRequest,
+    UpdateGroupAdminSettingsResponse,
+    UpdateConversationScreenCaptureRequest,
+    UpdateConversationScreenCaptureResponse,
+    ArchiveConversationRequest,
+    ArchiveConversationResponse,
+    UnarchiveConversationRequest,
+    UnarchiveConversationResponse,
     AddGroupMembersRequest,
     AddGroupMembersResponse,
+    GetConversationResponse,
+    UpdateGroupRequest,
+    UpdateGroupResponse,
+    DeleteConversationRequest,
+    DeleteConversationResponse,
     InitializeGroupResponse,
+    AddGroupAdminsRequest,
+    AddGroupAdminsResponse,
+    ApproveGroupAdminRequestRequest,
+    ApproveGroupAdminRequestResponse,
+    GetConversationEventsResponse,
+    GetConversationsResponse,
+    MediaUploadFinalizeRequest,
+    MediaUploadFinalizeResponse,
+    AddConversationKeysRequest,
+    AddConversationKeysResponse,
+    RejectGroupAdminRequestRequest,
+    RejectGroupAdminRequestResponse,
+    RemoveGroupAdminsRequest,
+    RemoveGroupAdminsResponse,
+    RejectGroupJoinRequestsRequest,
+    RejectGroupJoinRequestsResponse,
+    GetMessageRequestsResponse,
+    AddUserPublicKeyRequest,
+    AddUserPublicKeyResponse,
+    MarkConversationReadRequest,
+    MarkConversationReadResponse,
+    EnableGroupInviteRequest,
+    EnableGroupInviteResponse,
+    DisableGroupInviteRequest,
+    DisableGroupInviteResponse,
+    CreateGroupJoinRequestRequest,
+    CreateGroupJoinRequestResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    UpdateConversationMessageTtlRequest,
+    UpdateConversationMessageTtlResponse,
+    DeleteConversationMessageTtlRequest,
+    DeleteConversationMessageTtlResponse,
+    MuteConversationRequest,
+    MuteConversationResponse,
+    UnmuteConversationRequest,
+    UnmuteConversationResponse,
+    GetMessageRequestResponse,
+    GetConversationPinnedMessagesResponse,
+    MediaUploadAppendRequest,
+    MediaUploadAppendResponse,
+    RemoveGroupMembersRequest,
+    RemoveGroupMembersResponse,
+    CreateConversationRequest,
+    CreateConversationResponse,
+    GetGroupAdminRequestsResponse,
+    CreateGroupAdminRequestRequest,
+    CreateGroupAdminRequestResponse,
+    GetSettingsResponse,
+    UpdateSettingsRequest,
+    UpdateSettingsResponse,
+    DeleteMessagesRequest,
+    DeleteMessagesResponse,
+    MarkConversationUnreadResponse,
+    AcceptMessageRequestResponse,
+    GetGroupInviteResponse,
+    SendTypingIndicatorResponse,
 )
 
 
@@ -60,6 +110,2160 @@ class ChatClient:
         self.client = client
 
 
+    def media_upload_initialize(
+        self, body: MediaUploadInitializeRequest
+    ) -> MediaUploadInitializeResponse:
+        """
+        Initialize Chat Media Upload
+        Initializes an XChat media upload session.
+        body: Request body
+        Returns:
+            MediaUploadInitializeResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/media/upload/initialize"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return MediaUploadInitializeResponse.model_validate(response_data)
+
+
+    def update_group_admin_settings(
+        self, id: str, body: UpdateGroupAdminSettingsRequest
+    ) -> UpdateGroupAdminSettingsResponse:
+        """
+        Update the Admin-Only Settings of a Chat Group Conversation
+        Sets which actions only admins can perform in an existing encrypted Chat group conversation. A setting set to true restricts that action to admins, and false opens it to all members. Setting `send_message` to true makes the group announcement-only. Omitted settings keep their stored value. When sending `action_signatures`, sign over the full merged settings: the stored values with this request's changes applied, not only the settings in the request.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: At least one of `add_member`, `edit_group_info`, `send_message`, `start_call`, `edit_message_ttl`, `block_screen_capture` is required.
+        Returns:
+            UpdateGroupAdminSettingsResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/admin_settings"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "put" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="put", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.put(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UpdateGroupAdminSettingsResponse.model_validate(response_data)
+
+
+    def update_conversation_screen_capture(
+        self, id: str, body: UpdateConversationScreenCaptureRequest
+    ) -> UpdateConversationScreenCaptureResponse:
+        """
+        Update Screen Capture Settings for a Chat Conversation
+        Turns screenshot blocking or screenshot detection on or off in a Chat conversation, for every participant. In a group conversation, only admins can change these settings. Each request changes one setting: send either blocking or detection. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: At least one of `blocking`, `detection` is required.
+        Returns:
+            UpdateConversationScreenCaptureResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/screen_capture"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "put" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="put", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.put(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UpdateConversationScreenCaptureResponse.model_validate(response_data)
+
+
+    def archive_conversation(
+        self, id: str, body: ArchiveConversationRequest
+    ) -> ArchiveConversationResponse:
+        """
+        Archive a Chat Conversation
+        Archives a Chat conversation for the authenticated user only. Archiving an archived conversation changes nothing. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            ArchiveConversationResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/archive"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return ArchiveConversationResponse.model_validate(response_data)
+
+
+    def unarchive_conversation(
+        self, id: str, body: UnarchiveConversationRequest
+    ) -> UnarchiveConversationResponse:
+        """
+        Unarchive a Chat Conversation
+        Unarchives a Chat conversation for the authenticated user only. Unarchiving a conversation that is not archived changes nothing. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            UnarchiveConversationResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/archive"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UnarchiveConversationResponse.model_validate(response_data)
+
+
+    def add_group_members(
+        self, id: str, body: AddGroupMembersRequest
+    ) -> AddGroupMembersResponse:
+        """
+        Add Members to a Chat Group Conversation
+        Adds one or more members to an existing encrypted Chat group conversation, rotating the conversation key. Adding a user who has a pending join request approves that request; approval needs the same key-rotation body as adding any member.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            AddGroupMembersResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/members"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return AddGroupMembersResponse.model_validate(response_data)
+
+
+    def get_conversation(
+        self,
+        id: str,
+        chat_conversation_fields: Optional[
+            List[
+                Literal[
+                    "admin_settings",
+                    "created_at",
+                    "group_avatar_url",
+                    "group_description",
+                    "group_description_key_version",
+                    "group_name",
+                    "id",
+                    "invite",
+                    "is_archived",
+                    "is_muted",
+                    "last_read_event_id",
+                    "message_ttl_ms",
+                    "newest_event_id",
+                    "pending_member_ids",
+                    "screen_capture_blocking_enabled",
+                    "screen_capture_detection_enabled",
+                    "type",
+                    "unread",
+                    "updated_at",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["admin_ids", "member_ids", "participant_ids"]]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetConversationResponse:
+        """
+        Get Chat Conversation
+        Returns metadata for a Chat conversation including type, muted status, group details, and your unread state. For the unread state, request chat_conversation.fields=unread,last_read_event_id,newest_event_id: those fields give your read state, computed from your latest read receipt and the conversation's latest notifying message. Use chat_conversation.fields to select which fields are returned. Use expansions to hydrate member, admin, or participant user objects. Use user.fields to control which profile fields are returned for expanded users; in a 1:1 chat, user.fields=receives_your_chat on the participant says how you can message them: encrypted, unencrypted, or none.
+        Args:
+            id: id
+            chat_conversation_fields: A comma separated list of ChatConversation fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            Returns:
+            GetConversationResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if chat_conversation_fields is not None:
+            params["chat_conversation.fields"] = ",".join(
+                str(item) for item in chat_conversation_fields
+            )
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetConversationResponse.model_validate(response_data)
+
+
+    def update_group(self, id: str, body: UpdateGroupRequest) -> UpdateGroupResponse:
+        """
+        Update a Chat Group Conversation
+        Renames an encrypted Chat group conversation, changes its avatar, or sets its description. The client encrypts each value with the conversation key and lists the values it changed in modified_fields.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            UpdateGroupResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "put" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="put", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.put(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UpdateGroupResponse.model_validate(response_data)
+
+
+    def delete_conversation(
+        self, id: str, body: DeleteConversationRequest
+    ) -> DeleteConversationResponse:
+        """
+        Delete a Chat Conversation
+        Deletes a Chat conversation for the authenticated user only; other participants keep it. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient. Deleting a pending message request's conversation deletes the request, like Delete in the X app.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            DeleteConversationResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteConversationResponse.model_validate(response_data)
+
+
+    def media_download(self, id: str, media_hash_key: str) -> bytes:
+        """
+        Download Chat Media
+        Downloads encrypted media bytes from an XChat conversation. The response body contains raw binary bytes. A media item too large to return in one response fails with a 413 problem of type `https://api.x.com/2/problems/response-too-large`, and a retry fails the same way.
+        Args:
+            id: id
+            media_hash_key: media_hash_key
+            Returns:
+            Dict[str, Any]: Response data
+        """
+        url = self.client.base_url + "/2/chat/media/{id}/{media_hash_key}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace(
+            "{media_hash_key}", urllib.parse.quote(str(media_hash_key), safe="")
+        )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        # Binary endpoint - return raw bytes
+        return response.content
+        # Convert to Pydantic model if applicable
+        return response_data
+
+
+    def initialize_group(
+        self,
+    ) -> InitializeGroupResponse:
+        """
+        Initialize Chat Group
+        Initializes a new Chat group conversation and returns a unique conversation ID. Use the returned conversation_id in a subsequent POST /chat/conversations/group call to fully create and configure the group.
+        Returns:
+            InitializeGroupResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/group/initialize"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return InitializeGroupResponse.model_validate(response_data)
+
+
+    def add_group_admins(
+        self, id: str, body: AddGroupAdminsRequest
+    ) -> AddGroupAdminsResponse:
+        """
+        Add Admins to a Chat Group Conversation
+        Grants admin rights to one or more members of an existing encrypted Chat group conversation.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            AddGroupAdminsResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/admins"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return AddGroupAdminsResponse.model_validate(response_data)
+
+
+    def approve_group_admin_request(
+        self, id: str, user_id: str, body: ApproveGroupAdminRequestRequest
+    ) -> ApproveGroupAdminRequestResponse:
+        """
+        Approve an Admin Request in a Chat Group Conversation
+        Makes the user who requested admin permissions an admin of an encrypted Chat group conversation. Only a group admin can approve.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            user_id: The ID of the user who requested admin permissions.
+            body: Request body
+        Returns:
+            ApproveGroupAdminRequestResponse: Response data
+        """
+        url = (
+            self.client.base_url
+            + "/2/chat/conversations/{id}/admin_requests/{user_id}/approve"
+        )
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{user_id}", urllib.parse.quote(str(user_id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return ApproveGroupAdminRequestResponse.model_validate(response_data)
+
+
     def get_conversation_events(
         self,
         id: str,
@@ -69,6 +2273,7 @@ class ChatClient:
             List[
                 Literal[
                     "conversation_id",
+                    "conversation_key_version",
                     "conversation_token",
                     "created_at",
                     "encoded_event",
@@ -83,11 +2288,11 @@ class ChatClient:
     ) -> Iterator[GetConversationEventsResponse]:
         """
         Get Chat Conversation Events
-        Retrieves messages and key change events for a specific Chat conversation with pagination support. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Retrieves the events of a specific Chat conversation, newest first, with pagination support: messages, key changes, group changes, and read receipts. Events with an id above the conversation's last_read_event_id are unread: they come after the point you read up to. To collect them, page until an event's id is at or below it. Only `id` and `encoded_event` are always present. Events are either end-to-end encrypted or unencrypted, such as messages sent before the conversation was encrypted. Encrypted events carry `conversation_key_version`, and usually `conversation_token` and `message_event_signature`; treat an encrypted event without `message_event_signature` as unverified. An event without `conversation_key_version` is unencrypted. Decode each `encoded_event` client-side, and decrypt it with the conversation key named by `conversation_key_version` when that is present. A page holds up to `max_results` events and can hold fewer while `has_more` is true. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
         Args:
             id: id
-            max_results: max_results
-            pagination_token: pagination_token
+            max_results: The maximum number of events to return.
+            pagination_token: The next_token from a previous response, to fetch the next page.
             chat_message_event_fields: A comma separated list of ChatMessageEvent fields to display.
             Yields:
             GetConversationEventsResponse: One page of results at a time. Automatically handles pagination using next_token.
@@ -96,7 +2301,7 @@ class ChatClient:
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/chat/conversations/{id}/events"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -269,25 +2474,31 @@ class ChatClient:
             page_response = GetConversationEventsResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -295,7 +2506,13 @@ class ChatClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -306,6 +2523,516 @@ class ChatClient:
 
             # Optional: Add rate limit backoff here if needed
             # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_conversations(
+        self,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        unread_only: Optional[bool] = None,
+        type: Optional[Literal["direct", "group"]] = None,
+        is_archived: Optional[bool] = None,
+        is_muted: Optional[bool] = None,
+        participant_ids: Optional[List[str]] = None,
+        participant_query: Optional[str] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        chat_conversation_fields: Optional[
+            List[
+                Literal[
+                    "admin_settings",
+                    "created_at",
+                    "group_avatar_url",
+                    "group_description",
+                    "group_description_key_version",
+                    "group_name",
+                    "id",
+                    "invite",
+                    "is_archived",
+                    "is_muted",
+                    "last_read_event_id",
+                    "message_ttl_ms",
+                    "newest_event_id",
+                    "pending_member_ids",
+                    "screen_capture_blocking_enabled",
+                    "screen_capture_detection_enabled",
+                    "type",
+                    "unread",
+                    "updated_at",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["admin_ids", "member_ids", "participant_ids"]]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetConversationsResponse]:
+        """
+                Get Chat Conversations
+                Retrieves a list of Chat conversations for the authenticated user's inbox, newest first: the most recently active conversation comes first. To find the chat with a particular person, start with participant_query set to their @username or name; with expansions=participant_ids, user.fields=receives_your_chat says how you can message each match. The unread, last_read_event_id and newest_event_id fields give your read state, computed from your latest read receipt and each conversation's latest notifying message. Request them with chat_conversation.fields=unread,last_read_event_id,newest_event_id.
+        The filters unread_only, type, is_archived, is_muted, participant_ids, participant_query, start_time and end_time are optional, and all filters must match (AND). participant_query keeps conversations where another participant's username, or a word of their display name, starts with the query, ignoring case and accents; with a leading @ it matches usernames only. It considers the 100 people who best match the query, uses only public profile information, and never matches group names, nicknames or messages. start_time and end_time apply to the time of each conversation's latest message.
+        Each page covers max_results conversations and returns those that match, so a page can hold fewer than max_results, or none, while meta.next_token is set and has_more is true: keep paging, passing meta.next_token as pagination_token. Once a page reaches a conversation whose latest message is older than start_time, has_more is false. A pagination_token only works with the same filters as the request that returned it; with other filters, the request fails with a 400.
+        When both are provided, `start_time` must be earlier than `end_time`.
+                Args:
+                    max_results: Conversations covered per page (1-1000, default 200). Filtered pages can return fewer.
+                    pagination_token: meta.next_token from the previous page. Send the same filters with it, or the request fails.
+                    unread_only: Return only unread conversations. A page can be short; keep paging while has_more.
+                    type: Only direct (1:1) or only group conversations. Omit for both.
+                    is_archived: true: only archived; false: only not archived. Omit for both.
+                    is_muted: true: only muted; false: only not muted. Omit for both.
+                    participant_ids: Comma-separated numeric user IDs (1-10), all in the chat. Names or @handles: use participant_query.
+                    participant_query: Start here to find someone's chat: their @username or a word of their name (1-50 chars).
+                    start_time: ISO 8601, e.g. 2026-10-16T00:00:00Z. Chats whose latest message is at or after this time.
+                    end_time: ISO 8601, e.g. 2026-10-17T00:00:00Z. Chats whose latest message is before this time.
+                    chat_conversation_fields: A comma separated list of ChatConversation fields to display.
+                    expansions: A comma separated list of fields to expand.
+                    user_fields: A comma separated list of User fields to display.
+                    Yields:
+                    GetConversationsResponse: One page of results at a time. Automatically handles pagination using next_token.
+                Note:
+                    This method automatically paginates through all results. To get just the first page,
+                    you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/chat/conversations"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if unread_only is not None:
+                page_params["unread_only"] = str(unread_only).lower()
+            if type is not None:
+                page_params["type"] = type
+            if is_archived is not None:
+                page_params["is_archived"] = str(is_archived).lower()
+            if is_muted is not None:
+                page_params["is_muted"] = str(is_muted).lower()
+            if participant_ids is not None:
+                page_params["participant_ids"] = ",".join(
+                    str(item) for item in participant_ids
+                )
+            if participant_query is not None:
+                page_params["participant_query"] = participant_query
+            if start_time is not None:
+                page_params["start_time"] = start_time
+            if end_time is not None:
+                page_params["end_time"] = end_time
+            if chat_conversation_fields is not None:
+                page_params["chat_conversation.fields"] = ",".join(
+                    str(item) for item in chat_conversation_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetConversationsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def media_upload_finalize(
+        self, id: str, body: MediaUploadFinalizeRequest
+    ) -> MediaUploadFinalizeResponse:
+        """
+        Finalize Chat Media Upload
+        Finalizes an XChat media upload session.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            MediaUploadFinalizeResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/media/upload/{id}/finalize"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return MediaUploadFinalizeResponse.model_validate(response_data)
 
 
     def add_conversation_keys(
@@ -321,7 +3048,7 @@ class ChatClient:
             AddConversationKeysResponse: Response data
         """
         url = self.client.base_url + "/2/chat/conversations/{id}/keys"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -471,18 +3198,25 @@ class ChatClient:
         return AddConversationKeysResponse.model_validate(response_data)
 
 
-    def send_message(self, id: str, body: SendMessageRequest) -> SendMessageResponse:
+    def reject_group_admin_request(
+        self, id: str, user_id: str, body: RejectGroupAdminRequestRequest
+    ) -> RejectGroupAdminRequestResponse:
         """
-        Send Chat Message
-        Sends an encrypted message to a specific Chat conversation. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Reject an Admin Request in a Chat Group Conversation
+        Declines a user's pending request for admin permissions in an encrypted Chat group conversation. Only a group admin can reject.
         Args:
-            id: id
+            id: The ID of the group conversation, starting with `g`.
+            user_id: The ID of the user who requested admin permissions.
             body: Request body
         Returns:
-            SendMessageResponse: Response data
+            RejectGroupAdminRequestResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/conversations/{id}/messages"
-        url = url.replace("{id}", str(id))
+        url = (
+            self.client.base_url
+            + "/2/chat/conversations/{id}/admin_requests/{user_id}/reject"
+        )
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{user_id}", urllib.parse.quote(str(user_id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -629,22 +3363,23 @@ class ChatClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return SendMessageResponse.model_validate(response_data)
+        return RejectGroupAdminRequestResponse.model_validate(response_data)
 
 
-    def media_download(self, id: str, media_hash_key: str) -> bytes:
+    def remove_group_admins(
+        self, id: str, body: RemoveGroupAdminsRequest
+    ) -> RemoveGroupAdminsResponse:
         """
-        Download Chat Media
-        Downloads encrypted media bytes from an XChat conversation. The response body contains raw binary bytes.
+        Remove Admins from a Chat Group Conversation
+        Revokes admin rights from one or more admins of an existing encrypted Chat group conversation. They stay members of the group.
         Args:
-            id: id
-            media_hash_key: media_hash_key
-            Returns:
-            Dict[str, Any]: Response data
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            RemoveGroupAdminsResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/media/{id}/{media_hash_key}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{media_hash_key}", str(media_hash_key))
+        url = self.client.base_url + "/2/chat/conversations/{id}/admins/remove"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -671,8 +3406,15 @@ class ChatClient:
         # This is handled in the request logic below
         params = {}
         headers = {}
+        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
         # Select authentication method based on endpoint requirements and available credentials
         # Priority strategy (matches TypeScript):
         # 1. If endpoint only accepts one method, use that (if available)
@@ -700,7 +3442,7 @@ class ChatClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -728,9 +3470,13 @@ class ChatClient:
                 full_url = f"{url}?{query_string}" if query_string else url
             # Prepare body for OAuth1 signature (form-encoded, not JSON)
             body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
             # Build OAuth1 authorization header
             oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
+                method="post", url=full_url, body=body_string
             )
             headers["Authorization"] = oauth_header
         elif selected_auth == "bearer_token":
@@ -769,90 +3515,218 @@ class ChatClient:
                     raise ValueError(
                         f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
                     )
-        response = self.client.session.get(
+        response = self.client.session.post(
             url,
             params=params,
             headers=headers,
+            json=json_data,
         )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
-        # Binary endpoint - return raw bytes
-        return response.content
+        response_data = response.json()
         # Convert to Pydantic model if applicable
-        return response_data
+        return RemoveGroupAdminsResponse.model_validate(response_data)
 
 
-    def get_conversations(
+    def reject_group_join_requests(
+        self, id: str, body: RejectGroupJoinRequestsRequest
+    ) -> RejectGroupJoinRequestsResponse:
+        """
+        Reject Join Requests for a Chat Group Conversation
+        Rejects pending requests to join an encrypted Chat group conversation. Only group admins can reject requests. To approve a request instead, add the requesting users with addChatGroupMembers; adding a user clears their pending request.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            RejectGroupJoinRequestsResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/join_requests/reject"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return RejectGroupJoinRequestsResponse.model_validate(response_data)
+
+
+    def get_message_requests(
         self,
+        inbox_type: Optional[Literal["you_may_know", "low_quality"]] = None,
         max_results: Optional[int] = None,
         pagination_token: Optional[str] = None,
-        chat_conversation_fields: Optional[
+        chat_message_request_fields: Optional[
             List[
                 Literal[
-                    "created_at",
-                    "group_avatar_url",
-                    "group_name",
-                    "id",
-                    "is_muted",
-                    "message_ttl_ms",
-                    "screen_capture_blocking_enabled",
-                    "screen_capture_detection_enabled",
-                    "type",
-                    "updated_at",
+                    "conversation_id",
+                    "conversation_key_events",
+                    "encoded_message_create_event",
+                    "has_more_events",
+                    "message_events",
+                    "sender_id",
+                    "sender_recently_modified_profile",
+                    "social_proof_user_ids",
                 ]
             ]
         ] = None,
-        expansions: Optional[
-            List[Literal["admin_ids", "member_ids", "participant_ids"]]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetConversationsResponse]:
+    ) -> Iterator[GetMessageRequestsResponse]:
         """
-        Get Chat Conversations
-        Retrieves a list of Chat conversations for the authenticated user's inbox.
+        Get Chat Message Requests
+        Retrieves the authenticated user's pending Chat message requests from one inbox. Message contents are end-to-end encrypted unless the conversation is unencrypted. Accepting or deleting requests between pages can skip or repeat requests, and a page can be empty while `next_token` is set.
         Args:
-            max_results: max_results
-            pagination_token: pagination_token
-            chat_conversation_fields: A comma separated list of ChatConversation fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
+            inbox_type: Which message request inbox to list: `you_may_know` (the apps' Priority tab) or `low_quality` (the apps' Hidden tab).
+            max_results: The maximum number of message requests to return.
+            pagination_token: The next_token from a previous response, to fetch the next page.
+            chat_message_request_fields: A comma separated list of ChatMessageRequest fields to display.
             Yields:
-            GetConversationsResponse: One page of results at a time. Automatically handles pagination using next_token.
+            GetMessageRequestsResponse: One page of results at a time. Automatically handles pagination using next_token.
         Note:
             This method automatically paginates through all results. To get just the first page,
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
-        url = self.client.base_url + "/2/chat/conversations"
+        url = self.client.base_url + "/2/chat/message_requests"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -888,16 +3762,14 @@ class ChatClient:
         while True:
             # Build query parameters for this page
             page_params = {}
+            if inbox_type is not None:
+                page_params["inbox_type"] = inbox_type
             if max_results is not None:
                 page_params["max_results"] = max_results
-            if chat_conversation_fields is not None:
-                page_params["chat_conversation.fields"] = ",".join(
-                    str(item) for item in chat_conversation_fields
+            if chat_message_request_fields is not None:
+                page_params["chat_message_request.fields"] = ",".join(
+                    str(item) for item in chat_message_request_fields
                 )
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
             # Add pagination token for this page
             if current_pagination_token:
                 page_params[pagination_param_name] = current_pagination_token
@@ -1026,28 +3898,34 @@ class ChatClient:
             # Parse the response data
             response_data = response.json()
             # Convert to Pydantic model if applicable
-            page_response = GetConversationsResponse.model_validate(response_data)
+            page_response = GetMessageRequestsResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -1055,7 +3933,13 @@ class ChatClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -1068,171 +3952,11 @@ class ChatClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def media_upload_initialize(
-        self, body: MediaUploadInitializeRequest
-    ) -> MediaUploadInitializeResponse:
-        """
-        Initialize Chat Media Upload
-        Initializes an XChat media upload session.
-        body: Request body
-        Returns:
-            MediaUploadInitializeResponse: Response data
-        """
-        url = self.client.base_url + "/2/chat/media/upload/initialize"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return MediaUploadInitializeResponse.model_validate(response_data)
-
-
     def add_user_public_key(
         self, id: schemas.UserId, body: AddUserPublicKeyRequest
     ) -> AddUserPublicKeyResponse:
         """
-        Add public key
+        Add Public Key
         Registers a user's public key for X Chat encryption.
         Args:
             id: id
@@ -1241,7 +3965,7 @@ class ChatClient:
             AddUserPublicKeyResponse: Response data
         """
         url = self.client.base_url + "/2/users/{id}/public_keys"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -1391,20 +4115,20 @@ class ChatClient:
         return AddUserPublicKeyResponse.model_validate(response_data)
 
 
-    def delete_messages(
-        self, id: str, body: DeleteMessagesRequest
-    ) -> DeleteMessagesResponse:
+    def mark_conversation_read(
+        self, id: str, body: MarkConversationReadRequest
+    ) -> MarkConversationReadResponse:
         """
-        Delete Chat messages
-        Deletes one or more messages from a Chat conversation. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient. Delete for all removes a message you sent (or, in groups you administer, any message) for every participant; delete for self removes any message only from your own view.
+        Mark Conversation as Read
+        Marks a specific Chat conversation as read on behalf of the authenticated user. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient. Without action_signatures the conversation is marked read up to its newest event and the read receipt is unsigned. With one action signature over a MarkConversationReadEvent, the server sends that signed read receipt, marking the conversation read up to the event it names.
         Args:
             id: id
             body: Request body
         Returns:
-            DeleteMessagesResponse: Response data
+            MarkConversationReadResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/conversations/{id}/messages/delete"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/chat/conversations/{id}/read"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -1551,7 +4275,2047 @@ class ChatClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteMessagesResponse.model_validate(response_data)
+        return MarkConversationReadResponse.model_validate(response_data)
+
+
+    def enable_group_invite(
+        self, id: str, body: EnableGroupInviteRequest
+    ) -> EnableGroupInviteResponse:
+        """
+        Enable a Chat Group Invite Link
+        Turns on the invite link for an encrypted Chat group conversation and returns the link details. The client builds the link and sends it as invite_url, in the form https://x.com/i/chat/group_join/<conversation_id>/<token>, where the token is exactly 10 letters, digits, '-' or '_'. invite_url is required when action_signatures is sent. To make the link expire, send validity_duration_msec or validity_expiry_timestamp_msec. With action_signatures, send validity_expiry_timestamp_msec, because the signed payload carries the expiry. The group name and avatar sent here are stored unencrypted and shown to anyone who opens the link.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            EnableGroupInviteResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/invite"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return EnableGroupInviteResponse.model_validate(response_data)
+
+
+    def disable_group_invite(
+        self, id: str, body: DisableGroupInviteRequest
+    ) -> DisableGroupInviteResponse:
+        """
+        Disable a Chat Group Invite Link
+        Turns off the invite link for an encrypted Chat group conversation. The existing link stops working.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            DisableGroupInviteResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/invite"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DisableGroupInviteResponse.model_validate(response_data)
+
+
+    def create_group_join_request(
+        self, id: str, body: CreateGroupJoinRequestRequest
+    ) -> CreateGroupJoinRequestResponse:
+        """
+        Request to Join a Chat Group
+        Asks to join an encrypted Chat group conversation through its invite link. The request stays pending until a group admin adds the user to the group.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            body: Request body
+        Returns:
+            CreateGroupJoinRequestResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/join_requests"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return CreateGroupJoinRequestResponse.model_validate(response_data)
+
+
+    def send_message(self, id: str, body: SendMessageRequest) -> SendMessageResponse:
+        """
+        Send Chat Message
+        Sends a message or reaction to a Chat conversation, which you can find with `participant_query` on Get Chat Conversations. Send it end-to-end encrypted by default: `encoded_message_create_event`, built with the Chat XDK. Plaintext `content` is only a fallback for a 1:1 chat that X Chat can't encrypt: use it only when the recipient's `receives_your_chat` user field (`user.fields=receives_your_chat`) is `unencrypted`. When `content` is refused, nothing is sent and the problem's `detail` says why; HTTP 400 https://api.x.com/2/problems/encryption-required means the chat can be encrypted or is a group, so send it encrypted instead. A recipient you can't message (closed inbox, system account, or a block) returns HTTP 403 https://api.x.com/2/problems/recipient-not-messageable.
+        Args:
+            id: A conversation's id from Get Chat Conversations, or the recipient's user ID for a 1:1 chat.
+            body: At least one of `encoded_message_create_event`, `content` is required.
+        Returns:
+            SendMessageResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/messages"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return SendMessageResponse.model_validate(response_data)
+
+
+    def update_conversation_message_ttl(
+        self, id: str, body: UpdateConversationMessageTtlRequest
+    ) -> UpdateConversationMessageTtlResponse:
+        """
+        Turn On Disappearing Messages in a Chat Conversation
+        Sets how long new messages in a 1:1 or group Chat conversation last before they disappear, for every participant. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            UpdateConversationMessageTtlResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/message_ttl"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "put" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="put", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.put(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UpdateConversationMessageTtlResponse.model_validate(response_data)
+
+
+    def delete_conversation_message_ttl(
+        self, id: str, body: DeleteConversationMessageTtlRequest
+    ) -> DeleteConversationMessageTtlResponse:
+        """
+        Turn Off Disappearing Messages in a Chat Conversation
+        Stops new messages in a 1:1 or group Chat conversation from disappearing, for every participant. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            DeleteConversationMessageTtlResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/message_ttl"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteConversationMessageTtlResponse.model_validate(response_data)
+
+
+    def mute_conversation(
+        self, id: str, body: MuteConversationRequest
+    ) -> MuteConversationResponse:
+        """
+        Mute a Chat Conversation
+        Mutes notifications for a Chat conversation for the authenticated user only. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            MuteConversationResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/mute"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return MuteConversationResponse.model_validate(response_data)
+
+
+    def unmute_conversation(
+        self, id: str, body: UnmuteConversationRequest
+    ) -> UnmuteConversationResponse:
+        """
+        Unmute a Chat Conversation
+        Unmutes notifications for a Chat conversation for the authenticated user only. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            body: Request body
+        Returns:
+            UnmuteConversationResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/mute"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UnmuteConversationResponse.model_validate(response_data)
+
+
+    def get_message_request(
+        self,
+        id: str,
+        chat_message_request_detail_fields: Optional[
+            List[
+                Literal[
+                    "conversation_id",
+                    "conversation_key_events",
+                    "has_more_events",
+                    "message_events",
+                    "message_request_state",
+                    "participant_id",
+                ]
+            ]
+        ] = None,
+    ) -> GetMessageRequestResponse:
+        """
+        Get Chat Message Request
+        Retrieves the message request state of a 1:1 Chat conversation and its newest message events. Like opening the request in an X app, reading it marks the returned messages as delivered and updates the unread badge.
+        Args:
+            id: The other user's ID, or both user IDs joined by a hyphen.
+            chat_message_request_detail_fields: A comma separated list of ChatMessageRequestDetail fields to display.
+            Returns:
+            GetMessageRequestResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/message_requests/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if chat_message_request_detail_fields is not None:
+            params["chat_message_request_detail.fields"] = ",".join(
+                str(item) for item in chat_message_request_detail_fields
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetMessageRequestResponse.model_validate(response_data)
+
+
+    def get_conversation_pinned_messages(
+        self,
+        id: str,
+        pagination_token: Optional[str] = None,
+        chat_pinned_message_fields: Optional[List[Literal["encoded_event"]]] = None,
+    ) -> Iterator[GetConversationPinnedMessagesResponse]:
+        """
+        Get Chat Conversation Pinned Messages
+        Retrieves the pinned message events of a Chat conversation with pagination support. Each event is a Base64-encoded Thrift pin event whose contents are end-to-end encrypted; decode and decrypt it client-side. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Args:
+            id: The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversation, or both user IDs of a 1:1 conversation joined by a hyphen.
+            pagination_token: The next_token from a previous response, to fetch the next page.
+            chat_pinned_message_fields: A comma separated list of ChatPinnedMessage fields to display.
+            Yields:
+            GetConversationPinnedMessagesResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/pinned_messages"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if chat_pinned_message_fields is not None:
+                page_params["chat_pinned_message.fields"] = ",".join(
+                    str(item) for item in chat_pinned_message_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetConversationPinnedMessagesResponse.model_validate(
+                response_data
+            )
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def media_upload_append(
+        self, id: str, body: MediaUploadAppendRequest
+    ) -> MediaUploadAppendResponse:
+        """
+        Append Chat Media Upload
+        Appends media data to an XChat upload session.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            MediaUploadAppendResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/media/upload/{id}/append"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return MediaUploadAppendResponse.model_validate(response_data)
+
+
+    def remove_group_members(
+        self, id: str, body: RemoveGroupMembersRequest
+    ) -> RemoveGroupMembersResponse:
+        """
+        Remove Members from a Chat Group Conversation
+        Removes one or more members from an existing encrypted Chat group conversation. To leave a group, pass your own user ID. Leaving does not delete the conversation for the caller. When the removal rotates the conversation key, send group_key_rotation_data and the action signatures for the removal and the key change, in that order.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            RemoveGroupMembersResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/members/remove"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return RemoveGroupMembersResponse.model_validate(response_data)
 
 
     def create_conversation(
@@ -1714,20 +6478,339 @@ class ChatClient:
         return CreateConversationResponse.model_validate(response_data)
 
 
-    def media_upload_append(
-        self, id: str, body: MediaUploadAppendRequest
-    ) -> MediaUploadAppendResponse:
+    def get_group_admin_requests(
+        self,
+        id: str,
+        pagination_token: Optional[str] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetGroupAdminRequestsResponse]:
         """
-        Append Chat Media Upload
-        Appends media data to an XChat upload session.
+        Get Pending Admin Requests for a Chat Group Conversation
+        Returns the users who have asked to become admins of an encrypted Chat group conversation. Only a group admin can list admin requests. Use user.fields to select which profile fields are returned.
         Args:
-            id: id
+            id: The ID of the group conversation, starting with `g`.
+            pagination_token: The next_token from a previous response, to fetch the next page.
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            GetGroupAdminRequestsResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/admin_requests"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetGroupAdminRequestsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def create_group_admin_request(
+        self, id: str, body: CreateGroupAdminRequestRequest
+    ) -> CreateGroupAdminRequestResponse:
+        """
+        Request Admin Permissions in a Chat Group Conversation
+        Asks the admins of an encrypted Chat group conversation to make the authenticated user an admin. An admin approves or rejects the request.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
             body: Request body
         Returns:
-            MediaUploadAppendResponse: Response data
+            CreateGroupAdminRequestResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/media/upload/{id}/append"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/chat/conversations/{id}/admin_requests"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -1874,75 +6957,32 @@ class ChatClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return MediaUploadAppendResponse.model_validate(response_data)
+        return CreateGroupAdminRequestResponse.model_validate(response_data)
 
 
-    def get_conversation(
+    def get_settings(
         self,
-        id: str,
-        chat_conversation_fields: Optional[
+        chat_settings_fields: Optional[
             List[
                 Literal[
-                    "created_at",
-                    "group_avatar_url",
-                    "group_name",
-                    "id",
-                    "is_muted",
-                    "message_ttl_ms",
-                    "screen_capture_blocking_enabled",
-                    "screen_capture_detection_enabled",
-                    "type",
-                    "updated_at",
+                    "allow_dms_from",
+                    "always_allow_dms_from_subscribers",
+                    "av_settings",
+                    "dm_quality_filter",
+                    "dm_receipt_settings",
                 ]
             ]
         ] = None,
-        expansions: Optional[
-            List[Literal["admin_ids", "member_ids", "participant_ids"]]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetConversationResponse:
+    ) -> GetSettingsResponse:
         """
-        Get Chat Conversation
-        Returns metadata for a Chat conversation including type, muted status, and group details. Use chat_conversation.fields to select which fields are returned. Use expansions to hydrate member, admin, or participant user objects. Use user.fields to control which profile fields are returned for expanded users.
+        Get Chat Settings
+        Returns the authenticated user's Chat privacy settings: who can message them, read receipts, the message quality filter, and audio/video call permissions.
         Args:
-            id: id
-            chat_conversation_fields: A comma separated list of ChatConversation fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
+            chat_settings_fields: A comma separated list of ChatSettings fields to display.
             Returns:
-            GetConversationResponse: Response data
+            GetSettingsResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/conversations/{id}"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/chat/settings"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -1968,14 +7008,10 @@ class ChatClient:
         # OAuth1 header must be built per-request with method, URL, and body
         # This is handled in the request logic below
         params = {}
-        if chat_conversation_fields is not None:
-            params["chat_conversation.fields"] = ",".join(
-                str(item) for item in chat_conversation_fields
+        if chat_settings_fields is not None:
+            params["chat_settings.fields"] = ",".join(
+                str(item) for item in chat_settings_fields
             )
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
         headers = {}
         # Prepare request data
         json_data = None
@@ -2085,23 +7121,181 @@ class ChatClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return GetConversationResponse.model_validate(response_data)
+        return GetSettingsResponse.model_validate(response_data)
 
 
-    def mark_conversation_read(
-        self, id: str, body: MarkConversationReadRequest
-    ) -> MarkConversationReadResponse:
+    def update_settings(self, body: UpdateSettingsRequest) -> UpdateSettingsResponse:
         """
-        Mark Conversation as Read
-        Marks a specific Chat conversation as read on behalf of the authenticated user. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
+        Update Chat Settings
+        Updates the authenticated user's Chat privacy settings: who can message them, read receipts, the message quality filter, and audio/video call permissions. allow_dms_from, dm_receipt_settings, and dm_quality_filter accept only their listed values, matched exactly and case-sensitively; anything else is a 400. av_settings must set at least one of its settings. Whether settings omitted from a partial av_settings keep their values or are reset is not yet confirmed; send every av_settings field you want to keep.
+        body: At least one of `allow_dms_from`, `always_allow_dms_from_subscribers`, `dm_quality_filter`, `dm_receipt_settings`, `av_settings` is required.
+        Returns:
+            UpdateSettingsResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/settings"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "put" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="put", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.put(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UpdateSettingsResponse.model_validate(response_data)
+
+
+    def delete_messages(
+        self, id: str, body: DeleteMessagesRequest
+    ) -> DeleteMessagesResponse:
+        """
+        Delete Chat Messages
+        Deletes one or more messages from a Chat conversation. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient. Delete for all removes a message you sent (or, in groups you administer, any message) for every participant; delete for self removes any message only from your own view.
         Args:
             id: id
             body: Request body
         Returns:
-            MarkConversationReadResponse: Response data
+            DeleteMessagesResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/conversations/{id}/read"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/chat/conversations/{id}/messages/delete"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -2248,23 +7442,20 @@ class ChatClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return MarkConversationReadResponse.model_validate(response_data)
+        return DeleteMessagesResponse.model_validate(response_data)
 
 
-    def media_upload_finalize(
-        self, id: str, body: MediaUploadFinalizeRequest
-    ) -> MediaUploadFinalizeResponse:
+    def mark_conversation_unread(self, id: str) -> MarkConversationUnreadResponse:
         """
-        Finalize Chat Media Upload
-        Finalizes an XChat media upload session.
+        Mark Conversation as Unread
+        Marks a specific Chat conversation as unread on behalf of the authenticated user. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.
         Args:
             id: id
-            body: Request body
-        Returns:
-            MediaUploadFinalizeResponse: Response data
+            Returns:
+            MarkConversationUnreadResponse: Response data
         """
-        url = self.client.base_url + "/2/chat/media/upload/{id}/finalize"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/chat/conversations/{id}/unread"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -2291,15 +7482,8 @@ class ChatClient:
         # This is handled in the request logic below
         params = {}
         headers = {}
-        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
         # Select authentication method based on endpoint requirements and available credentials
         # Priority strategy (matches TypeScript):
         # 1. If endpoint only accepts one method, use that (if available)
@@ -2355,10 +7539,6 @@ class ChatClient:
                 full_url = f"{url}?{query_string}" if query_string else url
             # Prepare body for OAuth1 signature (form-encoded, not JSON)
             body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
             # Build OAuth1 authorization header
             oauth_header = self.client.auth.build_request_header(
                 method="post", url=full_url, body=body_string
@@ -2404,14 +7584,335 @@ class ChatClient:
             url,
             params=params,
             headers=headers,
-            json=json_data,
         )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return MediaUploadFinalizeResponse.model_validate(response_data)
+        return MarkConversationUnreadResponse.model_validate(response_data)
+
+
+    def accept_message_request(self, id: str) -> AcceptMessageRequestResponse:
+        """
+        Accept a Chat Message Request
+        Accepts the other user's pending message request in a 1:1 Chat conversation, which moves to the authenticated user's inbox. Without a pending request, including after a successful accept, the response is 404. Replying to a request does not accept it.
+        Args:
+            id: The other user's ID, or both user IDs joined by a hyphen.
+            Returns:
+            AcceptMessageRequestResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/message_requests/{id}/accept"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return AcceptMessageRequestResponse.model_validate(response_data)
+
+
+    def get_group_invite(
+        self,
+        id: str,
+        token: str,
+        chat_group_invite_fields: Optional[
+            List[
+                Literal[
+                    "conversation_id",
+                    "expires_at",
+                    "group_avatar_url",
+                    "group_name",
+                    "invite_url",
+                    "join_state",
+                    "member_count",
+                    "token",
+                    "welcome_message",
+                ]
+            ]
+        ] = None,
+    ) -> GetGroupInviteResponse:
+        """
+        Get a Chat Group Invite Link
+        Returns the preview of an encrypted Chat group conversation from its invite link: group name, avatar, member count, and the authenticated user's join state. The conversation ID and the token both come from the invite link.
+        Args:
+            id: The ID of the group conversation, starting with `g`.
+            token: The 10-character invite token from the group's invite link.
+            chat_group_invite_fields: A comma separated list of ChatGroupInvite fields to display.
+            Returns:
+            GetGroupInviteResponse: Response data
+        """
+        url = self.client.base_url + "/2/chat/conversations/{id}/invites/{token}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{token}", urllib.parse.quote(str(token), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if chat_group_invite_fields is not None:
+            params["chat_group_invite.fields"] = ",".join(
+                str(item) for item in chat_group_invite_fields
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetGroupInviteResponse.model_validate(response_data)
 
 
     def send_typing_indicator(self, id: str) -> SendTypingIndicatorResponse:
@@ -2424,7 +7925,7 @@ class ChatClient:
             SendTypingIndicatorResponse: Response data
         """
         url = self.client.base_url + "/2/chat/conversations/{id}/typing"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -2560,313 +8061,3 @@ class ChatClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return SendTypingIndicatorResponse.model_validate(response_data)
-
-
-    def add_group_members(
-        self, id: str, body: AddGroupMembersRequest
-    ) -> AddGroupMembersResponse:
-        """
-        Add members to a Chat group conversation
-        Adds one or more members to an existing encrypted Chat group conversation, rotating the conversation key.
-        Args:
-            id: id
-            body: Request body
-        Returns:
-            AddGroupMembersResponse: Response data
-        """
-        url = self.client.base_url + "/2/chat/conversations/{id}/members"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return AddGroupMembersResponse.model_validate(response_data)
-
-
-    def initialize_group(
-        self,
-    ) -> InitializeGroupResponse:
-        """
-        Initialize Chat Group
-        Initializes a new Chat group conversation and returns a unique conversation ID. Use the returned conversation_id in a subsequent POST /chat/conversations/group call to fully create and configure the group.
-        Returns:
-            InitializeGroupResponse: Response data
-        """
-        url = self.client.base_url + "/2/chat/conversations/group/initialize"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return InitializeGroupResponse.model_validate(response_data)

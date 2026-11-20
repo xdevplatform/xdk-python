@@ -69,7 +69,7 @@ class TestTrendsStructure:
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
             "max_trends",
-            "trend.fields",
+            "trend_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -116,7 +116,7 @@ class TestTrendsStructure:
             ), f"Required parameter '{required_param}' missing from get_personalized"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
-            "personalized_trend.fields",
+            "personalized_trend_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -136,11 +136,57 @@ class TestTrendsStructure:
         ), f"Method get_personalized should have return type annotation"
 
 
+    def test_get_locations_exists(self):
+        """Test that get_locations method exists with correct signature."""
+        # Check method exists
+        method = getattr(TrendsClient, "get_locations", None)
+        assert (
+            method is not None
+        ), f"Method get_locations does not exist on TrendsClient"
+        # Check method is callable
+        assert callable(method), f"get_locations is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get_locations should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_locations"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "trend_location_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_locations_return_annotation(self):
+        """Test that get_locations has proper return type annotation."""
+        method = getattr(TrendsClient, "get_locations")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_locations should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
             "get_by_woeid",
             "get_personalized",
+            "get_locations",
         ]
         for expected_method in expected_methods:
             assert hasattr(

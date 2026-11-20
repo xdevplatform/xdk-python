@@ -203,6 +203,7 @@ class TestNewsContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
@@ -405,6 +406,7 @@ class TestNewsContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response

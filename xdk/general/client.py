@@ -40,7 +40,7 @@ class GeneralClient:
         self,
     ) -> GetOpenApiSpecResponse:
         """
-        Get OpenAPI Spec.
+        Get OpenAPI Spec
         Retrieves the full OpenAPI Specification in JSON format. (See https://github.com/OAI/OpenAPI-Specification/blob/master/README.md)
         Returns:
             GetOpenApiSpecResponse: Response data

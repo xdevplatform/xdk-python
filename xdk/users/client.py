@@ -24,56 +24,61 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    GetMutingResponse,
-    MuteUserRequest,
-    MuteUserResponse,
-    GetPostsResponse,
-    GetFollowersResponse,
-    LikePostRequest,
-    LikePostResponse,
-    DeleteBookmarkResponse,
-    GetTimelineResponse,
-    GetListMembershipsResponse,
-    UnpinListResponse,
-    UnfollowUserResponse,
-    GetByUsernamesResponse,
-    SearchResponse,
-    GetByIdResponse,
-    GetPublicKeyResponse,
-    GetMeResponse,
-    GetPublicKeysResponse,
-    GetByIdsResponse,
-    GetAffiliatesResponse,
-    UnrepostPostResponse,
-    UnlikePostResponse,
-    RepostPostRequest,
-    RepostPostResponse,
-    UnmuteUserResponse,
-    UnblockDmsResponse,
-    GetBookmarksResponse,
-    CreateBookmarkRequest,
-    CreateBookmarkResponse,
-    GetLikedPostsResponse,
-    GetBlockingResponse,
-    GetPinnedListsResponse,
-    PinListRequest,
-    PinListResponse,
-    GetFollowingResponse,
-    FollowUserRequest,
-    FollowUserResponse,
-    GetBookmarksByFolderIdResponse,
-    UnfollowListResponse,
-    GetRepostsOfMeResponse,
-    GetByUsernameResponse,
-    GetFollowedListsResponse,
-    FollowListRequest,
-    FollowListResponse,
-    BlockDmsResponse,
-    GetOwnedListsResponse,
     GetBookmarkFoldersResponse,
     CreateBookmarkFolderRequest,
     CreateBookmarkFolderResponse,
+    UnmuteUserResponse,
+    GetAffiliatesResponse,
+    GetFollowingResponse,
+    FollowUserRequest,
+    FollowUserResponse,
+    GetLikedPostsResponse,
+    SearchResponse,
+    GetByUsernameResponse,
+    GetByIdsResponse,
+    BlockDmsResponse,
+    IdUnblockResponse,
+    GetMeFollowingResponse,
+    GetBookmarksByFolderIdResponse,
+    GetListMembershipsResponse,
     GetMentionsResponse,
+    UnrepostPostResponse,
+    GetPostsResponse,
+    GetFollowedListsResponse,
+    FollowListRequest,
+    FollowListResponse,
+    UnfollowUserResponse,
+    GetBlockingResponse,
+    IdBlockRequest,
+    IdBlockResponse,
+    GetRepostsOfMeResponse,
+    GetMeFollowersResponse,
+    GetByIdResponse,
+    UnlikePostResponse,
+    GetPublicKeyResponse,
+    RepostPostRequest,
+    RepostPostResponse,
+    GetByUsernamesResponse,
+    GetFollowersResponse,
+    GetPinnedListsResponse,
+    PinListRequest,
+    PinListResponse,
+    GetMeResponse,
+    GetPublicKeysResponse,
+    DeleteBookmarkResponse,
+    UnblockDmsResponse,
+    UnfollowListResponse,
+    GetMutingResponse,
+    MuteUserRequest,
+    MuteUserResponse,
+    GetOwnedListsResponse,
+    GetTimelineResponse,
+    UnpinListResponse,
+    LikePostRequest,
+    LikePostResponse,
+    GetBookmarksResponse,
+    CreateBookmarkRequest,
+    CreateBookmarkResponse,
 )
 
 
@@ -85,7 +90,562 @@ class UsersClient:
         self.client = client
 
 
-    def get_muting(
+    def get_bookmark_folders(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+    ) -> Iterator[GetBookmarkFoldersResponse]:
+        """
+        Get Bookmark Folders
+        Retrieves a list of Bookmark folders created by the authenticated user.
+        Args:
+            id: The authenticated user's numeric ID, not `me`: the `id` from Get My User (`GET /2/users/me`).
+            max_results: max_results
+            pagination_token: A base32hex-encoded pagination token.
+            Yields:
+            GetBookmarkFoldersResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/bookmarks/folders"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetBookmarkFoldersResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def create_bookmark_folder(
+        self, id: schemas.UserId, body: CreateBookmarkFolderRequest
+    ) -> CreateBookmarkFolderResponse:
+        """
+        Create Bookmark Folder
+        Creates a new Bookmark folder for the authenticated user.
+        Args:
+            id: The authenticated user's numeric ID, not `me`: the `id` from Get My User (`GET /2/users/me`).
+            body: Request body
+        Returns:
+            CreateBookmarkFolderResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/bookmarks/folders"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return CreateBookmarkFolderResponse.model_validate(response_data)
+
+
+    def unmute_user(
+        self, source_user_id: schemas.UserId, target_user_id: schemas.UserId
+    ) -> UnmuteUserResponse:
+        """
+        Unmute User
+        Causes the authenticated user to unmute the target user.
+        Args:
+            source_user_id: source_user_id
+            target_user_id: target_user_id
+            Returns:
+            UnmuteUserResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{source_user_id}/muting/{target_user_id}"
+        url = url.replace(
+            "{source_user_id}", urllib.parse.quote(str(source_user_id), safe="")
+        )
+        url = url.replace(
+            "{target_user_id}", urllib.parse.quote(str(target_user_id), safe="")
+        )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UnmuteUserResponse.model_validate(response_data)
+
+
+    def get_affiliates(
         self,
         id: schemas.UserId,
         max_results: Optional[int] = None,
@@ -93,6 +653,7 @@ class UsersClient:
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -102,12 +663,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -160,24 +724,2372 @@ class UsersClient:
                 ]
             ]
         ] = None,
-    ) -> Iterator[GetMutingResponse]:
+    ) -> Iterator[GetAffiliatesResponse]:
         """
-        Get Users Muting
+        Get Affiliates
+        Retrieves a list of Users who are affiliated with a specific organization User by their ID.
         Args:
             id: id
             max_results: max_results
-            pagination_token: pagination_token
+            pagination_token: A 64-bit signed integer.
             user_fields: A comma separated list of User fields to display.
             expansions: A comma separated list of fields to expand.
             post_fields: A comma separated list of Post fields to display.
             Yields:
-            GetMutingResponse: One page of results at a time. Automatically handles pagination using next_token.
+            GetAffiliatesResponse: One page of results at a time. Automatically handles pagination using next_token.
         Note:
             This method automatically paginates through all results. To get just the first page,
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
-        url = self.client.base_url + "/2/users/{id}/muting"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/affiliates"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("BearerToken")
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetAffiliatesResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_following(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetFollowingResponse]:
+        """
+        Get Following
+        Retrieves a list of Users followed by a specific User by their ID.
+        Args:
+            id: id
+            max_results: The maximum number of users to return.
+            pagination_token: The next_token or previous_token from a previous response, to fetch that page. A base32hex-encoded pagination token.
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            GetFollowingResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/following"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("BearerToken")
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetFollowingResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def follow_user(
+        self, id: schemas.UserId, body: FollowUserRequest
+    ) -> FollowUserResponse:
+        """
+        Follow User
+        Causes the authenticated user to follow a specific User by their ID.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            FollowUserResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/following"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return FollowUserResponse.model_validate(response_data)
+
+
+    def get_liked_posts(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_post_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "referenced_posts",
+                    "username",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "revenue",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetLikedPostsResponse]:
+        """
+        Get Liked Posts
+        Retrieves a list of Posts liked by a specific User by their ID.
+        Args:
+            id: id
+            max_results: max_results
+            pagination_token: A base32hex-encoded pagination token.
+            post_fields: A comma separated list of Post fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            Yields:
+            GetLikedPostsResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/liked_tweets"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            if poll_fields is not None:
+                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+            if place_fields is not None:
+                page_params["place.fields"] = ",".join(
+                    str(item) for item in place_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetLikedPostsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def search(
+        self,
+        query: str,
+        max_results: Optional[int] = None,
+        next_token: Optional[str] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[SearchResponse]:
+        """
+        Search Users
+        Retrieves a list of Users matching a search query.
+        Args:
+            query: A name or @username (1-50 chars): letters and digits in any language, spaces, and _ ' . - @ & "
+            max_results: max_results
+            next_token: next_token
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            SearchResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/search"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "next_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = next_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if query is not None:
+                page_params["query"] = query
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("BearerToken")
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = SearchResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_by_username(
+        self,
+        username: str,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetByUsernameResponse:
+        """
+        Get User by Username
+        Retrieves details of a specific User by their username.
+        Args:
+            username: username
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Returns:
+            GetByUsernameResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/by/username/{username}"
+        url = url.replace("{username}", urllib.parse.quote(str(username), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if post_fields is not None:
+            params["post.fields"] = ",".join(str(item) for item in post_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByUsernameResponse.model_validate(response_data)
+
+
+    def get_by_ids(
+        self,
+        ids: List[schemas.UserId],
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetByIdsResponse:
+        """
+        Get Users by IDs
+        Retrieves details of multiple Users by their IDs.
+        Args:
+            ids: ids
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Returns:
+            GetByIdsResponse: Response data
+        """
+        url = self.client.base_url + "/2/users"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if ids is not None:
+            params["ids"] = ",".join(str(item) for item in ids)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if post_fields is not None:
+            params["post.fields"] = ",".join(str(item) for item in post_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByIdsResponse.model_validate(response_data)
+
+
+    def block_dms(self, id: schemas.UserId) -> BlockDmsResponse:
+        """
+        Block DMs
+        Blocks direct messages to or from a specific User by their ID for the authenticated user.
+        Args:
+            id: id
+            Returns:
+            BlockDmsResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/dm/block"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return BlockDmsResponse.model_validate(response_data)
+
+
+    def id_unblock(
+        self, source_user_id: schemas.UserId, target_user_id: schemas.UserId
+    ) -> IdUnblockResponse:
+        """
+        Unblock User
+        Causes the source User to unblock the target User. Unblocking does not restore any follow the block removed, so blocking and then unblocking a follower removes them as a follower: do that only for followers the authenticated User approved removing.
+        Args:
+            source_user_id: source_user_id
+            target_user_id: target_user_id
+            Returns:
+            IdUnblockResponse: Response data
+        """
+        url = (
+            self.client.base_url + "/2/users/{source_user_id}/blocking/{target_user_id}"
+        )
+        url = url.replace(
+            "{source_user_id}", urllib.parse.quote(str(source_user_id), safe="")
+        )
+        url = url.replace(
+            "{target_user_id}", urllib.parse.quote(str(target_user_id), safe="")
+        )
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return IdUnblockResponse.model_validate(response_data)
+
+
+    def get_me_following(
+        self,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetMeFollowingResponse]:
+        """
+        Get the Users the Authenticated User Follows
+        Returns the Users the authenticated user follows. Same results as `GET /2/users/{id}/following` with your own user ID, without looking it up.
+        Args:
+            max_results: The maximum number of users to return.
+            pagination_token: The next_token or previous_token from a previous response, to fetch that page. A base32hex-encoded pagination token.
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            GetMeFollowingResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/me/following"
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -349,28 +3261,34 @@ class UsersClient:
             # Parse the response data
             response_data = response.json()
             # Convert to Pydantic model if applicable
-            page_response = GetMutingResponse.model_validate(response_data)
+            page_response = GetMeFollowingResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -378,7 +3296,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -391,17 +3315,992 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def mute_user(self, id: schemas.UserId, body: MuteUserRequest) -> MuteUserResponse:
+    def get_bookmarks_by_folder_id(
+        self,
+        id: schemas.UserId,
+        folder_id: str,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+    ) -> Iterator[GetBookmarksByFolderIdResponse]:
         """
-        Mute User
+        Get Bookmarks by Folder ID
+        Retrieves Posts in a specific Bookmark folder by its ID for the authenticated user.
+        Args:
+            id: The authenticated user's numeric ID, not `me`: the `id` from Get My User (`GET /2/users/me`).
+            folder_id: folder_id
+            max_results: max_results
+            pagination_token: A base32hex-encoded pagination token.
+            Yields:
+            GetBookmarksByFolderIdResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/bookmarks/folders/{folder_id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{folder_id}", urllib.parse.quote(str(folder_id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetBookmarksByFolderIdResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_list_memberships(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        list_fields: Optional[
+            List[
+                Literal[
+                    "created_at",
+                    "description",
+                    "follower_count",
+                    "id",
+                    "member_count",
+                    "name",
+                    "private",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[List[Literal["owner_id"]]] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetListMembershipsResponse]:
+        """
+        Get List Memberships
+        Retrieves a list of Lists that a specific User is a member of by their ID.
         Args:
             id: id
-            body: Request body
-        Returns:
-            MuteUserResponse: Response data
+            max_results: max_results
+            pagination_token: pagination_token
+            list_fields: A comma separated list of List fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            Yields:
+            GetListMembershipsResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
-        url = self.client.base_url + "/2/users/{id}/muting"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/list_memberships"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if list_fields is not None:
+                page_params["list.fields"] = ",".join(str(item) for item in list_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("BearerToken")
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetListMembershipsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_mentions(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        since_id: Optional[str] = None,
+        until_id: Optional[str] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_post_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "referenced_posts",
+                    "username",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "revenue",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetMentionsResponse]:
+        """
+                Get Mentions
+                Retrieves a list of Posts that mention a specific User by their ID.
+        When both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`.
+                Args:
+                    id: id
+                    max_results: max_results
+                    pagination_token: A base32hex-encoded pagination token.
+                    start_time: Must be on or after 2010-11-06.
+                    end_time: Must be on or after 2010-11-06.
+                    since_id: since_id
+                    until_id: until_id
+                    post_fields: A comma separated list of Post fields to display.
+                    expansions: A comma separated list of fields to expand.
+                    user_fields: A comma separated list of User fields to display.
+                    media_fields: A comma separated list of Media fields to display.
+                    poll_fields: A comma separated list of Poll fields to display.
+                    place_fields: A comma separated list of Place fields to display.
+                    Yields:
+                    GetMentionsResponse: One page of results at a time. Automatically handles pagination using next_token.
+                Note:
+                    This method automatically paginates through all results. To get just the first page,
+                    you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/mentions"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if start_time is not None:
+                page_params["start_time"] = start_time
+            if end_time is not None:
+                page_params["end_time"] = end_time
+            if since_id is not None:
+                page_params["since_id"] = since_id
+            if until_id is not None:
+                page_params["until_id"] = until_id
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            if poll_fields is not None:
+                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+            if place_fields is not None:
+                page_params["place.fields"] = ",".join(
+                    str(item) for item in place_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("BearerToken")
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetMentionsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def unrepost_post(
+        self, id: schemas.UserId, source_tweet_id: str
+    ) -> UnrepostPostResponse:
+        """
+        Unrepost Post
+        Causes the authenticated user to unrepost a specific Post by its ID.
+        Args:
+            id: id
+            source_tweet_id: source_tweet_id
+            Returns:
+            UnrepostPostResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/retweets/{source_tweet_id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace(
+            "{source_tweet_id}", urllib.parse.quote(str(source_tweet_id), safe="")
+        )
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -428,15 +4327,8 @@ class UsersClient:
         # This is handled in the request logic below
         params = {}
         headers = {}
-        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
         # Select authentication method based on endpoint requirements and available credentials
         # Priority strategy (matches TypeScript):
         # 1. If endpoint only accepts one method, use that (if available)
@@ -464,7 +4356,7 @@ class UsersClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -492,13 +4384,9 @@ class UsersClient:
                 full_url = f"{url}?{query_string}" if query_string else url
             # Prepare body for OAuth1 signature (form-encoded, not JSON)
             body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
             # Build OAuth1 authorization header
             oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
+                method="delete", url=full_url, body=body_string
             )
             headers["Authorization"] = oauth_header
         elif selected_auth == "bearer_token":
@@ -537,18 +4425,17 @@ class UsersClient:
                     raise ValueError(
                         f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
                     )
-        response = self.client.session.post(
+        response = self.client.session.delete(
             url,
             params=params,
             headers=headers,
-            json=json_data,
         )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return MuteUserResponse.model_validate(response_data)
+        return UnrepostPostResponse.model_validate(response_data)
 
 
     def get_posts(
@@ -619,6 +4506,7 @@ class UsersClient:
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -628,12 +4516,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -658,6 +4549,7 @@ class UsersClient:
                     "preview_image_url",
                     "promoted_metrics",
                     "public_metrics",
+                    "revenue",
                     "type",
                     "url",
                     "variants",
@@ -688,31 +4580,32 @@ class UsersClient:
         ] = None,
     ) -> Iterator[GetPostsResponse]:
         """
-        Get Users Posts
+                Get Posts
+                Retrieves a list of Posts authored by a specific User by their ID.
         When both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`.
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            start_time: Must be on or after 2010-11-06.
-            end_time: Must be on or after 2010-11-06.
-            since_id: since_id
-            until_id: until_id
-            exclude: exclude
-            post_fields: A comma separated list of Post fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            Yields:
-            GetPostsResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+                Args:
+                    id: id
+                    max_results: max_results
+                    pagination_token: A base32hex-encoded pagination token.
+                    start_time: Must be on or after 2010-11-06.
+                    end_time: Must be on or after 2010-11-06.
+                    since_id: since_id
+                    until_id: until_id
+                    exclude: exclude
+                    post_fields: A comma separated list of Post fields to display.
+                    expansions: A comma separated list of fields to expand.
+                    user_fields: A comma separated list of User fields to display.
+                    media_fields: A comma separated list of Media fields to display.
+                    poll_fields: A comma separated list of Poll fields to display.
+                    place_fields: A comma separated list of Place fields to display.
+                    Yields:
+                    GetPostsResponse: One page of results at a time. Automatically handles pagination using next_token.
+                Note:
+                    This method automatically paginates through all results. To get just the first page,
+                    you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/users/{id}/tweets"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -917,1044 +4810,31 @@ class UsersClient:
             page_response = GetPostsResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def get_followers(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetFollowersResponse]:
-        """
-        Get Users Followers
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Yields:
-            GetFollowersResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/followers"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("BearerToken")
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetFollowersResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def like_post(self, id: schemas.UserId, body: LikePostRequest) -> LikePostResponse:
-        """
-        Like Post
-        Args:
-            id: id
-            body: Request body
-        Returns:
-            LikePostResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/likes"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
                             )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return LikePostResponse.model_validate(response_data)
-
-
-    def delete_bookmark(
-        self, id: schemas.UserId, tweet_id: schemas.PostId
-    ) -> DeleteBookmarkResponse:
-        """
-        Delete Bookmark
-        Removes a Post from the authenticated user's Bookmarks by its ID.
-        Args:
-            id: id
-            tweet_id: tweet_id
-            Returns:
-            DeleteBookmarkResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/bookmarks/{tweet_id}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{tweet_id}", str(tweet_id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteBookmarkResponse.model_validate(response_data)
-
-
-    def get_timeline(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        since_id: Optional[str] = None,
-        until_id: Optional[str] = None,
-        exclude: Optional[List[Literal["replies", "retweets"]]] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_post_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "referenced_posts",
-                    "username",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetTimelineResponse]:
-        """
-        Get Users Timeline
-        When both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`.
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            start_time: Must be on or after 2010-11-06.
-            end_time: Must be on or after 2010-11-06.
-            since_id: since_id
-            until_id: until_id
-            exclude: exclude
-            post_fields: A comma separated list of Post fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            Yields:
-            GetTimelineResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/timelines/reverse_chronological"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if start_time is not None:
-                page_params["start_time"] = start_time
-            if end_time is not None:
-                page_params["end_time"] = end_time
-            if since_id is not None:
-                page_params["since_id"] = since_id
-            if until_id is not None:
-                page_params["until_id"] = until_id
-            if exclude is not None:
-                page_params["exclude"] = ",".join(str(item) for item in exclude)
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if media_fields is not None:
-                page_params["media.fields"] = ",".join(
-                    str(item) for item in media_fields
-                )
-            if poll_fields is not None:
-                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-            if place_fields is not None:
-                page_params["place.fields"] = ",".join(
-                    str(item) for item in place_fields
-                )
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetTimelineResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -1962,7 +4842,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -1975,7 +4861,7 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def get_list_memberships(
+    def get_followed_lists(
         self,
         id: schemas.UserId,
         max_results: Optional[int] = None,
@@ -1997,6 +4883,7 @@ class UsersClient:
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -2006,12 +4893,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -2024,24 +4914,25 @@ class UsersClient:
                 ]
             ]
         ] = None,
-    ) -> Iterator[GetListMembershipsResponse]:
+    ) -> Iterator[GetFollowedListsResponse]:
         """
-        Get Users List Memberships
+        Get Followed Lists
+        Retrieves a list of Lists followed by a specific User by their ID.
         Args:
             id: id
             max_results: max_results
-            pagination_token: pagination_token
+            pagination_token: A 64-bit signed integer.
             list_fields: A comma separated list of List fields to display.
             expansions: A comma separated list of fields to expand.
             user_fields: A comma separated list of User fields to display.
             Yields:
-            GetListMembershipsResponse: One page of results at a time. Automatically handles pagination using next_token.
+            GetFollowedListsResponse: One page of results at a time. Automatically handles pagination using next_token.
         Note:
             This method automatically paginates through all results. To get just the first page,
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
-        url = self.client.base_url + "/2/users/{id}/list_memberships"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/followed_lists"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -2223,28 +5114,34 @@ class UsersClient:
             # Parse the response data
             response_data = response.json()
             # Convert to Pydantic model if applicable
-            page_response = GetListMembershipsResponse.model_validate(response_data)
+            page_response = GetFollowedListsResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -2252,7 +5149,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -2265,21 +5168,20 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def unpin_list(
-        self, id: schemas.UserId, list_id: schemas.ListId
-    ) -> UnpinListResponse:
+    def follow_list(
+        self, id: schemas.UserId, body: FollowListRequest
+    ) -> FollowListResponse:
         """
-        Unpin a List
-        Causes the authenticated user to unpin a List by its ID.
+        Follow List
+        Causes the authenticated user to follow a specific List by its ID.
         Args:
             id: id
-            list_id: list_id
-            Returns:
-            UnpinListResponse: Response data
+            body: Request body
+        Returns:
+            FollowListResponse: Response data
         """
-        url = self.client.base_url + "/2/users/{id}/pinned_lists/{list_id}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{list_id}", str(list_id))
+        url = self.client.base_url + "/2/users/{id}/followed_lists"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -2306,8 +5208,15 @@ class UsersClient:
         # This is handled in the request logic below
         params = {}
         headers = {}
+        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
         # Select authentication method based on endpoint requirements and available credentials
         # Priority strategy (matches TypeScript):
         # 1. If endpoint only accepts one method, use that (if available)
@@ -2335,7 +5244,7 @@ class UsersClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -2363,9 +5272,13 @@ class UsersClient:
                 full_url = f"{url}?{query_string}" if query_string else url
             # Prepare body for OAuth1 signature (form-encoded, not JSON)
             body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
             # Build OAuth1 authorization header
             oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
+                method="post", url=full_url, body=body_string
             )
             headers["Authorization"] = oauth_header
         elif selected_auth == "bearer_token":
@@ -2404,17 +5317,18 @@ class UsersClient:
                     raise ValueError(
                         f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
                     )
-        response = self.client.session.delete(
+        response = self.client.session.post(
             url,
             params=params,
             headers=headers,
+            json=json_data,
         )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return UnpinListResponse.model_validate(response_data)
+        return FollowListResponse.model_validate(response_data)
 
 
     def unfollow_user(
@@ -2433,8 +5347,12 @@ class UsersClient:
             self.client.base_url
             + "/2/users/{source_user_id}/following/{target_user_id}"
         )
-        url = url.replace("{source_user_id}", str(source_user_id))
-        url = url.replace("{target_user_id}", str(target_user_id))
+        url = url.replace(
+            "{source_user_id}", urllib.parse.quote(str(source_user_id), safe="")
+        )
+        url = url.replace(
+            "{target_user_id}", urllib.parse.quote(str(target_user_id), safe="")
+        )
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -2572,3580 +5490,6 @@ class UsersClient:
         return UnfollowUserResponse.model_validate(response_data)
 
 
-    def get_by_usernames(
-        self,
-        usernames: List[str],
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetByUsernamesResponse:
-        """
-        Get Users by Usernames
-        Args:
-            usernames: usernames
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Returns:
-            GetByUsernamesResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/by"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if usernames is not None:
-            params["usernames"] = ",".join(str(item) for item in usernames)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if post_fields is not None:
-            params["post.fields"] = ",".join(str(item) for item in post_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByUsernamesResponse.model_validate(response_data)
-
-
-    def search(
-        self,
-        query: str,
-        max_results: Optional[int] = None,
-        next_token: Optional[str] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[SearchResponse]:
-        """
-        Search Users
-        Args:
-            query: query
-            max_results: max_results
-            next_token: next_token
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Yields:
-            SearchResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/search"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "next_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = next_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if query is not None:
-                page_params["query"] = query
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = SearchResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def get_by_id(
-        self,
-        id: schemas.UserId,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetByIdResponse:
-        """
-        Get Users by ID
-        Args:
-            id: id
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Returns:
-            GetByIdResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if post_fields is not None:
-            params["post.fields"] = ",".join(str(item) for item in post_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByIdResponse.model_validate(response_data)
-
-
-    def get_public_key(
-        self,
-        id: schemas.UserId,
-        public_key_fields: Optional[
-            List[
-                Literal[
-                    "identity_public_key_signature",
-                    "juicebox_config",
-                    "public_key",
-                    "public_key_version",
-                    "signing_public_key",
-                ]
-            ]
-        ] = None,
-    ) -> GetPublicKeyResponse:
-        """
-        Get public keys
-        Returns a user's registered public keys for X Chat encryption.
-        Args:
-            id: id
-            public_key_fields: A comma separated list of PublicKey fields to display.
-            Returns:
-            GetPublicKeyResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/public_keys"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        if public_key_fields is not None:
-            params["public_key.fields"] = ",".join(
-                str(item) for item in public_key_fields
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetPublicKeyResponse.model_validate(response_data)
-
-
-    def get_me(
-        self,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetMeResponse:
-        """
-        Get Users Me
-        Args:
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Returns:
-            GetMeResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/me"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if post_fields is not None:
-            params["post.fields"] = ",".join(str(item) for item in post_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetMeResponse.model_validate(response_data)
-
-
-    def get_public_keys(
-        self,
-        ids: List[schemas.PublicKeyId],
-        public_key_fields: Optional[
-            List[
-                Literal[
-                    "identity_public_key_signature",
-                    "juicebox_config",
-                    "public_key",
-                    "public_key_version",
-                    "signing_public_key",
-                ]
-            ]
-        ] = None,
-    ) -> GetPublicKeysResponse:
-        """
-        Get public keys
-        Returns registered public keys for X Chat encryption for the specified users.
-        Args:
-            ids: ids
-            public_key_fields: A comma separated list of PublicKey fields to display.
-            Returns:
-            GetPublicKeysResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/public_keys"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        if ids is not None:
-            params["ids"] = ",".join(str(item) for item in ids)
-        if public_key_fields is not None:
-            params["public_key.fields"] = ",".join(
-                str(item) for item in public_key_fields
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetPublicKeysResponse.model_validate(response_data)
-
-
-    def get_by_ids(
-        self,
-        ids: List[schemas.UserId],
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetByIdsResponse:
-        """
-        Get Users by IDs
-        Args:
-            ids: ids
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Returns:
-            GetByIdsResponse: Response data
-        """
-        url = self.client.base_url + "/2/users"
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        params = {}
-        if ids is not None:
-            params["ids"] = ",".join(str(item) for item in ids)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if post_fields is not None:
-            params["post.fields"] = ",".join(str(item) for item in post_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByIdsResponse.model_validate(response_data)
-
-
-    def get_affiliates(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetAffiliatesResponse]:
-        """
-        Get Users Affiliates
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A 64-bit signed integer.
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Yields:
-            GetAffiliatesResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/affiliates"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("BearerToken")
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetAffiliatesResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def unrepost_post(
-        self, id: schemas.UserId, source_tweet_id: str
-    ) -> UnrepostPostResponse:
-        """
-        Unrepost Post
-        Causes the authenticated user to unrepost a specific Post by its ID.
-        Args:
-            id: id
-            source_tweet_id: source_tweet_id
-            Returns:
-            UnrepostPostResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/retweets/{source_tweet_id}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{source_tweet_id}", str(source_tweet_id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return UnrepostPostResponse.model_validate(response_data)
-
-
-    def unlike_post(
-        self, id: schemas.UserId, tweet_id: schemas.PostId
-    ) -> UnlikePostResponse:
-        """
-        Unlike Post
-        Args:
-            id: id
-            tweet_id: tweet_id
-            Returns:
-            UnlikePostResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/likes/{tweet_id}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{tweet_id}", str(tweet_id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return UnlikePostResponse.model_validate(response_data)
-
-
-    def repost_post(
-        self, id: schemas.UserId, body: RepostPostRequest
-    ) -> RepostPostResponse:
-        """
-        Repost Post
-        Causes the authenticated user to repost a specific Post by its ID.
-        Args:
-            id: id
-            body: Request body
-        Returns:
-            RepostPostResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/retweets"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return RepostPostResponse.model_validate(response_data)
-
-
-    def unmute_user(
-        self, source_user_id: schemas.UserId, target_user_id: schemas.UserId
-    ) -> UnmuteUserResponse:
-        """
-        Unmute User
-        Causes the authenticated user to unmute the target user.
-        Args:
-            source_user_id: source_user_id
-            target_user_id: target_user_id
-            Returns:
-            UnmuteUserResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{source_user_id}/muting/{target_user_id}"
-        url = url.replace("{source_user_id}", str(source_user_id))
-        url = url.replace("{target_user_id}", str(target_user_id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return UnmuteUserResponse.model_validate(response_data)
-
-
-    def unblock_dms(self, id: schemas.UserId) -> UnblockDmsResponse:
-        """
-        Unblock Users Dms
-        Args:
-            id: id
-            Returns:
-            UnblockDmsResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/dm/unblock"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return UnblockDmsResponse.model_validate(response_data)
-
-
-    def get_bookmarks(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_post_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "referenced_posts",
-                    "username",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetBookmarksResponse]:
-        """
-        Get Users Bookmarks
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            post_fields: A comma separated list of Post fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            Yields:
-            GetBookmarksResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/bookmarks"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if media_fields is not None:
-                page_params["media.fields"] = ",".join(
-                    str(item) for item in media_fields
-                )
-            if poll_fields is not None:
-                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-            if place_fields is not None:
-                page_params["place.fields"] = ",".join(
-                    str(item) for item in place_fields
-                )
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetBookmarksResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def create_bookmark(
-        self, id: schemas.UserId, body: CreateBookmarkRequest
-    ) -> CreateBookmarkResponse:
-        """
-        Create Users Bookmark
-        Args:
-            id: id
-            body: Request body
-        Returns:
-            CreateBookmarkResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/bookmarks"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateBookmarkResponse.model_validate(response_data)
-
-
-    def get_liked_posts(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_post_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "referenced_posts",
-                    "username",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetLikedPostsResponse]:
-        """
-        Get Users Liked Posts
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            post_fields: A comma separated list of Post fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            Yields:
-            GetLikedPostsResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/liked_tweets"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if media_fields is not None:
-                page_params["media.fields"] = ",".join(
-                    str(item) for item in media_fields
-                )
-            if poll_fields is not None:
-                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-            if place_fields is not None:
-                page_params["place.fields"] = ",".join(
-                    str(item) for item in place_fields
-                )
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetLikedPostsResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
     def get_blocking(
         self,
         id: schemas.UserId,
@@ -6154,6 +5498,7 @@ class UsersClient:
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -6163,12 +5508,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -6223,7 +5571,8 @@ class UsersClient:
         ] = None,
     ) -> Iterator[GetBlockingResponse]:
         """
-        Get Users Blocking
+        Get Blocked Users
+        Returns the Users that the given User is blocking.
         Args:
             id: id
             max_results: max_results
@@ -6238,7 +5587,7 @@ class UsersClient:
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/users/{id}/blocking"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -6413,25 +5762,31 @@ class UsersClient:
             page_response = GetBlockingResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -6439,7 +5794,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -6452,221 +5813,18 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def get_pinned_lists(
-        self,
-        id: schemas.UserId,
-        list_fields: Optional[
-            List[
-                Literal[
-                    "created_at",
-                    "description",
-                    "follower_count",
-                    "id",
-                    "member_count",
-                    "name",
-                    "private",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[List[Literal["owner_id"]]] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetPinnedListsResponse:
+    def id_block(self, id: schemas.UserId, body: IdBlockRequest) -> IdBlockResponse:
         """
-        Get Users Pinned Lists
-        Args:
-            id: id
-            list_fields: A comma separated list of List fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            Returns:
-            GetPinnedListsResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/pinned_lists"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        if list_fields is not None:
-            params["list.fields"] = ",".join(str(item) for item in list_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetPinnedListsResponse.model_validate(response_data)
-
-
-    def pin_list(self, id: schemas.UserId, body: PinListRequest) -> PinListResponse:
-        """
-        Pin List
-        Causes the authenticated user to pin a specific List by its ID.
+        Block User
+        Causes the source User to block the target User. A block also removes any follow between the two Users, in both directions, and unblocking does not restore it. Each call blocks one account: block only accounts the authenticated User named or approved, because finding or reviewing accounts is not approval to block them.
         Args:
             id: id
             body: Request body
         Returns:
-            PinListResponse: Response data
+            IdBlockResponse: Response data
         """
-        url = self.client.base_url + "/2/users/{id}/pinned_lists"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/blocking"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -6813,867 +5971,7 @@ class UsersClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return PinListResponse.model_validate(response_data)
-
-
-    def get_following(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
-        ] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetFollowingResponse]:
-        """
-        Get Users Following
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            user_fields: A comma separated list of User fields to display.
-            expansions: A comma separated list of fields to expand.
-            post_fields: A comma separated list of Post fields to display.
-            Yields:
-            GetFollowingResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/following"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("BearerToken")
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetFollowingResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def follow_user(
-        self, id: schemas.UserId, body: FollowUserRequest
-    ) -> FollowUserResponse:
-        """
-        Follow User
-        Args:
-            id: id
-            body: Request body
-        Returns:
-            FollowUserResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/following"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.post(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return FollowUserResponse.model_validate(response_data)
-
-
-    def get_bookmarks_by_folder_id(
-        self,
-        id: schemas.UserId,
-        folder_id: str,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-    ) -> Iterator[GetBookmarksByFolderIdResponse]:
-        """
-        Get Users Bookmarks by Folder ID
-        Args:
-            id: id
-            folder_id: folder_id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            Yields:
-            GetBookmarksByFolderIdResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/bookmarks/folders/{folder_id}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{folder_id}", str(folder_id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetBookmarksByFolderIdResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
-
-
-    def unfollow_list(
-        self, id: schemas.UserId, list_id: schemas.ListId
-    ) -> UnfollowListResponse:
-        """
-        Unfollow a List
-        Causes the authenticated user to unfollow a List by its ID.
-        Args:
-            id: id
-            list_id: list_id
-            Returns:
-            UnfollowListResponse: Response data
-        """
-        url = self.client.base_url + "/2/users/{id}/followed_lists/{list_id}"
-        url = url.replace("{id}", str(id))
-        url = url.replace("{list_id}", str(list_id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return UnfollowListResponse.model_validate(response_data)
+        return IdBlockResponse.model_validate(response_data)
 
 
     def get_reposts_of_me(
@@ -7738,6 +6036,7 @@ class UsersClient:
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -7747,12 +6046,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -7777,6 +6079,7 @@ class UsersClient:
                     "preview_image_url",
                     "promoted_metrics",
                     "public_metrics",
+                    "revenue",
                     "type",
                     "url",
                     "variants",
@@ -7807,7 +6110,8 @@ class UsersClient:
         ] = None,
     ) -> Iterator[GetRepostsOfMeResponse]:
         """
-        Get Users Reposts of Me
+        Get Reposts of Me
+        Retrieves a list of Posts that repost content from the authenticated user.
         Args:
             max_results: max_results
             pagination_token: A base32hex-encoded pagination token.
@@ -8008,25 +6312,31 @@ class UsersClient:
             page_response = GetRepostsOfMeResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -8034,7 +6344,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -8047,12 +6363,14 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def get_by_username(
+    def get_me_followers(
         self,
-        username: str,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -8062,12 +6380,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -8120,19 +6441,339 @@ class UsersClient:
                 ]
             ]
         ] = None,
-    ) -> GetByUsernameResponse:
+    ) -> Iterator[GetMeFollowersResponse]:
         """
-        Get Users by Username
+        Get the Authenticated User's Followers
+        Returns the Users who follow the authenticated user. Same results as `GET /2/users/{id}/followers` with your own user ID, without looking it up.
         Args:
-            username: username
+            max_results: The maximum number of users to return.
+            pagination_token: The next_token or previous_token from a previous response, to fetch that page. A base32hex-encoded pagination token.
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            GetMeFollowersResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/me/followers"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetMeFollowersResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_by_id(
+        self,
+        id: schemas.UserId,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetByIdResponse:
+        """
+        Get User by ID
+        Retrieves details of a specific User by their ID.
+        Args:
+            id: id
             user_fields: A comma separated list of User fields to display.
             expansions: A comma separated list of fields to expand.
             post_fields: A comma separated list of Post fields to display.
             Returns:
-            GetByUsernameResponse: Response data
+            GetByIdResponse: Response data
         """
-        url = self.client.base_url + "/2/users/by/username/{username}"
-        url = url.replace("{username}", str(username))
+        url = self.client.base_url + "/2/users/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -8283,76 +6924,24 @@ class UsersClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return GetByUsernameResponse.model_validate(response_data)
+        return GetByIdResponse.model_validate(response_data)
 
 
-    def get_followed_lists(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        list_fields: Optional[
-            List[
-                Literal[
-                    "created_at",
-                    "description",
-                    "follower_count",
-                    "id",
-                    "member_count",
-                    "name",
-                    "private",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[List[Literal["owner_id"]]] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetFollowedListsResponse]:
+    def unlike_post(
+        self, id: schemas.UserId, tweet_id: schemas.PostId
+    ) -> UnlikePostResponse:
         """
-        Get Users Followed Lists
+        Unlike Post
+        Causes the authenticated user to unlike a specific Post by its ID.
         Args:
             id: id
-            max_results: max_results
-            pagination_token: A 64-bit signed integer.
-            list_fields: A comma separated list of List fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            Yields:
-            GetFollowedListsResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+            tweet_id: tweet_id
+            Returns:
+            UnlikePostResponse: Response data
         """
-        url = self.client.base_url + "/2/users/{id}/followed_lists"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/likes/{tweet_id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{tweet_id}", urllib.parse.quote(str(tweet_id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -8377,218 +6966,302 @@ class UsersClient:
         # UserToken: OAuth1.0a authentication - header will be built dynamically in request
         # OAuth1 header must be built per-request with method, URL, and body
         # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
             )
-        elif self.client.access_token:
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UnlikePostResponse.model_validate(response_data)
+
+
+    def get_public_key(
+        self,
+        id: schemas.UserId,
+        public_key_fields: Optional[
+            List[
+                Literal[
+                    "identity_public_key_signature",
+                    "juicebox_config",
+                    "public_key",
+                    "public_key_version",
+                    "signing_public_key",
+                    "user_id",
+                ]
+            ]
+        ] = None,
+    ) -> GetPublicKeyResponse:
+        """
+                Get User Public Keys
+                Returns a user's registered public keys for X Chat encryption.
+        Every key field is returned by default, so public_key.fields can be left out. It takes public_key, signing_public_key, identity_public_key_signature, public_key_version and juicebox_config.
+                Args:
+                    id: Numeric user ID, not `me`. For your own keys, use the `id` from Get My User (`GET /2/users/me`).
+                    public_key_fields: A comma separated list of PublicKey fields to display.
+                    Returns:
+                    GetPublicKeyResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/public_keys"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
             self.client.session.headers["Authorization"] = (
                 f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if public_key_fields is not None:
+            params["public_key.fields"] = ",".join(
+                str(item) for item in public_key_fields
             )
         headers = {}
         # Prepare request data
         json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if list_fields is not None:
-                page_params["list.fields"] = ",".join(str(item) for item in list_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
             )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("BearerToken")
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
             )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetFollowedListsResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetPublicKeyResponse.model_validate(response_data)
 
 
-    def follow_list(
-        self, id: schemas.UserId, body: FollowListRequest
-    ) -> FollowListResponse:
+    def repost_post(
+        self, id: schemas.UserId, body: RepostPostRequest
+    ) -> RepostPostResponse:
         """
-        Follow List
+        Repost Post
+        Causes the authenticated user to repost a specific Post by its ID.
         Args:
             id: id
             body: Request body
         Returns:
-            FollowListResponse: Response data
+            RepostPostResponse: Response data
         """
-        url = self.client.base_url + "/2/users/{id}/followed_lists"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/retweets"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -8735,19 +7408,1516 @@ class UsersClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return FollowListResponse.model_validate(response_data)
+        return RepostPostResponse.model_validate(response_data)
 
 
-    def block_dms(self, id: schemas.UserId) -> BlockDmsResponse:
+    def get_by_usernames(
+        self,
+        usernames: List[str],
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetByUsernamesResponse:
         """
-        Block Users Dms
+        Get Users by Usernames
+        Retrieves details of multiple Users by their usernames.
+        Args:
+            usernames: usernames
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Returns:
+            GetByUsernamesResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/by"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        params = {}
+        if usernames is not None:
+            params["usernames"] = ",".join(str(item) for item in usernames)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if post_fields is not None:
+            params["post.fields"] = ",".join(str(item) for item in post_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByUsernamesResponse.model_validate(response_data)
+
+
+    def get_followers(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetFollowersResponse]:
+        """
+        Get Followers
+        Retrieves a list of Users who follow a specific User by their ID.
+        Args:
+            id: id
+            max_results: The maximum number of users to return.
+            pagination_token: The next_token or previous_token from a previous response, to fetch that page. A base32hex-encoded pagination token.
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            GetFollowersResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/followers"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        # Priority: bearer_token > access_token (matches TypeScript behavior)
+        if self.client.bearer_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.bearer_token}"
+            )
+        elif self.client.access_token:
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("BearerToken")
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetFollowersResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_pinned_lists(
+        self,
+        id: schemas.UserId,
+        list_fields: Optional[
+            List[
+                Literal[
+                    "created_at",
+                    "description",
+                    "follower_count",
+                    "id",
+                    "member_count",
+                    "name",
+                    "private",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[List[Literal["owner_id"]]] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetPinnedListsResponse:
+        """
+        Get Pinned Lists
+        Retrieves a list of Lists pinned by the authenticated user.
+        Args:
+            id: id
+            list_fields: A comma separated list of List fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            Returns:
+            GetPinnedListsResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/pinned_lists"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if list_fields is not None:
+            params["list.fields"] = ",".join(str(item) for item in list_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetPinnedListsResponse.model_validate(response_data)
+
+
+    def pin_list(self, id: schemas.UserId, body: PinListRequest) -> PinListResponse:
+        """
+        Pin List
+        Causes the authenticated user to pin a specific List by its ID.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            PinListResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/pinned_lists"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return PinListResponse.model_validate(response_data)
+
+
+    def get_me(
+        self,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetMeResponse:
+        """
+        Get My User
+        Retrieves details of the authenticated user.
+        Args:
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Returns:
+            GetMeResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/me"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if post_fields is not None:
+            params["post.fields"] = ",".join(str(item) for item in post_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetMeResponse.model_validate(response_data)
+
+
+    def get_public_keys(
+        self,
+        ids: List[schemas.PublicKeyId],
+        public_key_fields: Optional[
+            List[
+                Literal[
+                    "identity_public_key_signature",
+                    "juicebox_config",
+                    "public_key",
+                    "public_key_version",
+                    "signing_public_key",
+                    "user_id",
+                ]
+            ]
+        ] = None,
+    ) -> GetPublicKeysResponse:
+        """
+                Get Public Keys for Multiple Users
+                Returns the public keys that up to 100 users registered for X Chat encryption, looked up by numeric user ID. Each key carries the user_id of the user it belongs to.
+        Every key field is returned by default, so public_key.fields can be left out. It takes public_key, signing_public_key, identity_public_key_signature, public_key_version, juicebox_config and user_id.
+                Args:
+                    ids: Comma-separated numeric user IDs (1-100), not @usernames.
+                    public_key_fields: A comma separated list of PublicKey fields to display.
+                    Returns:
+                    GetPublicKeysResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/public_keys"
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        if ids is not None:
+            params["ids"] = ",".join(str(item) for item in ids)
+        if public_key_fields is not None:
+            params["public_key.fields"] = ",".join(
+                str(item) for item in public_key_fields
+            )
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="get", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.get(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetPublicKeysResponse.model_validate(response_data)
+
+
+    def delete_bookmark(
+        self, id: schemas.UserId, tweet_id: schemas.PostId
+    ) -> DeleteBookmarkResponse:
+        """
+        Delete Bookmark
+        Removes a Post from the authenticated user's Bookmarks by its ID.
+        Args:
+            id: The authenticated user's numeric ID, not `me`: the `id` from Get My User (`GET /2/users/me`).
+            tweet_id: tweet_id
+            Returns:
+            DeleteBookmarkResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/bookmarks/{tweet_id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{tweet_id}", urllib.parse.quote(str(tweet_id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteBookmarkResponse.model_validate(response_data)
+
+
+    def unblock_dms(self, id: schemas.UserId) -> UnblockDmsResponse:
+        """
+        Unblock DMs
+        Unblocks direct messages to or from a specific User by their ID for the authenticated user.
         Args:
             id: id
             Returns:
-            BlockDmsResponse: Response data
+            UnblockDmsResponse: Response data
         """
-        url = self.client.base_url + "/2/users/{id}/dm/block"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/dm/unblock"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -8882,7 +9052,643 @@ class UsersClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return BlockDmsResponse.model_validate(response_data)
+        return UnblockDmsResponse.model_validate(response_data)
+
+
+    def unfollow_list(
+        self, id: schemas.UserId, list_id: schemas.ListId
+    ) -> UnfollowListResponse:
+        """
+        Unfollow List
+        Causes the authenticated user to unfollow a List by its ID.
+        Args:
+            id: id
+            list_id: list_id
+            Returns:
+            UnfollowListResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/followed_lists/{list_id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{list_id}", urllib.parse.quote(str(list_id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UnfollowListResponse.model_validate(response_data)
+
+
+    def get_muting(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[Literal["affiliation", "most_recent_post_id", "pinned_post_id"]]
+        ] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetMutingResponse]:
+        """
+        Get Muting
+        Retrieves a list of Users muted by the authenticated user.
+        Args:
+            id: id
+            max_results: max_results
+            pagination_token: pagination_token
+            user_fields: A comma separated list of User fields to display.
+            expansions: A comma separated list of fields to expand.
+            post_fields: A comma separated list of Post fields to display.
+            Yields:
+            GetMutingResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/muting"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetMutingResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def mute_user(self, id: schemas.UserId, body: MuteUserRequest) -> MuteUserResponse:
+        """
+        Mute User
+        Causes the authenticated user to mute a specific User by their ID.
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            MuteUserResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/muting"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return MuteUserResponse.model_validate(response_data)
 
 
     def get_owned_lists(
@@ -8907,6 +9713,7 @@ class UsersClient:
         user_fields: Optional[
             List[
                 Literal[
+                    "active_follower_count",
                     "confirmed_email",
                     "connection_status",
                     "created_at",
@@ -8916,12 +9723,15 @@ class UsersClient:
                     "is_identity_verified",
                     "location",
                     "name",
+                    "org_only",
                     "parody",
                     "profile_banner_url",
                     "profile_image_url",
                     "protected",
                     "public_metrics",
+                    "receives_your_chat",
                     "receives_your_dm",
+                    "subscriber_count",
                     "subscribes_to_you",
                     "subscription",
                     "subscription_type",
@@ -8936,7 +9746,8 @@ class UsersClient:
         ] = None,
     ) -> Iterator[GetOwnedListsResponse]:
         """
-        Get Users Owned Lists
+        Get Owned Lists
+        Retrieves a list of Lists owned by a specific User by their ID.
         Args:
             id: id
             max_results: max_results
@@ -8951,7 +9762,7 @@ class UsersClient:
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/users/{id}/owned_lists"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -9136,25 +9947,31 @@ class UsersClient:
             page_response = GetOwnedListsResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -9162,7 +9979,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -9175,26 +9998,174 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def get_bookmark_folders(
+    def get_timeline(
         self,
         id: schemas.UserId,
         max_results: Optional[int] = None,
         pagination_token: Optional[str] = None,
-    ) -> Iterator[GetBookmarkFoldersResponse]:
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        since_id: Optional[str] = None,
+        until_id: Optional[str] = None,
+        exclude: Optional[List[Literal["replies", "retweets"]]] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_post_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "referenced_posts",
+                    "username",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "revenue",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetTimelineResponse]:
         """
-        Get Users Bookmark Folders
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            Yields:
-            GetBookmarkFoldersResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+                Get Timeline
+                Retrieves a reverse chronological list of Posts in the authenticated user's Timeline.
+        When both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`.
+                Args:
+                    id: id
+                    max_results: max_results
+                    pagination_token: A base32hex-encoded pagination token.
+                    start_time: Must be on or after 2010-11-06.
+                    end_time: Must be on or after 2010-11-06.
+                    since_id: since_id
+                    until_id: until_id
+                    exclude: exclude
+                    post_fields: A comma separated list of Post fields to display.
+                    expansions: A comma separated list of fields to expand.
+                    user_fields: A comma separated list of User fields to display.
+                    media_fields: A comma separated list of Media fields to display.
+                    poll_fields: A comma separated list of Poll fields to display.
+                    place_fields: A comma separated list of Place fields to display.
+                    Yields:
+                    GetTimelineResponse: One page of results at a time. Automatically handles pagination using next_token.
+                Note:
+                    This method automatically paginates through all results. To get just the first page,
+                    you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
-        url = self.client.base_url + "/2/users/{id}/bookmarks/folders"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/timelines/reverse_chronological"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -9232,6 +10203,32 @@ class UsersClient:
             page_params = {}
             if max_results is not None:
                 page_params["max_results"] = max_results
+            if start_time is not None:
+                page_params["start_time"] = start_time
+            if end_time is not None:
+                page_params["end_time"] = end_time
+            if since_id is not None:
+                page_params["since_id"] = since_id
+            if until_id is not None:
+                page_params["until_id"] = until_id
+            if exclude is not None:
+                page_params["exclude"] = ",".join(str(item) for item in exclude)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            if poll_fields is not None:
+                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+            if place_fields is not None:
+                page_params["place.fields"] = ",".join(
+                    str(item) for item in place_fields
+                )
             # Add pagination token for this page
             if current_pagination_token:
                 page_params[pagination_param_name] = current_pagination_token
@@ -9360,28 +10357,34 @@ class UsersClient:
             # Parse the response data
             response_data = response.json()
             # Convert to Pydantic model if applicable
-            page_response = GetBookmarkFoldersResponse.model_validate(response_data)
+            page_response = GetTimelineResponse.model_validate(response_data)
             # Yield this page
             yield page_response
-            # Extract next_token from response
+            # Extract next_token / pagination_token from response
             next_token = None
             try:
-                # Try response.meta.next_token (most common pattern)
+                # Try response.meta.next_token or response.meta.pagination_token
                 if hasattr(page_response, "meta") and page_response.meta is not None:
                     meta = page_response.meta
                     # If meta is a Pydantic model, try to dump it
                     if hasattr(meta, "model_dump"):
                         try:
                             meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
                         except (AttributeError, TypeError):
                             pass
                     # Otherwise try attribute access
                     if not next_token and hasattr(meta, "next_token"):
                         next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
                     # If meta is a dict, access it directly
                     if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
             except (AttributeError, TypeError):
                 pass
             # Try dict access if we have a dict
@@ -9389,7 +10392,13 @@ class UsersClient:
                 try:
                     meta = response_data.get("meta")
                     if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
                 except (AttributeError, TypeError, KeyError):
                     pass
             # If no next_token, we're done
@@ -9402,20 +10411,725 @@ class UsersClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def create_bookmark_folder(
-        self, id: schemas.UserId, body: CreateBookmarkFolderRequest
-    ) -> CreateBookmarkFolderResponse:
+    def unpin_list(
+        self, id: schemas.UserId, list_id: schemas.ListId
+    ) -> UnpinListResponse:
         """
-        Create Bookmark Folder
-        Creates a new Bookmark folder for the authenticated user.
+        Unpin List
+        Causes the authenticated user to unpin a List by its ID.
+        Args:
+            id: id
+            list_id: list_id
+            Returns:
+            UnpinListResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/pinned_lists/{list_id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = url.replace("{list_id}", urllib.parse.quote(str(list_id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="delete", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.delete(
+            url,
+            params=params,
+            headers=headers,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return UnpinListResponse.model_validate(response_data)
+
+
+    def like_post(self, id: schemas.UserId, body: LikePostRequest) -> LikePostResponse:
+        """
+        Like Post
+        Causes the authenticated user to like a specific Post by its ID.
         Args:
             id: id
             body: Request body
         Returns:
-            CreateBookmarkFolderResponse: Response data
+            LikePostResponse: Response data
         """
-        url = self.client.base_url + "/2/users/{id}/bookmarks/folders"
-        url = url.replace("{id}", str(id))
+        url = self.client.base_url + "/2/users/{id}/likes"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        # Apply selected authentication
+        if selected_auth == "oauth1":
+            # OAuth1 authentication - build proper OAuth1 header dynamically
+            # Build OAuth1 header with method, URL, and body
+            # For OAuth1, we need to include query params in the URL for signature
+            full_url = url
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{url}?{query_string}" if query_string else url
+            # Prepare body for OAuth1 signature (form-encoded, not JSON)
+            body_string = ""
+            if json_data:
+                # OAuth1 spec: JSON bodies are NOT included in signature
+                # But we still need to pass the body for the request
+                body_string = ""
+            # Build OAuth1 authorization header
+            oauth_header = self.client.auth.build_request_header(
+                method="post", url=full_url, body=body_string
+            )
+            headers["Authorization"] = oauth_header
+        elif selected_auth == "bearer_token":
+            # Bearer token authentication
+            if self.client.bearer_token:
+                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+            elif self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+        elif selected_auth == "oauth2_user_context":
+            # OAuth2 User Token authentication
+            if self.client.access_token:
+                headers["Authorization"] = f"Bearer {self.client.access_token}"
+                # Check if token needs refresh
+                if self.client.oauth2_auth and self.client.token:
+                    if self.client.is_token_expired():
+                        self.client.refresh_token()
+                        if self.client.access_token:
+                            headers["Authorization"] = (
+                                f"Bearer {self.client.access_token}"
+                            )
+        # Make the request
+        if not selected_auth:
+            # No suitable auth method found - validate authentication
+            required_schemes = (
+                acceptable_schemes if "acceptable_schemes" in locals() else []
+            )
+            if required_schemes:
+                available = []
+                if available_bearer and "BearerToken" in required_schemes:
+                    available.append("BearerToken")
+                if available_oauth2 and "OAuth2UserToken" in required_schemes:
+                    available.append("OAuth2UserToken")
+                if available_oauth1 and "UserToken" in required_schemes:
+                    available.append("UserToken")
+                if not available:
+                    raise ValueError(
+                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+                    )
+        response = self.client.session.post(
+            url,
+            params=params,
+            headers=headers,
+            json=json_data,
+        )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return LikePostResponse.model_validate(response_data)
+
+
+    def get_bookmarks(
+        self,
+        id: schemas.UserId,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        post_fields: Optional[
+            List[
+                Literal[
+                    "article",
+                    "article_title",
+                    "attachments",
+                    "card_uri",
+                    "community_id",
+                    "context_annotations",
+                    "conversation_id",
+                    "created_at",
+                    "display_text_range",
+                    "edit_controls",
+                    "entities",
+                    "geo",
+                    "id",
+                    "lang",
+                    "matched_media_notes",
+                    "media_metadata",
+                    "non_public_metrics",
+                    "note_post",
+                    "note_request_suggestions",
+                    "organic_metrics",
+                    "paid_partnership",
+                    "possibly_sensitive",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "reply_settings",
+                    "scopes",
+                    "source",
+                    "suggested_source_links",
+                    "suggested_source_links_with_counts",
+                    "text",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "article.cover_media",
+                    "article.media_entities",
+                    "attachments.media_keys",
+                    "attachments.media_source_tweet",
+                    "attachments.poll_ids",
+                    "author_id",
+                    "edit_history_post_ids",
+                    "entities.mentions.username",
+                    "geo.place_id",
+                    "in_reply_to_user_id",
+                    "referenced_posts",
+                    "username",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        media_fields: Optional[
+            List[
+                Literal[
+                    "alt_text",
+                    "duration_ms",
+                    "height",
+                    "media_key",
+                    "non_public_metrics",
+                    "organic_metrics",
+                    "preview_image_url",
+                    "promoted_metrics",
+                    "public_metrics",
+                    "revenue",
+                    "type",
+                    "url",
+                    "variants",
+                    "width",
+                ]
+            ]
+        ] = None,
+        poll_fields: Optional[
+            List[
+                Literal[
+                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
+                ]
+            ]
+        ] = None,
+        place_fields: Optional[
+            List[
+                Literal[
+                    "contained_within",
+                    "country",
+                    "country_code",
+                    "full_name",
+                    "geo",
+                    "id",
+                    "name",
+                    "place_type",
+                ]
+            ]
+        ] = None,
+    ) -> Iterator[GetBookmarksResponse]:
+        """
+        Get Bookmarks
+        Retrieves a list of Posts bookmarked by the authenticated user.
+        Args:
+            id: The authenticated user's numeric ID, not `me`: the `id` from Get My User (`GET /2/users/me`).
+            max_results: max_results
+            pagination_token: A base32hex-encoded pagination token.
+            post_fields: A comma separated list of Post fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            media_fields: A comma separated list of Media fields to display.
+            poll_fields: A comma separated list of Poll fields to display.
+            place_fields: A comma separated list of Place fields to display.
+            Yields:
+            GetBookmarksResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+        """
+        url = self.client.base_url + "/2/users/{id}/bookmarks"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
+        # Priority: access_token > oauth2_session (for token refresh support)
+        if self.client.access_token:
+            # Use access_token directly as bearer token (matches TypeScript)
+            self.client.session.headers["Authorization"] = (
+                f"Bearer {self.client.access_token}"
+            )
+            # If we have oauth2_auth, check if token needs refresh
+            if self.client.oauth2_auth and self.client.token:
+                if self.client.is_token_expired():
+                    self.client.refresh_token()
+                    # Update access_token after refresh
+                    if self.client.access_token:
+                        self.client.session.headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+        elif self.client.oauth2_auth and self.client.token:
+            # Fallback: use oauth2_session if available (for backward compatibility)
+            # Check if token needs refresh
+            if self.client.is_token_expired():
+                self.client.refresh_token()
+        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
+        # OAuth1 header must be built per-request with method, URL, and body
+        # This is handled in the request logic below
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            if poll_fields is not None:
+                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
+            if place_fields is not None:
+                page_params["place.fields"] = ",".join(
+                    str(item) for item in place_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            # Apply selected authentication for this page
+            page_headers = headers.copy()
+            if page_selected_auth == "oauth1":
+                # OAuth1 authentication - build proper OAuth1 header dynamically
+                # Build OAuth1 header with method, URL, and body
+                # For OAuth1, we need to include query params in the URL for signature
+                full_url = url
+                if page_params:
+                    query_string = urllib.parse.urlencode(page_params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                # Prepare body for OAuth1 signature (form-encoded, not JSON)
+                body_string = ""
+                # Build OAuth1 authorization header
+                oauth_header = self.client.auth.build_request_header(
+                    method="get", url=full_url, body=body_string
+                )
+                page_headers["Authorization"] = oauth_header
+            elif page_selected_auth == "bearer_token":
+                # Bearer token authentication
+                if self.client.bearer_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif page_selected_auth == "oauth2_user_context":
+                # OAuth2 User Token authentication
+                if self.client.access_token:
+                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
+                    # Check if token needs refresh
+                    if self.client.oauth2_auth and self.client.token:
+                        if self.client.is_token_expired():
+                            self.client.refresh_token()
+                            if self.client.access_token:
+                                page_headers["Authorization"] = (
+                                    f"Bearer {self.client.access_token}"
+                                )
+            # Make the request
+            if not page_selected_auth:
+                # No suitable auth method found - validate authentication
+                required_schemes = (
+                    page_acceptable_schemes
+                    if "page_acceptable_schemes" in locals()
+                    else []
+                )
+                if required_schemes:
+                    available = []
+                    if page_available_bearer and "BearerToken" in required_schemes:
+                        available.append("BearerToken")
+                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
+                        available.append("OAuth2UserToken")
+                    if page_available_oauth1 and "UserToken" in required_schemes:
+                        available.append("UserToken")
+                    if not available:
+                        raise ValueError(
+                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                        )
+            response = self.client.session.get(
+                url,
+                params=page_params,
+                headers=page_headers,
+            )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetBookmarksResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def create_bookmark(
+        self, id: schemas.UserId, body: CreateBookmarkRequest
+    ) -> CreateBookmarkResponse:
+        """
+        Create Bookmark
+        Adds one or more Posts to the authenticated user's Bookmarks. Supply `tweet_id` for a single Post, or `tweet_ids` (at most 25) to bookmark several in one request. Optional `folder_id` applies to every Post in the request. Billing and rate limits still apply per HTTP request.
+        Args:
+            id: The authenticated user's numeric ID, not `me`: the `id` from Get My User (`GET /2/users/me`).
+            body: At least one of `tweet_id`, `tweet_ids` is required.
+        Returns:
+            CreateBookmarkResponse: Response data
+        """
+        url = self.client.base_url + "/2/users/{id}/bookmarks"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -9558,405 +11272,4 @@ class UsersClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return CreateBookmarkFolderResponse.model_validate(response_data)
-
-
-    def get_mentions(
-        self,
-        id: schemas.UserId,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        since_id: Optional[str] = None,
-        until_id: Optional[str] = None,
-        post_fields: Optional[
-            List[
-                Literal[
-                    "article",
-                    "article_title",
-                    "attachments",
-                    "card_uri",
-                    "community_id",
-                    "context_annotations",
-                    "conversation_id",
-                    "created_at",
-                    "display_text_range",
-                    "edit_controls",
-                    "entities",
-                    "geo",
-                    "id",
-                    "lang",
-                    "matched_media_notes",
-                    "media_metadata",
-                    "non_public_metrics",
-                    "note_post",
-                    "note_request_suggestions",
-                    "organic_metrics",
-                    "paid_partnership",
-                    "possibly_sensitive",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "reply_settings",
-                    "scopes",
-                    "source",
-                    "suggested_source_links",
-                    "suggested_source_links_with_counts",
-                    "text",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "article.cover_media",
-                    "article.media_entities",
-                    "attachments.media_keys",
-                    "attachments.media_source_tweet",
-                    "attachments.poll_ids",
-                    "author_id",
-                    "edit_history_post_ids",
-                    "entities.mentions.username",
-                    "geo.place_id",
-                    "in_reply_to_user_id",
-                    "referenced_posts",
-                    "username",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_dm",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        media_fields: Optional[
-            List[
-                Literal[
-                    "alt_text",
-                    "duration_ms",
-                    "height",
-                    "media_key",
-                    "non_public_metrics",
-                    "organic_metrics",
-                    "preview_image_url",
-                    "promoted_metrics",
-                    "public_metrics",
-                    "type",
-                    "url",
-                    "variants",
-                    "width",
-                ]
-            ]
-        ] = None,
-        poll_fields: Optional[
-            List[
-                Literal[
-                    "duration_minutes", "end_datetime", "id", "options", "voting_status"
-                ]
-            ]
-        ] = None,
-        place_fields: Optional[
-            List[
-                Literal[
-                    "contained_within",
-                    "country",
-                    "country_code",
-                    "full_name",
-                    "geo",
-                    "id",
-                    "name",
-                    "place_type",
-                ]
-            ]
-        ] = None,
-    ) -> Iterator[GetMentionsResponse]:
-        """
-        Get Users Mentions
-        When both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`.
-        Args:
-            id: id
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            start_time: Must be on or after 2010-11-06.
-            end_time: Must be on or after 2010-11-06.
-            since_id: since_id
-            until_id: until_id
-            post_fields: A comma separated list of Post fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            media_fields: A comma separated list of Media fields to display.
-            poll_fields: A comma separated list of Poll fields to display.
-            place_fields: A comma separated list of Place fields to display.
-            Yields:
-            GetMentionsResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
-        """
-        url = self.client.base_url + "/2/users/{id}/mentions"
-        url = url.replace("{id}", str(id))
-        # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
-        # Priority: access_token > oauth2_session (for token refresh support)
-        if self.client.access_token:
-            # Use access_token directly as bearer token (matches TypeScript)
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-            # If we have oauth2_auth, check if token needs refresh
-            if self.client.oauth2_auth and self.client.token:
-                if self.client.is_token_expired():
-                    self.client.refresh_token()
-                    # Update access_token after refresh
-                    if self.client.access_token:
-                        self.client.session.headers["Authorization"] = (
-                            f"Bearer {self.client.access_token}"
-                        )
-        elif self.client.oauth2_auth and self.client.token:
-            # Fallback: use oauth2_session if available (for backward compatibility)
-            # Check if token needs refresh
-            if self.client.is_token_expired():
-                self.client.refresh_token()
-        # UserToken: OAuth1.0a authentication - header will be built dynamically in request
-        # OAuth1 header must be built per-request with method, URL, and body
-        # This is handled in the request logic below
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if start_time is not None:
-                page_params["start_time"] = start_time
-            if end_time is not None:
-                page_params["end_time"] = end_time
-            if since_id is not None:
-                page_params["since_id"] = since_id
-            if until_id is not None:
-                page_params["until_id"] = until_id
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if media_fields is not None:
-                page_params["media.fields"] = ",".join(
-                    str(item) for item in media_fields
-                )
-            if poll_fields is not None:
-                page_params["poll.fields"] = ",".join(str(item) for item in poll_fields)
-            if place_fields is not None:
-                page_params["place.fields"] = ",".join(
-                    str(item) for item in place_fields
-                )
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("BearerToken")
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetMentionsResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token (most common pattern)
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token")
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
-
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
+        return CreateBookmarkResponse.model_validate(response_data)

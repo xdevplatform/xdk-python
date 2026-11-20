@@ -72,10 +72,10 @@ class TestSpacesStructure:
             ), f"Required parameter '{required_param}' missing from get_by_creator_ids"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
-            "space.fields",
+            "space_fields",
             "expansions",
-            "user.fields",
-            "topic.fields",
+            "user_fields",
+            "topic_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -93,175 +93,6 @@ class TestSpacesStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method get_by_creator_ids should have return type annotation"
-
-
-    def test_search_exists(self):
-        """Test that search method exists with correct signature."""
-        # Check method exists
-        method = getattr(SpacesClient, "search", None)
-        assert method is not None, f"Method search does not exist on SpacesClient"
-        # Check method is callable
-        assert callable(method), f"search is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"search should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "query",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from search"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "state",
-            "max_results",
-            "space.fields",
-            "expansions",
-            "user.fields",
-            "topic.fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_search_return_annotation(self):
-        """Test that search has proper return type annotation."""
-        method = getattr(SpacesClient, "search")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method search should have return type annotation"
-
-
-    def test_get_posts_exists(self):
-        """Test that get_posts method exists with correct signature."""
-        # Check method exists
-        method = getattr(SpacesClient, "get_posts", None)
-        assert method is not None, f"Method get_posts does not exist on SpacesClient"
-        # Check method is callable
-        assert callable(method), f"get_posts is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get_posts should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_posts"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "max_results",
-            "pagination_token",
-            "post.fields",
-            "expansions",
-            "user.fields",
-            "media.fields",
-            "poll.fields",
-            "place.fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_posts_return_annotation(self):
-        """Test that get_posts has proper return type annotation."""
-        method = getattr(SpacesClient, "get_posts")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_posts should have return type annotation"
-
-
-    def test_get_posts_pagination_params(self):
-        """Test that get_posts has pagination parameters."""
-        method = getattr(SpacesClient, "get_posts")
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have pagination-related parameters
-        pagination_params = [
-            "pagination_token",
-            "max_results",
-            "next_token",
-            "cursor",
-            "limit",
-        ]
-        has_pagination_param = any(param in params for param in pagination_params)
-        assert (
-            has_pagination_param
-        ), f"Paginated method get_posts should have pagination parameters"
-
-
-    def test_get_by_id_exists(self):
-        """Test that get_by_id method exists with correct signature."""
-        # Check method exists
-        method = getattr(SpacesClient, "get_by_id", None)
-        assert method is not None, f"Method get_by_id does not exist on SpacesClient"
-        # Check method is callable
-        assert callable(method), f"get_by_id is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get_by_id should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_by_id"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "space.fields",
-            "expansions",
-            "user.fields",
-            "topic.fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_by_id_return_annotation(self):
-        """Test that get_by_id has proper return type annotation."""
-        method = getattr(SpacesClient, "get_by_id")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_by_id should have return type annotation"
 
 
     def test_get_by_ids_exists(self):
@@ -289,10 +120,10 @@ class TestSpacesStructure:
             ), f"Required parameter '{required_param}' missing from get_by_ids"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
-            "space.fields",
+            "space_fields",
             "expansions",
-            "user.fields",
-            "topic.fields",
+            "user_fields",
+            "topic_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -339,9 +170,9 @@ class TestSpacesStructure:
         optional_params = [
             "max_results",
             "pagination_token",
-            "user.fields",
+            "user_fields",
             "expansions",
-            "post.fields",
+            "post_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -380,15 +211,184 @@ class TestSpacesStructure:
         ), f"Paginated method get_buyers should have pagination parameters"
 
 
+    def test_get_posts_exists(self):
+        """Test that get_posts method exists with correct signature."""
+        # Check method exists
+        method = getattr(SpacesClient, "get_posts", None)
+        assert method is not None, f"Method get_posts does not exist on SpacesClient"
+        # Check method is callable
+        assert callable(method), f"get_posts is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get_posts should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_posts"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "max_results",
+            "pagination_token",
+            "post_fields",
+            "expansions",
+            "user_fields",
+            "media_fields",
+            "poll_fields",
+            "place_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_posts_return_annotation(self):
+        """Test that get_posts has proper return type annotation."""
+        method = getattr(SpacesClient, "get_posts")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_posts should have return type annotation"
+
+
+    def test_get_posts_pagination_params(self):
+        """Test that get_posts has pagination parameters."""
+        method = getattr(SpacesClient, "get_posts")
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have pagination-related parameters
+        pagination_params = [
+            "pagination_token",
+            "max_results",
+            "next_token",
+            "cursor",
+            "limit",
+        ]
+        has_pagination_param = any(param in params for param in pagination_params)
+        assert (
+            has_pagination_param
+        ), f"Paginated method get_posts should have pagination parameters"
+
+
+    def test_search_exists(self):
+        """Test that search method exists with correct signature."""
+        # Check method exists
+        method = getattr(SpacesClient, "search", None)
+        assert method is not None, f"Method search does not exist on SpacesClient"
+        # Check method is callable
+        assert callable(method), f"search is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"search should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "query",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from search"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "state",
+            "max_results",
+            "space_fields",
+            "expansions",
+            "user_fields",
+            "topic_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_search_return_annotation(self):
+        """Test that search has proper return type annotation."""
+        method = getattr(SpacesClient, "search")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method search should have return type annotation"
+
+
+    def test_get_by_id_exists(self):
+        """Test that get_by_id method exists with correct signature."""
+        # Check method exists
+        method = getattr(SpacesClient, "get_by_id", None)
+        assert method is not None, f"Method get_by_id does not exist on SpacesClient"
+        # Check method is callable
+        assert callable(method), f"get_by_id is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get_by_id should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_by_id"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "space_fields",
+            "expansions",
+            "user_fields",
+            "topic_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_by_id_return_annotation(self):
+        """Test that get_by_id has proper return type annotation."""
+        method = getattr(SpacesClient, "get_by_id")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_by_id should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
             "get_by_creator_ids",
-            "search",
-            "get_posts",
-            "get_by_id",
             "get_by_ids",
             "get_buyers",
+            "get_posts",
+            "search",
+            "get_by_id",
         ]
         for expected_method in expected_methods:
             assert hasattr(

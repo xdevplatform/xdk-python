@@ -179,7 +179,8 @@ class TestGeneralContracts:
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {}
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.content = b""
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
@@ -197,6 +198,7 @@ class TestGeneralContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response

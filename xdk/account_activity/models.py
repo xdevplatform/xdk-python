@@ -25,10 +25,6 @@ GetSubscriptionCountResponse = schemas.GetAccountActivitySubscriptionCountRespon
 GetSubscriptionsResponse = schemas.GetAccountActivitySubscriptionsResponse
 
 
-# Response model for delete_subscription
-DeleteSubscriptionResponse = schemas.DeleteAccountActivitySubscriptionResponse
-
-
 # Response model for validate_subscription
 ValidateSubscriptionResponse = schemas.ValidateAccountActivitySubscriptionResponse
 
@@ -38,8 +34,32 @@ class CreateSubscriptionRequest(
 ):
     """Request model for create_subscription"""
 
-    pass
+
+    def __init__(self, root: Any = None, **kwargs: Any) -> None:
+        if root is None:
+            super().__init__(kwargs)
+        else:
+            super().__init__(root)
+
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        root = object.__getattribute__(self, "root")
+        if isinstance(root, dict) and name in root:
+            return root[name]
+        if hasattr(root, name):
+            return getattr(root, name)
+        if name in ("data", "errors", "includes", "meta"):
+            return None
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
 
 
 # Response model for create_subscription
 CreateSubscriptionResponse = schemas.CreateAccountActivitySubscriptionResponse
+
+
+# Response model for delete_subscription
+DeleteSubscriptionResponse = schemas.DeleteAccountActivitySubscriptionResponse

@@ -17,8 +17,32 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_by_keys
-GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
+# Response model for finalize_upload
+FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
+
+
+# Response model for get_amplify_programs
+GetAmplifyProgramsResponse = schemas.GetAmplifyProgramsResponse
+
+
+# Request model for create_metadata
+CreateMetadataRequest = schemas.CreateMediaMetadataRequest
+
+
+# Response model for create_metadata
+CreateMetadataResponse = schemas.CreateMediaMetadataResponse
+
+
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.InitializeMediaUploadRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.InitializeMediaUploadResponse
+
+
+# Response model for get_amplify_program_posts
+GetAmplifyProgramPostsResponse = schemas.GetAmplifyProgramPostsResponse
 
 
 # Response model for get_upload_status
@@ -33,24 +57,24 @@ UploadRequest = schemas.MediaUploadRequest
 UploadResponse = schemas.MediaUploadResponse
 
 
-# Request model for create_metadata
-CreateMetadataRequest = schemas.CreateMediaMetadataRequest
+# Request model for add_post_to_amplify_programs
+AddPostToAmplifyProgramsRequest = schemas.AddPostToAmplifyProgramsRequest
 
 
-# Response model for create_metadata
-CreateMetadataResponse = schemas.CreateMediaMetadataResponse
+# Response model for add_post_to_amplify_programs
+AddPostToAmplifyProgramsResponse = schemas.AddPostToAmplifyProgramsResponse
 
 
-# Response model for finalize_upload
-FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
+# Response model for get_by_keys
+GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
 
 
-# Response model for get_by_key
-GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
+# Request model for append_upload
+AppendUploadRequest = schemas.AppendMediaUploadRequest
 
 
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
+# Response model for append_upload
+AppendUploadResponse = schemas.AppendMediaUploadResponse
 
 
 # Request model for create_subtitles
@@ -69,17 +93,63 @@ DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
 DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
 
 
-# Request model for append_upload
-AppendUploadRequest = schemas.AppendMediaUploadRequest
+# Request model for add_to_library
+AddToLibraryRequest = schemas.AddMediaToLibraryRequest
 
 
-# Response model for append_upload
-AppendUploadResponse = schemas.AppendMediaUploadResponse
+# Response model for add_to_library
+AddToLibraryResponse = schemas.AddMediaToLibraryResponse
 
 
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.InitializeMediaUploadRequest
+# Response model for get_library_categories
+GetLibraryCategoriesResponse = schemas.GetMediaLibraryCategoriesResponse
 
 
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.InitializeMediaUploadResponse
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
+
+
+# Response model for get_by_key
+GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
+
+
+# Response model for get_amplify_program
+GetAmplifyProgramResponse = schemas.GetAmplifyProgramResponse
+
+
+# Request model for update_in_library
+UpdateInLibraryRequest = schemas.UpdateMediaInLibraryRequest
+
+
+# Response model for update_in_library
+UpdateInLibraryResponse = schemas.UpdateMediaInLibraryResponse
+
+
+class RemoveFromLibraryRequest(RootModel[schemas.RemoveMediaFromLibraryRequest]):
+    """Request model for remove_from_library"""
+
+
+    def __init__(self, root: Any = None, **kwargs: Any) -> None:
+        if root is None:
+            super().__init__(kwargs)
+        else:
+            super().__init__(root)
+
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        root = object.__getattribute__(self, "root")
+        if isinstance(root, dict) and name in root:
+            return root[name]
+        if hasattr(root, name):
+            return getattr(root, name)
+        if name in ("data", "errors", "includes", "meta"):
+            return None
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
+
+
+# Response model for remove_from_library
+RemoveFromLibraryResponse = schemas.RemoveMediaFromLibraryResponse

@@ -17,6 +17,10 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Response model for delete_all
+DeleteAllResponse = schemas.DeleteAllConnectionsResponse
+
+
 # Response model for get_connection_history
 GetConnectionHistoryResponse = schemas.GetConnectionHistoryResponse
 
@@ -27,10 +31,6 @@ DeleteByUuidsRequest = schemas.DeleteConnectionsByUuidsRequest
 
 # Response model for delete_by_uuids
 DeleteByUuidsResponse = schemas.DeleteConnectionsByUuidsResponse
-
-
-# Response model for delete_all
-DeleteAllResponse = schemas.DeleteAllConnectionsResponse
 
 
 # Response model for delete_by_endpoint

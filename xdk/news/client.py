@@ -61,7 +61,7 @@ class NewsClient:
         ] = None,
     ) -> GetResponse:
         """
-        Get news stories by ID
+        Get News Stories by ID
         Retrieves news story by its ID.
         Args:
             id: id
@@ -70,7 +70,7 @@ class NewsClient:
             GetResponse: Response data
         """
         url = self.client.base_url + "/2/news/{id}"
-        url = url.replace("{id}", str(id))
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # OAuth2UserToken: Use access_token as bearer token (matches TypeScript behavior)
         # Priority: access_token > oauth2_session (for token refresh support)
         if self.client.access_token:
@@ -247,6 +247,7 @@ class NewsClient:
     ) -> SearchResponse:
         """
         Search News
+        Retrieves a list of News stories matching the specified search query.
         Args:
             query: query
             max_results: max_results

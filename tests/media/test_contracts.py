@@ -43,8 +43,211 @@ class TestMediaContracts:
         self.media_client = getattr(self.client, "media")
 
 
-    def test_get_by_keys_request_structure(self):
-        """Test get_by_keys request structure."""
+    def test_finalize_upload_request_structure(self):
+        """Test finalize_upload request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["id"] = "test_id"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.media_client, "finalize_upload")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.post.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.post.call_count >= 1
+                else:
+                    mock_session.post.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.post.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/upload/{id}/finalize"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.post.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for finalize_upload: {e}")
+
+
+    def test_finalize_upload_required_parameters(self):
+        """Test that finalize_upload handles parameters correctly."""
+        method = getattr(self.media_client, "finalize_upload")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.post.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_finalize_upload_response_structure(self):
+        """Test finalize_upload response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["id"] = "test_value"
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "finalize_upload")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_amplify_programs_request_structure(self):
+        """Test get_amplify_programs request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -57,11 +260,10 @@ class TestMediaContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["media_keys"] = ["test_item"]
             # Add request body if required
             # Call the method
             try:
-                method = getattr(self.media_client, "get_by_keys")
+                method = getattr(self.media_client, "get_amplify_programs")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -142,7 +344,7 @@ class TestMediaContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/media"
+                expected_path = "/2/media/amplify/programs"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -170,12 +372,790 @@ class TestMediaContracts:
                     # Validation error is acceptable - request was made, just response parsing failed
                     mock_session.get.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for get_by_keys: {e}")
+                    pytest.fail(f"Contract test failed for get_amplify_programs: {e}")
 
 
-    def test_get_by_keys_required_parameters(self):
-        """Test that get_by_keys handles parameters correctly."""
-        method = getattr(self.media_client, "get_by_keys")
+    def test_get_amplify_programs_required_parameters(self):
+        """Test that get_amplify_programs handles parameters correctly."""
+        method = getattr(self.media_client, "get_amplify_programs")
+        # No required parameters, method should be callable without args
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.content = b""
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            try:
+                method()
+            except Exception as e:
+                pytest.fail(f"Method with no required params should be callable: {e}")
+
+
+    def test_get_amplify_programs_response_structure(self):
+        """Test get_amplify_programs response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "get_amplify_programs")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_create_metadata_request_structure(self):
+        """Test create_metadata request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import CreateMetadataRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                CreateMetadataRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = CreateMetadataRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call the method
+            try:
+                method = getattr(self.media_client, "create_metadata")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.post.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.post.call_count >= 1
+                else:
+                    mock_session.post.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.post.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/metadata"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.post.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for create_metadata: {e}")
+
+
+    def test_create_metadata_required_parameters(self):
+        """Test that create_metadata handles parameters correctly."""
+        method = getattr(self.media_client, "create_metadata")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.post.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_create_metadata_response_structure(self):
+        """Test create_metadata response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import CreateMetadataRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                CreateMetadataRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = CreateMetadataRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call method and verify response structure
+            method = getattr(self.media_client, "create_metadata")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_initialize_upload_request_structure(self):
+        """Test initialize_upload request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import InitializeUploadRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                InitializeUploadRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = InitializeUploadRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call the method
+            try:
+                method = getattr(self.media_client, "initialize_upload")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.post.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.post.call_count >= 1
+                else:
+                    mock_session.post.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.post.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/upload/initialize"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.post.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for initialize_upload: {e}")
+
+
+    def test_initialize_upload_required_parameters(self):
+        """Test that initialize_upload handles parameters correctly."""
+        method = getattr(self.media_client, "initialize_upload")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.post.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_initialize_upload_response_structure(self):
+        """Test initialize_upload response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import InitializeUploadRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                InitializeUploadRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = InitializeUploadRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call method and verify response structure
+            method = getattr(self.media_client, "initialize_upload")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_amplify_program_posts_request_structure(self):
+        """Test get_amplify_program_posts request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["program_id"] = "test_program_id"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.media_client, "get_amplify_program_posts")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.get.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.get.call_count >= 1
+                else:
+                    mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/amplify/programs/{program_id}/posts"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.get.assert_called_once()
+                else:
+                    pytest.fail(
+                        f"Contract test failed for get_amplify_program_posts: {e}"
+                    )
+
+
+    def test_get_amplify_program_posts_required_parameters(self):
+        """Test that get_amplify_program_posts handles parameters correctly."""
+        method = getattr(self.media_client, "get_amplify_program_posts")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -195,23 +1175,24 @@ class TestMediaContracts:
                     next(result)
 
 
-    def test_get_by_keys_response_structure(self):
-        """Test get_by_keys response structure validation."""
+    def test_get_amplify_program_posts_response_structure(self):
+        """Test get_amplify_program_posts response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
             mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["media_keys"] = ["test"]
+            kwargs["program_id"] = "test_value"
             # Add request body if required
             # Call method and verify response structure
-            method = getattr(self.media_client, "get_by_keys")
+            method = getattr(self.media_client, "get_amplify_program_posts")
             import inspect
             if "stream_config" in inspect.signature(method).parameters:
                 # Streaming operations yield from a live connection; response
@@ -405,6 +1386,7 @@ class TestMediaContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.get.return_value = mock_response
@@ -650,6 +1632,7 @@ class TestMediaContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.post.return_value = mock_response
@@ -735,8 +1718,8 @@ class TestMediaContracts:
                 )
 
 
-    def test_create_metadata_request_structure(self):
-        """Test create_metadata request structure."""
+    def test_add_post_to_amplify_programs_request_structure(self):
+        """Test add_post_to_amplify_programs request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -751,16 +1734,16 @@ class TestMediaContracts:
             # Add required parameters
             # Add request body if required
             # Import and create proper request model instance
-            from xdk.media.models import CreateMetadataRequest
+            from xdk.media.models import AddPostToAmplifyProgramsRequest
             # Rebuild model to resolve forward references before instantiation
             try:
-                CreateMetadataRequest.model_rebuild()
+                AddPostToAmplifyProgramsRequest.model_rebuild()
             except Exception:
                 pass  # Model may already be fully defined
             # Create instance with required fields (using dummy values for testing)
             import typing
             required_kwargs = {}
-            request_model = CreateMetadataRequest
+            request_model = AddPostToAmplifyProgramsRequest
             for field_name, field_info in getattr(
                 request_model, "model_fields", {}
             ).items():
@@ -796,7 +1779,7 @@ class TestMediaContracts:
                 kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call the method
             try:
-                method = getattr(self.media_client, "create_metadata")
+                method = getattr(self.media_client, "add_post_to_amplify_programs")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -877,7 +1860,7 @@ class TestMediaContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/media/metadata"
+                expected_path = "/2/media/amplify/posts"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -905,12 +1888,14 @@ class TestMediaContracts:
                     # Validation error is acceptable - request was made, just response parsing failed
                     mock_session.post.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for create_metadata: {e}")
+                    pytest.fail(
+                        f"Contract test failed for add_post_to_amplify_programs: {e}"
+                    )
 
 
-    def test_create_metadata_required_parameters(self):
-        """Test that create_metadata handles parameters correctly."""
-        method = getattr(self.media_client, "create_metadata")
+    def test_add_post_to_amplify_programs_required_parameters(self):
+        """Test that add_post_to_amplify_programs handles parameters correctly."""
+        method = getattr(self.media_client, "add_post_to_amplify_programs")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -930,14 +1915,15 @@ class TestMediaContracts:
                     next(result)
 
 
-    def test_create_metadata_response_structure(self):
-        """Test create_metadata response structure validation."""
+    def test_add_post_to_amplify_programs_response_structure(self):
+        """Test add_post_to_amplify_programs response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
             mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.post.return_value = mock_response
@@ -945,16 +1931,16 @@ class TestMediaContracts:
             kwargs = {}
             # Add request body if required
             # Import and create proper request model instance
-            from xdk.media.models import CreateMetadataRequest
+            from xdk.media.models import AddPostToAmplifyProgramsRequest
             # Rebuild model to resolve forward references before instantiation
             try:
-                CreateMetadataRequest.model_rebuild()
+                AddPostToAmplifyProgramsRequest.model_rebuild()
             except Exception:
                 pass  # Model may already be fully defined
             # Create instance with required fields (using dummy values for testing)
             import typing
             required_kwargs = {}
-            request_model = CreateMetadataRequest
+            request_model = AddPostToAmplifyProgramsRequest
             for field_name, field_info in getattr(
                 request_model, "model_fields", {}
             ).items():
@@ -989,7 +1975,7 @@ class TestMediaContracts:
                 # validation since this test only exercises request plumbing.
                 kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call method and verify response structure
-            method = getattr(self.media_client, "create_metadata")
+            method = getattr(self.media_client, "add_post_to_amplify_programs")
             import inspect
             if "stream_config" in inspect.signature(method).parameters:
                 # Streaming operations yield from a live connection; response
@@ -1023,8 +2009,211 @@ class TestMediaContracts:
                 )
 
 
-    def test_finalize_upload_request_structure(self):
-        """Test finalize_upload request structure."""
+    def test_get_by_keys_request_structure(self):
+        """Test get_by_keys request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["media_keys"] = ["test_item"]
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.media_client, "get_by_keys")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.get.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.get.call_count >= 1
+                else:
+                    mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.get.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for get_by_keys: {e}")
+
+
+    def test_get_by_keys_required_parameters(self):
+        """Test that get_by_keys handles parameters correctly."""
+        method = getattr(self.media_client, "get_by_keys")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.get.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_get_by_keys_response_structure(self):
+        """Test get_by_keys response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["media_keys"] = ["test"]
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "get_by_keys")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_append_upload_request_structure(self):
+        """Test append_upload request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -1039,9 +2228,53 @@ class TestMediaContracts:
             # Add required parameters
             kwargs["id"] = "test_id"
             # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import AppendUploadRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                AppendUploadRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = AppendUploadRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call the method
             try:
-                method = getattr(self.media_client, "finalize_upload")
+                method = getattr(self.media_client, "append_upload")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -1122,7 +2355,7 @@ class TestMediaContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/media/upload/{id}/finalize"
+                expected_path = "/2/media/upload/{id}/append"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -1150,12 +2383,12 @@ class TestMediaContracts:
                     # Validation error is acceptable - request was made, just response parsing failed
                     mock_session.post.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for finalize_upload: {e}")
+                    pytest.fail(f"Contract test failed for append_upload: {e}")
 
 
-    def test_finalize_upload_required_parameters(self):
-        """Test that finalize_upload handles parameters correctly."""
-        method = getattr(self.media_client, "finalize_upload")
+    def test_append_upload_required_parameters(self):
+        """Test that append_upload handles parameters correctly."""
+        method = getattr(self.media_client, "append_upload")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -1175,14 +2408,15 @@ class TestMediaContracts:
                     next(result)
 
 
-    def test_finalize_upload_response_structure(self):
-        """Test finalize_upload response structure validation."""
+    def test_append_upload_response_structure(self):
+        """Test append_upload response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
             mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.post.return_value = mock_response
@@ -1190,416 +2424,52 @@ class TestMediaContracts:
             kwargs = {}
             kwargs["id"] = "test_value"
             # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.media_client, "finalize_upload")
-            import inspect
-            if "stream_config" in inspect.signature(method).parameters:
-                # Streaming operations yield from a live connection; response
-                # structure is validated by the streaming tests instead.
-                return
-            result = method(**kwargs)
-            # Verify response round-trips the spec-valid payload: every key in
-            # the mocked response must surface on the model (RootModel
-            # wrappers expose the payload via .root instead).
-            import types as _types
-            if isinstance(result, _types.GeneratorType):
-                # Paginated methods return generators; validate the first page.
-                _pages = list(result)
-                target = _pages[0] if _pages else None
-            else:
-                target = result.root if hasattr(result, "root") else result
-            if target is not None and isinstance(mock_response_data, dict):
-                for _key in mock_response_data:
-                    if isinstance(target, dict):
-                        assert _key in target, f"Response should have '{_key}' key"
+            # Import and create proper request model instance
+            from xdk.media.models import AppendUploadRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                AppendUploadRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = AppendUploadRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
                     else:
-                        assert hasattr(
-                            target, _key
-                        ), f"Response should have '{_key}' field"
-            # Optional field - just check it doesn't cause errors if accessed
+                        required_kwargs[field_name] = "test_value"
             try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_get_by_key_request_structure(self):
-        """Test get_by_key request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["media_key"] = "test_media_key"
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.media_client, "get_by_key")
-                # Check if this is a true streaming operation (has stream_config parameter)
-                import types
-                import inspect
-                sig = inspect.signature(method)
-                has_stream_config_param = "stream_config" in sig.parameters
-                # Set up streaming mock only for actual streaming operations
-                if has_stream_config_param:
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    # Make it a proper context manager
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Set up iter_content to return an iterator that yields test data then stops
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content = Mock(
-                        side_effect=lambda *args, **kw: iter([test_data])
-                    )
-                    # First call returns mock response, second call raises to prevent infinite reconnect loop
-                    from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.get.side_effect = [
-                        mock_streaming_response,
-                        StreamError(
-                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
-                        ),
-                    ]
-                    # Pass stream_config with max_retries=0 to exit quickly on error
-                    from xdk.streaming import StreamConfig
-                    kwargs["stream_config"] = StreamConfig(max_retries=0)
-                result = method(**kwargs)
-                # Check if result is a generator (streaming or paginated)
-                is_generator = isinstance(result, types.GeneratorType)
-                is_streaming = has_stream_config_param and is_generator
-                if is_generator:
-                    # Consume the generator to trigger the HTTP request
-                    # For both streaming and paginated methods, request happens on iteration
-                    try:
-                        # Try to get first item - this will trigger the HTTP request
-                        next(result)
-                    except StopIteration:
-                        # Generator exhausted immediately - request was still made
-                        pass
-                    except (
-                        requests.exceptions.RequestException,
-                        json.JSONDecodeError,
-                        AttributeError,
-                        ValueError,
-                    ) as e:
-                        # These exceptions can occur during streaming/pagination
-                        pass
-                    except Exception as e:
-                        # Accept validation errors - we're testing request structure, not response parsing
-                        # Also accept streaming errors
-                        err_str = str(e).lower()
-                        err_type = type(e).__name__
-                        if (
-                            "validation" in err_str
-                            or "ValidationError" in err_type
-                            or "PydanticUserError" in err_type
-                            or "Max retries" in str(e)
-                            or "StreamError" in err_type
-                            or "not fully defined" in err_str
-                        ):
-                            pass
-                        else:
-                            raise
-                # Verify the request was made
-                if is_streaming:
-                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.get.call_count >= 1
-                else:
-                    mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/media/{media_key}"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                # Accept validation errors - we're testing request structure, not response parsing
-                err_str = str(e).lower()
-                err_type = type(e).__name__
-                if (
-                    "validation" in err_str
-                    or "ValidationError" in err_type
-                    or "PydanticUserError" in err_type
-                    or "not fully defined" in err_str
-                ):
-                    # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.get.assert_called_once()
-                else:
-                    pytest.fail(f"Contract test failed for get_by_key: {e}")
-
-
-    def test_get_by_key_required_parameters(self):
-        """Test that get_by_key handles parameters correctly."""
-        method = getattr(self.media_client, "get_by_key")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.get.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            # For generator methods (paginated), we need to iterate to trigger the exception
-            import types
-            with pytest.raises((TypeError, ValueError, Exception)):
-                result = method()
-                # Check if it's a generator (paginated method)
-                if isinstance(result, types.GeneratorType):
-                    # For generators, exception is raised when iterating
-                    next(result)
-
-
-    def test_get_by_key_response_structure(self):
-        """Test get_by_key response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["media_key"] = "test_value"
-            # Add request body if required
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call method and verify response structure
-            method = getattr(self.media_client, "get_by_key")
-            import inspect
-            if "stream_config" in inspect.signature(method).parameters:
-                # Streaming operations yield from a live connection; response
-                # structure is validated by the streaming tests instead.
-                return
-            result = method(**kwargs)
-            # Verify response round-trips the spec-valid payload: every key in
-            # the mocked response must surface on the model (RootModel
-            # wrappers expose the payload via .root instead).
-            import types as _types
-            if isinstance(result, _types.GeneratorType):
-                # Paginated methods return generators; validate the first page.
-                _pages = list(result)
-                target = _pages[0] if _pages else None
-            else:
-                target = result.root if hasattr(result, "root") else result
-            if target is not None and isinstance(mock_response_data, dict):
-                for _key in mock_response_data:
-                    if isinstance(target, dict):
-                        assert _key in target, f"Response should have '{_key}' key"
-                    else:
-                        assert hasattr(
-                            target, _key
-                        ), f"Response should have '{_key}' field"
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_get_analytics_request_structure(self):
-        """Test get_analytics request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["media_keys"] = ["test_item"]
-            kwargs["start_time"] = "test_start_time"
-            kwargs["end_time"] = "test_end_time"
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.media_client, "get_analytics")
-                # Check if this is a true streaming operation (has stream_config parameter)
-                import types
-                import inspect
-                sig = inspect.signature(method)
-                has_stream_config_param = "stream_config" in sig.parameters
-                # Set up streaming mock only for actual streaming operations
-                if has_stream_config_param:
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    # Make it a proper context manager
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Set up iter_content to return an iterator that yields test data then stops
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content = Mock(
-                        side_effect=lambda *args, **kw: iter([test_data])
-                    )
-                    # First call returns mock response, second call raises to prevent infinite reconnect loop
-                    from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.get.side_effect = [
-                        mock_streaming_response,
-                        StreamError(
-                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
-                        ),
-                    ]
-                    # Pass stream_config with max_retries=0 to exit quickly on error
-                    from xdk.streaming import StreamConfig
-                    kwargs["stream_config"] = StreamConfig(max_retries=0)
-                result = method(**kwargs)
-                # Check if result is a generator (streaming or paginated)
-                is_generator = isinstance(result, types.GeneratorType)
-                is_streaming = has_stream_config_param and is_generator
-                if is_generator:
-                    # Consume the generator to trigger the HTTP request
-                    # For both streaming and paginated methods, request happens on iteration
-                    try:
-                        # Try to get first item - this will trigger the HTTP request
-                        next(result)
-                    except StopIteration:
-                        # Generator exhausted immediately - request was still made
-                        pass
-                    except (
-                        requests.exceptions.RequestException,
-                        json.JSONDecodeError,
-                        AttributeError,
-                        ValueError,
-                    ) as e:
-                        # These exceptions can occur during streaming/pagination
-                        pass
-                    except Exception as e:
-                        # Accept validation errors - we're testing request structure, not response parsing
-                        # Also accept streaming errors
-                        err_str = str(e).lower()
-                        err_type = type(e).__name__
-                        if (
-                            "validation" in err_str
-                            or "ValidationError" in err_type
-                            or "PydanticUserError" in err_type
-                            or "Max retries" in str(e)
-                            or "StreamError" in err_type
-                            or "not fully defined" in err_str
-                        ):
-                            pass
-                        else:
-                            raise
-                # Verify the request was made
-                if is_streaming:
-                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.get.call_count >= 1
-                else:
-                    mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/media/analytics"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                # Accept validation errors - we're testing request structure, not response parsing
-                err_str = str(e).lower()
-                err_type = type(e).__name__
-                if (
-                    "validation" in err_str
-                    or "ValidationError" in err_type
-                    or "PydanticUserError" in err_type
-                    or "not fully defined" in err_str
-                ):
-                    # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.get.assert_called_once()
-                else:
-                    pytest.fail(f"Contract test failed for get_analytics: {e}")
-
-
-    def test_get_analytics_required_parameters(self):
-        """Test that get_analytics handles parameters correctly."""
-        method = getattr(self.media_client, "get_analytics")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.get.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            # For generator methods (paginated), we need to iterate to trigger the exception
-            import types
-            with pytest.raises((TypeError, ValueError, Exception)):
-                result = method()
-                # Check if it's a generator (paginated method)
-                if isinstance(result, types.GeneratorType):
-                    # For generators, exception is raised when iterating
-                    next(result)
-
-
-    def test_get_analytics_response_structure(self):
-        """Test get_analytics response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["media_keys"] = ["test"]
-            kwargs["start_time"] = "test_value"
-            kwargs["end_time"] = "test_value"
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.media_client, "get_analytics")
+            method = getattr(self.media_client, "append_upload")
             import inspect
             if "stream_config" in inspect.signature(method).parameters:
                 # Streaming operations yield from a live connection; response
@@ -1836,6 +2706,7 @@ class TestMediaContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.post.return_value = mock_response
@@ -2124,6 +2995,7 @@ class TestMediaContracts:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.delete.return_value = mock_response
@@ -2209,12 +3081,12 @@ class TestMediaContracts:
                 )
 
 
-    def test_append_upload_request_structure(self):
-        """Test append_upload request structure."""
+    def test_add_to_library_request_structure(self):
+        """Test add_to_library request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
-            mock_response.status_code = 200
+            mock_response.status_code = 201
             # Minimal spec-valid payload generated from the OpenAPI response schema
             mock_response.json.return_value = json.loads(r"""{}""")
             mock_response.raise_for_status.return_value = None
@@ -2223,19 +3095,18 @@ class TestMediaContracts:
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["id"] = "test_id"
             # Add request body if required
             # Import and create proper request model instance
-            from xdk.media.models import AppendUploadRequest
+            from xdk.media.models import AddToLibraryRequest
             # Rebuild model to resolve forward references before instantiation
             try:
-                AppendUploadRequest.model_rebuild()
+                AddToLibraryRequest.model_rebuild()
             except Exception:
                 pass  # Model may already be fully defined
             # Create instance with required fields (using dummy values for testing)
             import typing
             required_kwargs = {}
-            request_model = AppendUploadRequest
+            request_model = AddToLibraryRequest
             for field_name, field_info in getattr(
                 request_model, "model_fields", {}
             ).items():
@@ -2271,7 +3142,7 @@ class TestMediaContracts:
                 kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call the method
             try:
-                method = getattr(self.media_client, "append_upload")
+                method = getattr(self.media_client, "add_to_library")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -2280,7 +3151,7 @@ class TestMediaContracts:
                 # Set up streaming mock only for actual streaming operations
                 if has_stream_config_param:
                     mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.status_code = 201
                     mock_streaming_response.raise_for_status.return_value = None
                     # Make it a proper context manager
                     mock_streaming_response.__enter__ = Mock(
@@ -2352,7 +3223,7 @@ class TestMediaContracts:
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/media/upload/{id}/append"
+                expected_path = "/2/media/library"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -2380,12 +3251,12 @@ class TestMediaContracts:
                     # Validation error is acceptable - request was made, just response parsing failed
                     mock_session.post.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for append_upload: {e}")
+                    pytest.fail(f"Contract test failed for add_to_library: {e}")
 
 
-    def test_append_upload_required_parameters(self):
-        """Test that append_upload handles parameters correctly."""
-        method = getattr(self.media_client, "append_upload")
+    def test_add_to_library_required_parameters(self):
+        """Test that add_to_library handles parameters correctly."""
+        method = getattr(self.media_client, "add_to_library")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -2405,32 +3276,32 @@ class TestMediaContracts:
                     next(result)
 
 
-    def test_append_upload_response_structure(self):
-        """Test append_upload response structure validation."""
+    def test_add_to_library_response_structure(self):
+        """Test add_to_library response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
             mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
-            mock_response.status_code = 200
+            mock_response.status_code = 201
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
             mock_session.post.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["id"] = "test_value"
             # Add request body if required
             # Import and create proper request model instance
-            from xdk.media.models import AppendUploadRequest
+            from xdk.media.models import AddToLibraryRequest
             # Rebuild model to resolve forward references before instantiation
             try:
-                AppendUploadRequest.model_rebuild()
+                AddToLibraryRequest.model_rebuild()
             except Exception:
                 pass  # Model may already be fully defined
             # Create instance with required fields (using dummy values for testing)
             import typing
             required_kwargs = {}
-            request_model = AppendUploadRequest
+            request_model = AddToLibraryRequest
             for field_name, field_info in getattr(
                 request_model, "model_fields", {}
             ).items():
@@ -2465,7 +3336,7 @@ class TestMediaContracts:
                 # validation since this test only exercises request plumbing.
                 kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call method and verify response structure
-            method = getattr(self.media_client, "append_upload")
+            method = getattr(self.media_client, "add_to_library")
             import inspect
             if "stream_config" in inspect.signature(method).parameters:
                 # Streaming operations yield from a live connection; response
@@ -2499,8 +3370,8 @@ class TestMediaContracts:
                 )
 
 
-    def test_initialize_upload_request_structure(self):
-        """Test initialize_upload request structure."""
+    def test_get_library_categories_request_structure(self):
+        """Test get_library_categories request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
@@ -2509,58 +3380,14 @@ class TestMediaContracts:
             mock_response.json.return_value = json.loads(r"""{}""")
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
+            mock_session.get.return_value = mock_response
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
             # Add request body if required
-            # Import and create proper request model instance
-            from xdk.media.models import InitializeUploadRequest
-            # Rebuild model to resolve forward references before instantiation
-            try:
-                InitializeUploadRequest.model_rebuild()
-            except Exception:
-                pass  # Model may already be fully defined
-            # Create instance with required fields (using dummy values for testing)
-            import typing
-            required_kwargs = {}
-            request_model = InitializeUploadRequest
-            for field_name, field_info in getattr(
-                request_model, "model_fields", {}
-            ).items():
-                if field_info.is_required():
-                    annotation = field_info.annotation
-                    annotation_str = str(annotation) if annotation else "str"
-                    literals = (
-                        [
-                            arg
-                            for arg in typing.get_args(annotation)
-                            if isinstance(arg, (str, int, bool))
-                        ]
-                        if typing.get_origin(annotation) is typing.Literal
-                        else []
-                    )
-                    if literals:
-                        required_kwargs[field_name] = literals[0]
-                    elif "int" in annotation_str.lower():
-                        required_kwargs[field_name] = 42
-                    elif "bool" in annotation_str.lower():
-                        required_kwargs[field_name] = True
-                    elif "list" in annotation_str.lower() or "List" in annotation_str:
-                        required_kwargs[field_name] = []
-                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
-                        required_kwargs[field_name] = {}
-                    else:
-                        required_kwargs[field_name] = "test_value"
-            try:
-                kwargs["body"] = request_model(**required_kwargs)
-            except Exception:
-                # Typed models may reject fabricated values; build without
-                # validation since this test only exercises request plumbing.
-                kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call the method
             try:
-                method = getattr(self.media_client, "initialize_upload")
+                method = getattr(self.media_client, "get_library_categories")
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
                 import inspect
@@ -2583,7 +3410,7 @@ class TestMediaContracts:
                     )
                     # First call returns mock response, second call raises to prevent infinite reconnect loop
                     from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.post.side_effect = [
+                    mock_session.get.side_effect = [
                         mock_streaming_response,
                         StreamError(
                             "Test complete", StreamErrorType.AUTHENTICATION_ERROR
@@ -2632,16 +3459,16 @@ class TestMediaContracts:
                 # Verify the request was made
                 if is_streaming:
                     # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.post.call_count >= 1
+                    assert mock_session.get.call_count >= 1
                 else:
-                    mock_session.post.assert_called_once()
+                    mock_session.get.assert_called_once()
                 # Verify request structure
-                call_args = mock_session.post.call_args
+                call_args = mock_session.get.call_args
                 # Check URL structure
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/media/upload/initialize"
+                expected_path = "/2/media/library/categories"
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -2667,14 +3494,214 @@ class TestMediaContracts:
                     or "not fully defined" in err_str
                 ):
                     # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.post.assert_called_once()
+                    mock_session.get.assert_called_once()
                 else:
-                    pytest.fail(f"Contract test failed for initialize_upload: {e}")
+                    pytest.fail(f"Contract test failed for get_library_categories: {e}")
 
 
-    def test_initialize_upload_required_parameters(self):
-        """Test that initialize_upload handles parameters correctly."""
-        method = getattr(self.media_client, "initialize_upload")
+    def test_get_library_categories_required_parameters(self):
+        """Test that get_library_categories handles parameters correctly."""
+        method = getattr(self.media_client, "get_library_categories")
+        # No required parameters, method should be callable without args
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.content = b""
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            try:
+                method()
+            except Exception as e:
+                pytest.fail(f"Method with no required params should be callable: {e}")
+
+
+    def test_get_library_categories_response_structure(self):
+        """Test get_library_categories response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "get_library_categories")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_analytics_request_structure(self):
+        """Test get_analytics request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["media_keys"] = ["test_item"]
+            kwargs["start_time"] = "test_start_time"
+            kwargs["end_time"] = "test_end_time"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.media_client, "get_analytics")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.get.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.get.call_count >= 1
+                else:
+                    mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/analytics"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.get.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for get_analytics: {e}")
+
+
+    def test_get_analytics_required_parameters(self):
+        """Test that get_analytics handles parameters correctly."""
+        method = getattr(self.media_client, "get_analytics")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -2682,7 +3709,7 @@ class TestMediaContracts:
             mock_response.status_code = 400
             mock_response.json.return_value = {"error": "Missing required parameters"}
             mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.post.return_value = mock_response
+            mock_session.get.return_value = mock_response
             # Call without required parameters should either raise locally or via server response
             # For generator methods (paginated), we need to iterate to trigger the exception
             import types
@@ -2694,31 +3721,688 @@ class TestMediaContracts:
                     next(result)
 
 
-    def test_initialize_upload_response_structure(self):
-        """Test initialize_upload response structure validation."""
+    def test_get_analytics_response_structure(self):
+        """Test get_analytics response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
             mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
+            mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
+            kwargs["media_keys"] = ["test"]
+            kwargs["start_time"] = "test_value"
+            kwargs["end_time"] = "test_value"
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "get_analytics")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_by_key_request_structure(self):
+        """Test get_by_key request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["media_key"] = "test_media_key"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.media_client, "get_by_key")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.get.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.get.call_count >= 1
+                else:
+                    mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/{media_key}"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.get.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for get_by_key: {e}")
+
+
+    def test_get_by_key_required_parameters(self):
+        """Test that get_by_key handles parameters correctly."""
+        method = getattr(self.media_client, "get_by_key")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.get.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_get_by_key_response_structure(self):
+        """Test get_by_key response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["media_key"] = "test_value"
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "get_by_key")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_amplify_program_request_structure(self):
+        """Test get_amplify_program request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["program_id"] = "test_program_id"
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.media_client, "get_amplify_program")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.get.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.get.call_count >= 1
+                else:
+                    mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/amplify/programs/{program_id}"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.get.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for get_amplify_program: {e}")
+
+
+    def test_get_amplify_program_required_parameters(self):
+        """Test that get_amplify_program handles parameters correctly."""
+        method = getattr(self.media_client, "get_amplify_program")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.get.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_get_amplify_program_response_structure(self):
+        """Test get_amplify_program response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["program_id"] = "test_value"
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.media_client, "get_amplify_program")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_update_in_library_request_structure(self):
+        """Test update_in_library request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.put.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["media_key"] = "test_media_key"
             # Add request body if required
             # Import and create proper request model instance
-            from xdk.media.models import InitializeUploadRequest
+            from xdk.media.models import UpdateInLibraryRequest
             # Rebuild model to resolve forward references before instantiation
             try:
-                InitializeUploadRequest.model_rebuild()
+                UpdateInLibraryRequest.model_rebuild()
             except Exception:
                 pass  # Model may already be fully defined
             # Create instance with required fields (using dummy values for testing)
             import typing
             required_kwargs = {}
-            request_model = InitializeUploadRequest
+            request_model = UpdateInLibraryRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call the method
+            try:
+                method = getattr(self.media_client, "update_in_library")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.put.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.put.call_count >= 1
+                else:
+                    mock_session.put.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.put.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/library/{media_key}"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.put.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for update_in_library: {e}")
+
+
+    def test_update_in_library_required_parameters(self):
+        """Test that update_in_library handles parameters correctly."""
+        method = getattr(self.media_client, "update_in_library")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.put.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_update_in_library_response_structure(self):
+        """Test update_in_library response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.put.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["media_key"] = "test_value"
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import UpdateInLibraryRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                UpdateInLibraryRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = UpdateInLibraryRequest
             for field_name, field_info in getattr(
                 request_model, "model_fields", {}
             ).items():
@@ -2753,7 +4437,298 @@ class TestMediaContracts:
                 # validation since this test only exercises request plumbing.
                 kwargs["body"] = request_model.model_construct(**required_kwargs)
             # Call method and verify response structure
-            method = getattr(self.media_client, "initialize_upload")
+            method = getattr(self.media_client, "update_in_library")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_remove_from_library_request_structure(self):
+        """Test remove_from_library request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.delete.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["media_key"] = "test_media_key"
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import RemoveFromLibraryRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                RemoveFromLibraryRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = RemoveFromLibraryRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call the method
+            try:
+                method = getattr(self.media_client, "remove_from_library")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.delete.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.delete.call_count >= 1
+                else:
+                    mock_session.delete.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.delete.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/media/library/{media_key}"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.delete.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for remove_from_library: {e}")
+
+
+    def test_remove_from_library_required_parameters(self):
+        """Test that remove_from_library handles parameters correctly."""
+        method = getattr(self.media_client, "remove_from_library")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.delete.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_remove_from_library_response_structure(self):
+        """Test remove_from_library response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.delete.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["media_key"] = "test_value"
+            # Add request body if required
+            # Import and create proper request model instance
+            from xdk.media.models import RemoveFromLibraryRequest
+            # Rebuild model to resolve forward references before instantiation
+            try:
+                RemoveFromLibraryRequest.model_rebuild()
+            except Exception:
+                pass  # Model may already be fully defined
+            # Create instance with required fields (using dummy values for testing)
+            import typing
+            required_kwargs = {}
+            request_model = RemoveFromLibraryRequest
+            for field_name, field_info in getattr(
+                request_model, "model_fields", {}
+            ).items():
+                if field_info.is_required():
+                    annotation = field_info.annotation
+                    annotation_str = str(annotation) if annotation else "str"
+                    literals = (
+                        [
+                            arg
+                            for arg in typing.get_args(annotation)
+                            if isinstance(arg, (str, int, bool))
+                        ]
+                        if typing.get_origin(annotation) is typing.Literal
+                        else []
+                    )
+                    if literals:
+                        required_kwargs[field_name] = literals[0]
+                    elif "int" in annotation_str.lower():
+                        required_kwargs[field_name] = 42
+                    elif "bool" in annotation_str.lower():
+                        required_kwargs[field_name] = True
+                    elif "list" in annotation_str.lower() or "List" in annotation_str:
+                        required_kwargs[field_name] = []
+                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
+                        required_kwargs[field_name] = {}
+                    else:
+                        required_kwargs[field_name] = "test_value"
+            try:
+                kwargs["body"] = request_model(**required_kwargs)
+            except Exception:
+                # Typed models may reject fabricated values; build without
+                # validation since this test only exercises request plumbing.
+                kwargs["body"] = request_model.model_construct(**required_kwargs)
+            # Call method and verify response structure
+            method = getattr(self.media_client, "remove_from_library")
             import inspect
             if "stream_config" in inspect.signature(method).parameters:
                 # Streaming operations yield from a live connection; response

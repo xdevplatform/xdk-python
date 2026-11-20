@@ -12,6 +12,7 @@ handles all recovery automatically.
 Generated automatically - do not edit manually.
 """
 
+import codecs
 import json
 import time
 import logging
@@ -409,17 +410,21 @@ def _process_stream(
 ) -> Generator[Union[T, Dict[str, Any]], None, None]:
     """Process the streaming response, yielding parsed JSON objects."""
     buffer = ""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
     try:
         for chunk in response.iter_content(
             chunk_size=config.chunk_size,
-            decode_unicode=True,
+            decode_unicode=False,
         ):
             if not chunk:
                 continue
-            # Ensure chunk is string
+            # Decode incrementally so multi-byte UTF-8 characters split across
+            # TCP chunk boundaries never raise UnicodeDecodeError.
             if isinstance(chunk, bytes):
-                chunk = chunk.decode("utf-8")
-            buffer += chunk
+                text = decoder.decode(chunk, final=False)
+            else:
+                text = str(chunk)
+            buffer += text
             # Process complete lines
             while "\n" in buffer:
                 line, buffer = buffer.split("\n", 1)
@@ -442,7 +447,8 @@ def _process_stream(
                 except Exception as e:
                     logger.debug(f"Error processing line: {e}")
                     continue
-        # Process remaining buffer
+        # Flush incremental decoder and process remaining buffer
+        buffer += decoder.decode(b"", final=True)
         if buffer.strip():
             try:
                 data = json.loads(buffer.strip())
