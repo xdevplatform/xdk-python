@@ -29,18 +29,6 @@ RotateBotTokenResponse = schemas.RotateBotTokenResponse
 RevokeBotTokenResponse = schemas.RevokeBotTokenResponse
 
 
-# Response model for get
-GetResponse = schemas.GetBotsResponse
-
-
-# Request model for create_bot
-CreateBotRequest = schemas.CreateBotRequest
-
-
-# Response model for create_bot
-CreateBotResponse = schemas.CreateBotResponse
-
-
 # Request model for update_bot
 UpdateBotRequest = schemas.UpdateBotRequest
 
@@ -51,3 +39,15 @@ UpdateBotResponse = schemas.UpdateBotResponse
 
 # Response model for delete_bot
 DeleteBotResponse = schemas.DeleteBotResponse
+
+
+# Response model for get
+GetResponse = schemas.GetBotsResponse
+
+
+# Request model for create_bot
+CreateBotRequest = schemas.CreateBotRequest
+
+
+# Response model for create_bot
+CreateBotResponse = schemas.CreateBotResponse

@@ -137,92 +137,6 @@ class TestBotsStructure:
         ), f"Method revoke_bot_token should have return type annotation"
 
 
-    def test_get_exists(self):
-        """Test that get method exists with correct signature."""
-        # Check method exists
-        method = getattr(BotsClient, "get", None)
-        assert method is not None, f"Method get does not exist on BotsClient"
-        # Check method is callable
-        assert callable(method), f"get is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "user_fields",
-            "expansions",
-            "post_fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_return_annotation(self):
-        """Test that get has proper return type annotation."""
-        method = getattr(BotsClient, "get")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get should have return type annotation"
-
-
-    def test_create_bot_exists(self):
-        """Test that create_bot method exists with correct signature."""
-        # Check method exists
-        method = getattr(BotsClient, "create_bot", None)
-        assert method is not None, f"Method create_bot does not exist on BotsClient"
-        # Check method is callable
-        assert callable(method), f"create_bot is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"create_bot should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_bot"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_bot_return_annotation(self):
-        """Test that create_bot has proper return type annotation."""
-        method = getattr(BotsClient, "create_bot")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_bot should have return type annotation"
-
-
     def test_update_bot_exists(self):
         """Test that update_bot method exists with correct signature."""
         # Check method exists
@@ -309,15 +223,101 @@ class TestBotsStructure:
         ), f"Method delete_bot should have return type annotation"
 
 
+    def test_get_exists(self):
+        """Test that get method exists with correct signature."""
+        # Check method exists
+        method = getattr(BotsClient, "get", None)
+        assert method is not None, f"Method get does not exist on BotsClient"
+        # Check method is callable
+        assert callable(method), f"get is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "user_fields",
+            "expansions",
+            "post_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_return_annotation(self):
+        """Test that get has proper return type annotation."""
+        method = getattr(BotsClient, "get")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get should have return type annotation"
+
+
+    def test_create_bot_exists(self):
+        """Test that create_bot method exists with correct signature."""
+        # Check method exists
+        method = getattr(BotsClient, "create_bot", None)
+        assert method is not None, f"Method create_bot does not exist on BotsClient"
+        # Check method is callable
+        assert callable(method), f"create_bot is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"create_bot should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_bot"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_bot_return_annotation(self):
+        """Test that create_bot has proper return type annotation."""
+        method = getattr(BotsClient, "create_bot")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_bot should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
             "rotate_bot_token",
             "revoke_bot_token",
-            "get",
-            "create_bot",
             "update_bot",
             "delete_bot",
+            "get",
+            "create_bot",
         ]
         for expected_method in expected_methods:
             assert hasattr(

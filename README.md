@@ -13,7 +13,7 @@ for the generated Python SDK package.
 Generated automatically - do not edit manually.
 -->
 
-The official Python SDK for the X API v2 (`v0.11.1`).
+The official Python SDK for the X API v2 (`v0.11.2`).
 
 ## Installation
 

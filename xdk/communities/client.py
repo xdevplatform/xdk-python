@@ -80,7 +80,7 @@ class CommunitiesClient:
         # 2. If endpoint accepts multiple methods:
         #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
         #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
         selected_auth = None
         # Check what auth methods we have available
         available_bearer = bool(self.client.bearer_token)
@@ -102,7 +102,7 @@ class CommunitiesClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -119,70 +119,52 @@ class CommunitiesClient:
                     selected_auth = "oauth2_user_context"
                 elif "UserToken" in acceptable_schemes and available_oauth1:
                     selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
             )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="GET",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
         # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
         if self.client.timeout is not None or self.client.max_retries > 0:
             response = self.client._send_with_retry(
                 "get",
                 url,
                 params=params,
-                headers=headers,
+                headers_factory=_build_request_headers,
             )
         else:
             response = self.client.session.get(
                 url,
                 params=params,
-                headers=headers,
+                headers=_build_request_headers(),
             )
         # Check for errors
         response.raise_for_status()
@@ -257,7 +239,7 @@ class CommunitiesClient:
             # 2. If endpoint accepts multiple methods:
             #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
             #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements in OpenAPI spec: omit Authorization header
             page_selected_auth = None
             # Check what auth methods we have available
             page_available_bearer = bool(self.client.bearer_token)
@@ -280,7 +262,7 @@ class CommunitiesClient:
                     page_selected_auth = "oauth1"
             # Multiple schemes acceptable - use priority based on operation type
             elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
                 if is_write_operation:
                     # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                     if "UserToken" in page_acceptable_schemes and page_available_oauth1:
@@ -311,73 +293,60 @@ class CommunitiesClient:
                         "UserToken" in page_acceptable_schemes and page_available_oauth1
                     ):
                         page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
+            if not page_selected_auth and page_acceptable_schemes:
+                raise ValueError(
+                    f"Authentication required for this endpoint. Required schemes: {page_acceptable_schemes}. "
+                    f"Available: {[s for s in page_acceptable_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
                 )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+            def _build_page_headers() -> Dict[str, str]:
+                page_headers = headers.copy()
+                if page_selected_auth == "oauth1":
+                    # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                    full_url = url
+                    if page_params:
+                        query_string = urllib.parse.urlencode(page_params)
+                        full_url = f"{url}?{query_string}" if query_string else url
+                    page_headers["Authorization"] = (
+                        self.client.auth.build_request_header(
+                            method="GET",
+                            url=full_url,
+                            body="",
                         )
+                    )
+                elif page_selected_auth == "bearer_token":
+                    if self.client.bearer_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.bearer_token}"
+                        )
+                    elif self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                elif page_selected_auth == "oauth2_user_context":
+                    if (
+                        self.client.oauth2_auth
+                        and self.client.token
+                        and self.client.is_token_expired()
+                    ):
+                        self.client.refresh_token()
+                    if self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                return page_headers
+            # Make the request
             if self.client.timeout is not None or self.client.max_retries > 0:
                 response = self.client._send_with_retry(
                     "get",
                     url,
                     params=page_params,
-                    headers=page_headers,
+                    headers_factory=_build_page_headers,
                 )
             else:
                 response = self.client.session.get(
                     url,
                     params=page_params,
-                    headers=page_headers,
+                    headers=_build_page_headers(),
                 )
             # Check for errors
             response.raise_for_status()

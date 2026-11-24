@@ -24,16 +24,16 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    CreateConversationRequest,
-    CreateConversationResponse,
-    GetEventsResponse,
+    GetEventsByIdResponse,
+    DeleteEventsResponse,
     CreateByConversationIdRequest,
     CreateByConversationIdResponse,
     GetEventsByConversationIdResponse,
+    CreateConversationRequest,
+    CreateConversationResponse,
+    GetEventsResponse,
     CreateByParticipantIdRequest,
     CreateByParticipantIdResponse,
-    GetEventsByIdResponse,
-    DeleteEventsResponse,
     GetEventsByParticipantIdResponse,
 )
 
@@ -46,303 +46,9 @@ class DirectMessagesClient:
         self.client = client
 
 
-    def create_conversation(
-        self, body: CreateConversationRequest
-    ) -> CreateConversationResponse:
-        """
-        Create DM Conversation
-        Initiates a new direct message conversation with specified participants.
-        body: Request body
-        Returns:
-            CreateConversationResponse: Response data
-        """
-        url = self.client.base_url + "/2/dm_conversations"
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        headers = {}
-        headers["Content-Type"] = "application/json"
-        # Prepare request data
-        json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "post",
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        else:
-            response = self.client.session.post(
-                url,
-                params=params,
-                headers=headers,
-                json=json_data,
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return CreateConversationResponse.model_validate(response_data)
-
-
-    def dm_conversations_media_download(
-        self, dm_id: str, media_id: str, resource_id: str
-    ) -> bytes:
-        """
-        Download DM Media
-        Downloads media attached to a legacy Direct Message. The requesting user must be a participant in the conversation containing the specified DM event. The response body contains raw binary bytes.
-        Args:
-            dm_id: dm_id
-            media_id: media_id
-            resource_id: resource_id
-            Returns:
-            Dict[str, Any]: Response data
-        """
-        url = (
-            self.client.base_url
-            + "/2/dm_conversations/media/{dm_id}/{media_id}/{resource_id}"
-        )
-        url = url.replace("{dm_id}", urllib.parse.quote(str(dm_id), safe=""))
-        url = url.replace("{media_id}", urllib.parse.quote(str(media_id), safe=""))
-        url = url.replace(
-            "{resource_id}", urllib.parse.quote(str(resource_id), safe="")
-        )
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
-            )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
-        # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "get",
-                url,
-                params=params,
-                headers=headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=headers,
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        # Binary endpoint - return raw bytes
-        return response.content
-        # Convert to Pydantic model if applicable
-        return response_data
-
-
-    def get_events(
+    def get_events_by_id(
         self,
-        max_results: Optional[int] = None,
-        pagination_token: Optional[str] = None,
-        event_types: Optional[
-            List[Literal["MessageCreate", "ParticipantsJoin", "ParticipantsLeave"]]
-        ] = None,
+        event_id: str,
         dm_event_fields: Optional[
             List[
                 Literal[
@@ -458,244 +164,249 @@ class DirectMessagesClient:
                 ]
             ]
         ] = None,
-    ) -> Iterator[GetEventsResponse]:
+    ) -> GetEventsByIdResponse:
         """
-        Get DM Events
-        Retrieves a list of recent direct message events across all conversations.
+        Get DM Event by ID
+        Retrieves details of a specific direct message event by its ID.
         Args:
-            max_results: max_results
-            pagination_token: A base32hex-encoded pagination token.
-            event_types: event_types
+            event_id: event_id
             dm_event_fields: A comma separated list of DmEvent fields to display.
             expansions: A comma separated list of fields to expand.
             user_fields: A comma separated list of User fields to display.
             post_fields: A comma separated list of Post fields to display.
             media_fields: A comma separated list of Media fields to display.
-            Yields:
-            GetEventsResponse: One page of results at a time. Automatically handles pagination using next_token.
-        Note:
-            This method automatically paginates through all results. To get just the first page,
-            you can call it once and break, or use the pagination_token parameter to start at a specific page.
+            Returns:
+            GetEventsByIdResponse: Response data
         """
-        url = self.client.base_url + "/2/dm_events"
+        url = self.client.base_url + "/2/dm_events/{event_id}"
+        url = url.replace("{event_id}", urllib.parse.quote(str(event_id), safe=""))
         # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        if dm_event_fields is not None:
+            params["dm_event.fields"] = ",".join(str(item) for item in dm_event_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if post_fields is not None:
+            params["post.fields"] = ",".join(str(item) for item in post_fields)
+        if media_fields is not None:
+            params["media.fields"] = ",".join(str(item) for item in media_fields)
         headers = {}
         # Prepare request data
         json_data = None
-        # Determine pagination parameter name
-        pagination_param_name = "pagination_token"
-        # Start with provided pagination_token, or None for first page
-        # Check if pagination_token parameter exists in the method signature
-        current_pagination_token = pagination_token
-        while True:
-            # Build query parameters for this page
-            page_params = {}
-            if max_results is not None:
-                page_params["max_results"] = max_results
-            if event_types is not None:
-                page_params["event_types"] = ",".join(str(item) for item in event_types)
-            if dm_event_fields is not None:
-                page_params["dm_event.fields"] = ",".join(
-                    str(item) for item in dm_event_fields
-                )
-            if expansions is not None:
-                page_params["expansions"] = ",".join(str(item) for item in expansions)
-            if user_fields is not None:
-                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
-            if post_fields is not None:
-                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
-            if media_fields is not None:
-                page_params["media.fields"] = ",".join(
-                    str(item) for item in media_fields
-                )
-            # Add pagination token for this page
-            if current_pagination_token:
-                page_params[pagination_param_name] = current_pagination_token
-            # Select authentication method (same logic as regular_request)
-            # Priority strategy (matches TypeScript):
-            # 1. If endpoint only accepts one method, use that (if available)
-            # 2. If endpoint accepts multiple methods:
-            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
-            page_selected_auth = None
-            # Check what auth methods we have available
-            page_available_bearer = bool(self.client.bearer_token)
-            page_available_oauth2 = bool(self.client.access_token)
-            page_available_oauth1 = bool(
-                self.client.auth and self.client.auth.access_token
-            )
-            # Count acceptable schemes
-            page_acceptable_schemes = []
-            page_acceptable_schemes.append("OAuth2UserToken")
-            page_acceptable_schemes.append("UserToken")
-            # If only one scheme is acceptable, use it if available
-            if len(page_acceptable_schemes) == 1:
-                scheme = page_acceptable_schemes[0]
-                if scheme == "BearerToken" and page_available_bearer:
-                    page_selected_auth = "bearer_token"
-                elif scheme == "OAuth2UserToken" and page_available_oauth2:
-                    page_selected_auth = "oauth2_user_context"
-                elif scheme == "UserToken" and page_available_oauth1:
-                    page_selected_auth = "oauth1"
-            # Multiple schemes acceptable - use priority based on operation type
-            elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
-                if is_write_operation:
-                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
-                        page_selected_auth = "oauth1"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                else:
-                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                    if (
-                        "BearerToken" in page_acceptable_schemes
-                        and page_available_bearer
-                    ):
-                        page_selected_auth = "bearer_token"
-                    elif (
-                        "OAuth2UserToken" in page_acceptable_schemes
-                        and page_available_oauth2
-                    ):
-                        page_selected_auth = "oauth2_user_context"
-                    elif (
-                        "UserToken" in page_acceptable_schemes and page_available_oauth1
-                    ):
-                        page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
-                )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
-                        )
-            if self.client.timeout is not None or self.client.max_retries > 0:
-                response = self.client._send_with_retry(
-                    "get",
-                    url,
-                    params=page_params,
-                    headers=page_headers,
-                )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
             else:
-                response = self.client.session.get(
-                    url,
-                    params=page_params,
-                    headers=page_headers,
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="GET",
+                    url=full_url,
+                    body="",
                 )
-            # Check for errors
-            response.raise_for_status()
-            # Parse the response data
-            response_data = response.json()
-            # Convert to Pydantic model if applicable
-            page_response = GetEventsResponse.model_validate(response_data)
-            # Yield this page
-            yield page_response
-            # Extract next_token / pagination_token from response
-            next_token = None
-            try:
-                # Try response.meta.next_token or response.meta.pagination_token
-                if hasattr(page_response, "meta") and page_response.meta is not None:
-                    meta = page_response.meta
-                    # If meta is a Pydantic model, try to dump it
-                    if hasattr(meta, "model_dump"):
-                        try:
-                            meta_dict = meta.model_dump()
-                            next_token = meta_dict.get("next_token") or meta_dict.get(
-                                "pagination_token"
-                            )
-                        except (AttributeError, TypeError):
-                            pass
-                    # Otherwise try attribute access
-                    if not next_token and hasattr(meta, "next_token"):
-                        next_token = getattr(meta, "next_token", None)
-                    if not next_token and hasattr(meta, "pagination_token"):
-                        next_token = getattr(meta, "pagination_token", None)
-                    # If meta is a dict, access it directly
-                    if not next_token and isinstance(meta, dict):
-                        next_token = meta.get("next_token") or meta.get(
-                            "pagination_token"
-                        )
-            except (AttributeError, TypeError):
-                pass
-            # Try dict access if we have a dict
-            if not next_token and isinstance(response_data, dict):
-                try:
-                    meta = response_data.get("meta")
-                    if meta and isinstance(meta, dict):
-                        next_token = meta.get("next_token") or meta.get(
-                            "pagination_token"
-                        )
-                    if not next_token:
-                        next_token = response_data.get(
-                            "next_token"
-                        ) or response_data.get("pagination_token")
-                except (AttributeError, TypeError, KeyError):
-                    pass
-            # If no next_token, we're done
-            if not next_token:
-                break
-            # Update token for next iteration
-            current_pagination_token = next_token
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "get",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+            )
+        else:
+            response = self.client.session.get(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetEventsByIdResponse.model_validate(response_data)
 
-            # Optional: Add rate limit backoff here if needed
-            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+    def delete_events(self, event_id: str) -> DeleteEventsResponse:
+        """
+        Delete DM Event
+        Deletes a specific direct message event by its ID, if owned by the authenticated user.
+        Args:
+            event_id: event_id
+            Returns:
+            DeleteEventsResponse: Response data
+        """
+        url = self.client.base_url + "/2/dm_events/{event_id}"
+        url = url.replace("{event_id}", urllib.parse.quote(str(event_id), safe=""))
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "DELETE" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="DELETE",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "delete",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+            )
+        else:
+            response = self.client.session.delete(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteEventsResponse.model_validate(response_data)
 
 
     def create_by_conversation_id(
@@ -732,7 +443,7 @@ class DirectMessagesClient:
         # 2. If endpoint accepts multiple methods:
         #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
         #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
         selected_auth = None
         # Check what auth methods we have available
         available_bearer = bool(self.client.bearer_token)
@@ -753,7 +464,7 @@ class DirectMessagesClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "POST" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -770,75 +481,53 @@ class DirectMessagesClient:
                     selected_auth = "oauth2_user_context"
                 elif "UserToken" in acceptable_schemes and available_oauth1:
                     selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
             )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="POST",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
         # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
         if self.client.timeout is not None or self.client.max_retries > 0:
             response = self.client._send_with_retry(
                 "post",
                 url,
                 params=params,
-                headers=headers,
+                headers_factory=_build_request_headers,
                 json=json_data,
             )
         else:
             response = self.client.session.post(
                 url,
                 params=params,
-                headers=headers,
+                headers=_build_request_headers(),
                 json=json_data,
             )
         # Check for errors
@@ -1033,7 +722,7 @@ class DirectMessagesClient:
             # 2. If endpoint accepts multiple methods:
             #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
             #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements in OpenAPI spec: omit Authorization header
             page_selected_auth = None
             # Check what auth methods we have available
             page_available_bearer = bool(self.client.bearer_token)
@@ -1056,7 +745,7 @@ class DirectMessagesClient:
                     page_selected_auth = "oauth1"
             # Multiple schemes acceptable - use priority based on operation type
             elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
                 if is_write_operation:
                     # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                     if "UserToken" in page_acceptable_schemes and page_available_oauth1:
@@ -1087,73 +776,60 @@ class DirectMessagesClient:
                         "UserToken" in page_acceptable_schemes and page_available_oauth1
                     ):
                         page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
+            if not page_selected_auth and page_acceptable_schemes:
+                raise ValueError(
+                    f"Authentication required for this endpoint. Required schemes: {page_acceptable_schemes}. "
+                    f"Available: {[s for s in page_acceptable_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
                 )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+            def _build_page_headers() -> Dict[str, str]:
+                page_headers = headers.copy()
+                if page_selected_auth == "oauth1":
+                    # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                    full_url = url
+                    if page_params:
+                        query_string = urllib.parse.urlencode(page_params)
+                        full_url = f"{url}?{query_string}" if query_string else url
+                    page_headers["Authorization"] = (
+                        self.client.auth.build_request_header(
+                            method="GET",
+                            url=full_url,
+                            body="",
                         )
+                    )
+                elif page_selected_auth == "bearer_token":
+                    if self.client.bearer_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.bearer_token}"
+                        )
+                    elif self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                elif page_selected_auth == "oauth2_user_context":
+                    if (
+                        self.client.oauth2_auth
+                        and self.client.token
+                        and self.client.is_token_expired()
+                    ):
+                        self.client.refresh_token()
+                    if self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                return page_headers
+            # Make the request
             if self.client.timeout is not None or self.client.max_retries > 0:
                 response = self.client._send_with_retry(
                     "get",
                     url,
                     params=page_params,
-                    headers=page_headers,
+                    headers_factory=_build_page_headers,
                 )
             else:
                 response = self.client.session.get(
                     url,
                     params=page_params,
-                    headers=page_headers,
+                    headers=_build_page_headers(),
                 )
             # Check for errors
             response.raise_for_status()
@@ -1216,24 +892,17 @@ class DirectMessagesClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
-    def create_by_participant_id(
-        self, participant_id: str, body: CreateByParticipantIdRequest
-    ) -> CreateByParticipantIdResponse:
+    def create_conversation(
+        self, body: CreateConversationRequest
+    ) -> CreateConversationResponse:
         """
-        Create DM Message by Participant ID
-        Sends a new direct message to a specific participant by their ID.
-        Args:
-            participant_id: participant_id
-            body: At least one of `text`, `attachments` is required.
+        Create DM Conversation
+        Initiates a new direct message conversation with specified participants.
+        body: Request body
         Returns:
-            CreateByParticipantIdResponse: Response data
+            CreateConversationResponse: Response data
         """
-        url = (
-            self.client.base_url + "/2/dm_conversations/with/{participant_id}/messages"
-        )
-        url = url.replace(
-            "{participant_id}", urllib.parse.quote(str(participant_id), safe="")
-        )
+        url = self.client.base_url + "/2/dm_conversations"
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
@@ -1252,7 +921,7 @@ class DirectMessagesClient:
         # 2. If endpoint accepts multiple methods:
         #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
         #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
         selected_auth = None
         # Check what auth methods we have available
         available_bearer = bool(self.client.bearer_token)
@@ -1273,7 +942,7 @@ class DirectMessagesClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "post" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "POST" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -1290,75 +959,53 @@ class DirectMessagesClient:
                     selected_auth = "oauth2_user_context"
                 elif "UserToken" in acceptable_schemes and available_oauth1:
                     selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            if json_data:
-                # OAuth1 spec: JSON bodies are NOT included in signature
-                # But we still need to pass the body for the request
-                body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="post", url=full_url, body=body_string
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
             )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="POST",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
         # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
         if self.client.timeout is not None or self.client.max_retries > 0:
             response = self.client._send_with_retry(
                 "post",
                 url,
                 params=params,
-                headers=headers,
+                headers_factory=_build_request_headers,
                 json=json_data,
             )
         else:
             response = self.client.session.post(
                 url,
                 params=params,
-                headers=headers,
+                headers=_build_request_headers(),
                 json=json_data,
             )
         # Check for errors
@@ -1366,12 +1013,16 @@ class DirectMessagesClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return CreateByParticipantIdResponse.model_validate(response_data)
+        return CreateConversationResponse.model_validate(response_data)
 
 
-    def get_events_by_id(
+    def get_events(
         self,
-        event_id: str,
+        max_results: Optional[int] = None,
+        pagination_token: Optional[str] = None,
+        event_types: Optional[
+            List[Literal["MessageCreate", "ParticipantsJoin", "ParticipantsLeave"]]
+        ] = None,
         dm_event_fields: Optional[
             List[
                 Literal[
@@ -1487,34 +1138,257 @@ class DirectMessagesClient:
                 ]
             ]
         ] = None,
-    ) -> GetEventsByIdResponse:
+    ) -> Iterator[GetEventsResponse]:
         """
-        Get DM Event by ID
-        Retrieves details of a specific direct message event by its ID.
+        Get DM Events
+        Retrieves a list of recent direct message events across all conversations.
         Args:
-            event_id: event_id
+            max_results: max_results
+            pagination_token: A base32hex-encoded pagination token.
+            event_types: event_types
             dm_event_fields: A comma separated list of DmEvent fields to display.
             expansions: A comma separated list of fields to expand.
             user_fields: A comma separated list of User fields to display.
             post_fields: A comma separated list of Post fields to display.
             media_fields: A comma separated list of Media fields to display.
-            Returns:
-            GetEventsByIdResponse: Response data
+            Yields:
+            GetEventsResponse: One page of results at a time. Automatically handles pagination using next_token.
+        Note:
+            This method automatically paginates through all results. To get just the first page,
+            you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
-        url = self.client.base_url + "/2/dm_events/{event_id}"
-        url = url.replace("{event_id}", urllib.parse.quote(str(event_id), safe=""))
+        url = self.client.base_url + "/2/dm_events"
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Determine pagination parameter name
+        pagination_param_name = "pagination_token"
+        # Start with provided pagination_token, or None for first page
+        # Check if pagination_token parameter exists in the method signature
+        current_pagination_token = pagination_token
+        while True:
+            # Build query parameters for this page
+            page_params = {}
+            if max_results is not None:
+                page_params["max_results"] = max_results
+            if event_types is not None:
+                page_params["event_types"] = ",".join(str(item) for item in event_types)
+            if dm_event_fields is not None:
+                page_params["dm_event.fields"] = ",".join(
+                    str(item) for item in dm_event_fields
+                )
+            if expansions is not None:
+                page_params["expansions"] = ",".join(str(item) for item in expansions)
+            if user_fields is not None:
+                page_params["user.fields"] = ",".join(str(item) for item in user_fields)
+            if post_fields is not None:
+                page_params["post.fields"] = ",".join(str(item) for item in post_fields)
+            if media_fields is not None:
+                page_params["media.fields"] = ",".join(
+                    str(item) for item in media_fields
+                )
+            # Add pagination token for this page
+            if current_pagination_token:
+                page_params[pagination_param_name] = current_pagination_token
+            # Select authentication method (same logic as regular_request)
+            # Priority strategy (matches TypeScript):
+            # 1. If endpoint only accepts one method, use that (if available)
+            # 2. If endpoint accepts multiple methods:
+            #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+            #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements in OpenAPI spec: omit Authorization header
+            page_selected_auth = None
+            # Check what auth methods we have available
+            page_available_bearer = bool(self.client.bearer_token)
+            page_available_oauth2 = bool(self.client.access_token)
+            page_available_oauth1 = bool(
+                self.client.auth and self.client.auth.access_token
+            )
+            # Count acceptable schemes
+            page_acceptable_schemes = []
+            page_acceptable_schemes.append("OAuth2UserToken")
+            page_acceptable_schemes.append("UserToken")
+            # If only one scheme is acceptable, use it if available
+            if len(page_acceptable_schemes) == 1:
+                scheme = page_acceptable_schemes[0]
+                if scheme == "BearerToken" and page_available_bearer:
+                    page_selected_auth = "bearer_token"
+                elif scheme == "OAuth2UserToken" and page_available_oauth2:
+                    page_selected_auth = "oauth2_user_context"
+                elif scheme == "UserToken" and page_available_oauth1:
+                    page_selected_auth = "oauth1"
+            # Multiple schemes acceptable - use priority based on operation type
+            elif len(page_acceptable_schemes) > 1:
+                is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
+                if is_write_operation:
+                    # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                    if "UserToken" in page_acceptable_schemes and page_available_oauth1:
+                        page_selected_auth = "oauth1"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                else:
+                    # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                    if (
+                        "BearerToken" in page_acceptable_schemes
+                        and page_available_bearer
+                    ):
+                        page_selected_auth = "bearer_token"
+                    elif (
+                        "OAuth2UserToken" in page_acceptable_schemes
+                        and page_available_oauth2
+                    ):
+                        page_selected_auth = "oauth2_user_context"
+                    elif (
+                        "UserToken" in page_acceptable_schemes and page_available_oauth1
+                    ):
+                        page_selected_auth = "oauth1"
+            if not page_selected_auth and page_acceptable_schemes:
+                raise ValueError(
+                    f"Authentication required for this endpoint. Required schemes: {page_acceptable_schemes}. "
+                    f"Available: {[s for s in page_acceptable_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+                )
+            def _build_page_headers() -> Dict[str, str]:
+                page_headers = headers.copy()
+                if page_selected_auth == "oauth1":
+                    # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                    full_url = url
+                    if page_params:
+                        query_string = urllib.parse.urlencode(page_params)
+                        full_url = f"{url}?{query_string}" if query_string else url
+                    page_headers["Authorization"] = (
+                        self.client.auth.build_request_header(
+                            method="GET",
+                            url=full_url,
+                            body="",
+                        )
+                    )
+                elif page_selected_auth == "bearer_token":
+                    if self.client.bearer_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.bearer_token}"
+                        )
+                    elif self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                elif page_selected_auth == "oauth2_user_context":
+                    if (
+                        self.client.oauth2_auth
+                        and self.client.token
+                        and self.client.is_token_expired()
+                    ):
+                        self.client.refresh_token()
+                    if self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                return page_headers
+            # Make the request
+            if self.client.timeout is not None or self.client.max_retries > 0:
+                response = self.client._send_with_retry(
+                    "get",
+                    url,
+                    params=page_params,
+                    headers_factory=_build_page_headers,
+                )
+            else:
+                response = self.client.session.get(
+                    url,
+                    params=page_params,
+                    headers=_build_page_headers(),
+                )
+            # Check for errors
+            response.raise_for_status()
+            # Parse the response data
+            response_data = response.json()
+            # Convert to Pydantic model if applicable
+            page_response = GetEventsResponse.model_validate(response_data)
+            # Yield this page
+            yield page_response
+            # Extract next_token / pagination_token from response
+            next_token = None
+            try:
+                # Try response.meta.next_token or response.meta.pagination_token
+                if hasattr(page_response, "meta") and page_response.meta is not None:
+                    meta = page_response.meta
+                    # If meta is a Pydantic model, try to dump it
+                    if hasattr(meta, "model_dump"):
+                        try:
+                            meta_dict = meta.model_dump()
+                            next_token = meta_dict.get("next_token") or meta_dict.get(
+                                "pagination_token"
+                            )
+                        except (AttributeError, TypeError):
+                            pass
+                    # Otherwise try attribute access
+                    if not next_token and hasattr(meta, "next_token"):
+                        next_token = getattr(meta, "next_token", None)
+                    if not next_token and hasattr(meta, "pagination_token"):
+                        next_token = getattr(meta, "pagination_token", None)
+                    # If meta is a dict, access it directly
+                    if not next_token and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+            except (AttributeError, TypeError):
+                pass
+            # Try dict access if we have a dict
+            if not next_token and isinstance(response_data, dict):
+                try:
+                    meta = response_data.get("meta")
+                    if meta and isinstance(meta, dict):
+                        next_token = meta.get("next_token") or meta.get(
+                            "pagination_token"
+                        )
+                    if not next_token:
+                        next_token = response_data.get(
+                            "next_token"
+                        ) or response_data.get("pagination_token")
+                except (AttributeError, TypeError, KeyError):
+                    pass
+            # If no next_token, we're done
+            if not next_token:
+                break
+            # Update token for next iteration
+            current_pagination_token = next_token
+
+            # Optional: Add rate limit backoff here if needed
+            # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def dm_conversations_media_download(
+        self, dm_id: str, media_id: str, resource_id: str
+    ) -> bytes:
+        """
+        Download DM Media
+        Downloads media attached to a legacy Direct Message. The requesting user must be a participant in the conversation containing the specified DM event. The response body contains raw binary bytes.
+        Args:
+            dm_id: dm_id
+            media_id: media_id
+            resource_id: resource_id
+            Returns:
+            Dict[str, Any]: Response data
+        """
+        url = (
+            self.client.base_url
+            + "/2/dm_conversations/media/{dm_id}/{media_id}/{resource_id}"
+        )
+        url = url.replace("{dm_id}", urllib.parse.quote(str(dm_id), safe=""))
+        url = url.replace("{media_id}", urllib.parse.quote(str(media_id), safe=""))
+        url = url.replace(
+            "{resource_id}", urllib.parse.quote(str(resource_id), safe="")
+        )
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
-        if dm_event_fields is not None:
-            params["dm_event.fields"] = ",".join(str(item) for item in dm_event_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if post_fields is not None:
-            params["post.fields"] = ",".join(str(item) for item in post_fields)
-        if media_fields is not None:
-            params["media.fields"] = ",".join(str(item) for item in media_fields)
         headers = {}
         # Prepare request data
         json_data = None
@@ -1524,7 +1398,7 @@ class DirectMessagesClient:
         # 2. If endpoint accepts multiple methods:
         #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
         #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
         selected_auth = None
         # Check what auth methods we have available
         available_bearer = bool(self.client.bearer_token)
@@ -1533,7 +1407,6 @@ class DirectMessagesClient:
         # Count acceptable schemes
         acceptable_schemes = []
         acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
         # If only one scheme is acceptable, use it if available
         if len(acceptable_schemes) == 1:
             scheme = acceptable_schemes[0]
@@ -1545,7 +1418,7 @@ class DirectMessagesClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -1562,102 +1435,99 @@ class DirectMessagesClient:
                     selected_auth = "oauth2_user_context"
                 elif "UserToken" in acceptable_schemes and available_oauth1:
                     selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="get", url=full_url, body=body_string
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
             )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="GET",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
         # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
         if self.client.timeout is not None or self.client.max_retries > 0:
             response = self.client._send_with_retry(
                 "get",
                 url,
                 params=params,
-                headers=headers,
+                headers_factory=_build_request_headers,
             )
         else:
             response = self.client.session.get(
                 url,
                 params=params,
-                headers=headers,
+                headers=_build_request_headers(),
             )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
-        response_data = response.json()
+        # Binary endpoint - return raw bytes
+        return response.content
         # Convert to Pydantic model if applicable
-        return GetEventsByIdResponse.model_validate(response_data)
+        return response_data
 
 
-    def delete_events(self, event_id: str) -> DeleteEventsResponse:
+    def create_by_participant_id(
+        self, participant_id: str, body: CreateByParticipantIdRequest
+    ) -> CreateByParticipantIdResponse:
         """
-        Delete DM Event
-        Deletes a specific direct message event by its ID, if owned by the authenticated user.
+        Create DM Message by Participant ID
+        Sends a new direct message to a specific participant by their ID.
         Args:
-            event_id: event_id
-            Returns:
-            DeleteEventsResponse: Response data
+            participant_id: participant_id
+            body: At least one of `text`, `attachments` is required.
+        Returns:
+            CreateByParticipantIdResponse: Response data
         """
-        url = self.client.base_url + "/2/dm_events/{event_id}"
-        url = url.replace("{event_id}", urllib.parse.quote(str(event_id), safe=""))
+        url = (
+            self.client.base_url + "/2/dm_conversations/with/{participant_id}/messages"
+        )
+        url = url.replace(
+            "{participant_id}", urllib.parse.quote(str(participant_id), safe="")
+        )
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
+        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
         # Select authentication method based on endpoint requirements and available credentials
         # Priority strategy (matches TypeScript):
         # 1. If endpoint only accepts one method, use that (if available)
         # 2. If endpoint accepts multiple methods:
         #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
         #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
         selected_auth = None
         # Check what auth methods we have available
         available_bearer = bool(self.client.bearer_token)
@@ -1678,7 +1548,7 @@ class DirectMessagesClient:
                 selected_auth = "oauth1"
         # Multiple schemes acceptable - use priority based on operation type
         elif len(acceptable_schemes) > 1:
-            is_write_operation = "delete" in ["POST", "PUT", "DELETE", "PATCH"]
+            is_write_operation = "POST" in ["POST", "PUT", "DELETE", "PATCH"]
             if is_write_operation:
                 # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                 if "UserToken" in acceptable_schemes and available_oauth1:
@@ -1695,77 +1565,61 @@ class DirectMessagesClient:
                     selected_auth = "oauth2_user_context"
                 elif "UserToken" in acceptable_schemes and available_oauth1:
                     selected_auth = "oauth1"
-        # Apply selected authentication
-        if selected_auth == "oauth1":
-            # OAuth1 authentication - build proper OAuth1 header dynamically
-            # Build OAuth1 header with method, URL, and body
-            # For OAuth1, we need to include query params in the URL for signature
-            full_url = url
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{url}?{query_string}" if query_string else url
-            # Prepare body for OAuth1 signature (form-encoded, not JSON)
-            body_string = ""
-            # Build OAuth1 authorization header
-            oauth_header = self.client.auth.build_request_header(
-                method="delete", url=full_url, body=body_string
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
             )
-            headers["Authorization"] = oauth_header
-        elif selected_auth == "bearer_token":
-            # Bearer token authentication
-            if self.client.bearer_token:
-                headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-            elif self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-        elif selected_auth == "oauth2_user_context":
-            # OAuth2 User Token authentication
-            if self.client.access_token:
-                headers["Authorization"] = f"Bearer {self.client.access_token}"
-                # Check if token needs refresh
-                if self.client.oauth2_auth and self.client.token:
-                    if self.client.is_token_expired():
-                        self.client.refresh_token()
-                        if self.client.access_token:
-                            headers["Authorization"] = (
-                                f"Bearer {self.client.access_token}"
-                            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="POST",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
         # Make the request
-        if not selected_auth:
-            # No suitable auth method found - validate authentication
-            required_schemes = (
-                acceptable_schemes if "acceptable_schemes" in locals() else []
-            )
-            if required_schemes:
-                available = []
-                if available_bearer and "BearerToken" in required_schemes:
-                    available.append("BearerToken")
-                if available_oauth2 and "OAuth2UserToken" in required_schemes:
-                    available.append("OAuth2UserToken")
-                if available_oauth1 and "UserToken" in required_schemes:
-                    available.append("UserToken")
-                if not available:
-                    raise ValueError(
-                        f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-                    )
         if self.client.timeout is not None or self.client.max_retries > 0:
             response = self.client._send_with_retry(
-                "delete",
+                "post",
                 url,
                 params=params,
-                headers=headers,
+                headers_factory=_build_request_headers,
+                json=json_data,
             )
         else:
-            response = self.client.session.delete(
+            response = self.client.session.post(
                 url,
                 params=params,
-                headers=headers,
+                headers=_build_request_headers(),
+                json=json_data,
             )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteEventsResponse.model_validate(response_data)
+        return CreateByParticipantIdResponse.model_validate(response_data)
 
 
     def get_events_by_participant_id(
@@ -1956,7 +1810,7 @@ class DirectMessagesClient:
             # 2. If endpoint accepts multiple methods:
             #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
             #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-            # 3. If no security requirements: Bearer Token > OAuth2 User Token > OAuth1
+            # 3. If no security requirements in OpenAPI spec: omit Authorization header
             page_selected_auth = None
             # Check what auth methods we have available
             page_available_bearer = bool(self.client.bearer_token)
@@ -1979,7 +1833,7 @@ class DirectMessagesClient:
                     page_selected_auth = "oauth1"
             # Multiple schemes acceptable - use priority based on operation type
             elif len(page_acceptable_schemes) > 1:
-                is_write_operation = "get" in ["POST", "PUT", "DELETE", "PATCH"]
+                is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
                 if is_write_operation:
                     # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
                     if "UserToken" in page_acceptable_schemes and page_available_oauth1:
@@ -2010,73 +1864,60 @@ class DirectMessagesClient:
                         "UserToken" in page_acceptable_schemes and page_available_oauth1
                     ):
                         page_selected_auth = "oauth1"
-            # Apply selected authentication for this page
-            page_headers = headers.copy()
-            if page_selected_auth == "oauth1":
-                # OAuth1 authentication - build proper OAuth1 header dynamically
-                # Build OAuth1 header with method, URL, and body
-                # For OAuth1, we need to include query params in the URL for signature
-                full_url = url
-                if page_params:
-                    query_string = urllib.parse.urlencode(page_params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                # Prepare body for OAuth1 signature (form-encoded, not JSON)
-                body_string = ""
-                # Build OAuth1 authorization header
-                oauth_header = self.client.auth.build_request_header(
-                    method="get", url=full_url, body=body_string
+            if not page_selected_auth and page_acceptable_schemes:
+                raise ValueError(
+                    f"Authentication required for this endpoint. Required schemes: {page_acceptable_schemes}. "
+                    f"Available: {[s for s in page_acceptable_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
                 )
-                page_headers["Authorization"] = oauth_header
-            elif page_selected_auth == "bearer_token":
-                # Bearer token authentication
-                if self.client.bearer_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif page_selected_auth == "oauth2_user_context":
-                # OAuth2 User Token authentication
-                if self.client.access_token:
-                    page_headers["Authorization"] = f"Bearer {self.client.access_token}"
-                    # Check if token needs refresh
-                    if self.client.oauth2_auth and self.client.token:
-                        if self.client.is_token_expired():
-                            self.client.refresh_token()
-                            if self.client.access_token:
-                                page_headers["Authorization"] = (
-                                    f"Bearer {self.client.access_token}"
-                                )
-            # Make the request
-            if not page_selected_auth:
-                # No suitable auth method found - validate authentication
-                required_schemes = (
-                    page_acceptable_schemes
-                    if "page_acceptable_schemes" in locals()
-                    else []
-                )
-                if required_schemes:
-                    available = []
-                    if page_available_bearer and "BearerToken" in required_schemes:
-                        available.append("BearerToken")
-                    if page_available_oauth2 and "OAuth2UserToken" in required_schemes:
-                        available.append("OAuth2UserToken")
-                    if page_available_oauth1 and "UserToken" in required_schemes:
-                        available.append("UserToken")
-                    if not available:
-                        raise ValueError(
-                            f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
+            def _build_page_headers() -> Dict[str, str]:
+                page_headers = headers.copy()
+                if page_selected_auth == "oauth1":
+                    # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                    full_url = url
+                    if page_params:
+                        query_string = urllib.parse.urlencode(page_params)
+                        full_url = f"{url}?{query_string}" if query_string else url
+                    page_headers["Authorization"] = (
+                        self.client.auth.build_request_header(
+                            method="GET",
+                            url=full_url,
+                            body="",
                         )
+                    )
+                elif page_selected_auth == "bearer_token":
+                    if self.client.bearer_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.bearer_token}"
+                        )
+                    elif self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                elif page_selected_auth == "oauth2_user_context":
+                    if (
+                        self.client.oauth2_auth
+                        and self.client.token
+                        and self.client.is_token_expired()
+                    ):
+                        self.client.refresh_token()
+                    if self.client.access_token:
+                        page_headers["Authorization"] = (
+                            f"Bearer {self.client.access_token}"
+                        )
+                return page_headers
+            # Make the request
             if self.client.timeout is not None or self.client.max_retries > 0:
                 response = self.client._send_with_retry(
                     "get",
                     url,
                     params=page_params,
-                    headers=page_headers,
+                    headers_factory=_build_page_headers,
                 )
             else:
                 response = self.client.session.get(
                     url,
                     params=page_params,
-                    headers=page_headers,
+                    headers=_build_page_headers(),
                 )
             # Check for errors
             response.raise_for_status()

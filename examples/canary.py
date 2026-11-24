@@ -64,7 +64,7 @@ class _CanaryHttpServer(ThreadingHTTPServer):
 
 class XdkPythonCanaryApp:
     SDK_NAME = "python"
-    SDK_VERSION = "0.11.1"
+    SDK_VERSION = "0.11.2"
 
 
     def __init__(self, enable_live_probes: bool = False) -> None:
@@ -145,11 +145,12 @@ class XdkPythonCanaryApp:
                     ]
                     if snap is not None:
                         lines.append("# TYPE xdk_canary_probe_duration_ms gauge")
-                        lines.append("# TYPE xdk_canary_probe_success gauge")
                         for p in snap.probes:
                             lines.append(
                                 f'xdk_canary_probe_duration_ms{{sdk="{outer.SDK_NAME}",probe="{p.name}",mode="{p.mode}"}} {p.durationMs}'
                             )
+                        lines.append("# TYPE xdk_canary_probe_success gauge")
+                        for p in snap.probes:
                             lines.append(
                                 f'xdk_canary_probe_success{{sdk="{outer.SDK_NAME}",probe="{p.name}",mode="{p.mode}"}} {1 if p.passed else 0}'
                             )

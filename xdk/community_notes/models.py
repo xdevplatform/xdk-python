@@ -17,20 +17,12 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for delete
-DeleteResponse = schemas.DeleteCommunityNotesResponse
-
-
 # Request model for create
 CreateRequest = schemas.CreateCommunityNotesRequest
 
 
 # Response model for create
 CreateResponse = schemas.CreateCommunityNotesResponse
-
-
-# Response model for search_written
-SearchWrittenResponse = schemas.SearchCommunityNotesWrittenResponse
 
 
 # Request model for evaluate
@@ -43,3 +35,11 @@ EvaluateResponse = schemas.EvaluateCommunityNotesResponse
 
 # Response model for search_eligible_posts
 SearchEligiblePostsResponse = schemas.SearchEligiblePostsResponse
+
+
+# Response model for search_written
+SearchWrittenResponse = schemas.SearchCommunityNotesWrittenResponse
+
+
+# Response model for delete
+DeleteResponse = schemas.DeleteCommunityNotesResponse

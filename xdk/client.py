@@ -19,53 +19,53 @@ from .oauth2_auth import OAuth2PKCEAuth
 from .oauth1_auth import OAuth1
 from .paginator import Cursor, cursor, PaginationError
 
-from .stream.client import StreamClient
-
-from .lists.client import ListsClient
-
-from .articles.client import ArticlesClient
-
-from .account.client import AccountClient
-
-from .bots.client import BotsClient
-
-from .usage.client import UsageClient
-
-from .general.client import GeneralClient
+from .chat.client import ChatClient
 
 from .broadcasts.client import BroadcastsClient
 
+from .webhooks.client import WebhooksClient
+
+from .stream.client import StreamClient
+
 from .calls.client import CallsClient
+
+from .account.client import AccountClient
 
 from .spaces.client import SpacesClient
 
-from .chat.client import ChatClient
-
-from .activity.client import ActivityClient
-
 from .communities.client import CommunitiesClient
 
-from .users.client import UsersClient
+from .lists.client import ListsClient
 
-from .posts.client import PostsClient
-
-from .account_activity.client import AccountActivityClient
-
-from .webhooks.client import WebhooksClient
-
-from .direct_messages.client import DirectMessagesClient
-
-from .community_notes.client import CommunityNotesClient
+from .connections.client import ConnectionsClient
 
 from .media.client import MediaClient
 
-from .trends.client import TrendsClient
+from .community_notes.client import CommunityNotesClient
 
-from .compliance.client import ComplianceClient
+from .users.client import UsersClient
+
+from .articles.client import ArticlesClient
 
 from .news.client import NewsClient
 
-from .connections.client import ConnectionsClient
+from .activity.client import ActivityClient
+
+from .account_activity.client import AccountActivityClient
+
+from .posts.client import PostsClient
+
+from .compliance.client import ComplianceClient
+
+from .direct_messages.client import DirectMessagesClient
+
+from .bots.client import BotsClient
+
+from .general.client import GeneralClient
+
+from .usage.client import UsageClient
+
+from .trends.client import TrendsClient
 
 
 class Client:
@@ -107,7 +107,7 @@ class Client:
             retry_backoff: Initial backoff delay in seconds for transient retries (defaults to 0.5).
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.11.1"})
+        self.session.headers.update({"User-Agent": "xdk-python/0.11.2"})
         self.base_url = base_url.rstrip("/")
         self.bearer_token = bearer_token
         self.timeout = timeout
@@ -140,30 +140,30 @@ class Client:
         # Set up OAuth1 authentication if provided
         self.auth = auth
         # Initialize clients for each tag
-        self.stream = StreamClient(self)
-        self.lists = ListsClient(self)
-        self.articles = ArticlesClient(self)
-        self.account = AccountClient(self)
-        self.bots = BotsClient(self)
-        self.usage = UsageClient(self)
-        self.general = GeneralClient(self)
-        self.broadcasts = BroadcastsClient(self)
-        self.calls = CallsClient(self)
-        self.spaces = SpacesClient(self)
         self.chat = ChatClient(self)
-        self.activity = ActivityClient(self)
-        self.communities = CommunitiesClient(self)
-        self.users = UsersClient(self)
-        self.posts = PostsClient(self)
-        self.account_activity = AccountActivityClient(self)
+        self.broadcasts = BroadcastsClient(self)
         self.webhooks = WebhooksClient(self)
-        self.direct_messages = DirectMessagesClient(self)
-        self.community_notes = CommunityNotesClient(self)
-        self.media = MediaClient(self)
-        self.trends = TrendsClient(self)
-        self.compliance = ComplianceClient(self)
-        self.news = NewsClient(self)
+        self.stream = StreamClient(self)
+        self.calls = CallsClient(self)
+        self.account = AccountClient(self)
+        self.spaces = SpacesClient(self)
+        self.communities = CommunitiesClient(self)
+        self.lists = ListsClient(self)
         self.connections = ConnectionsClient(self)
+        self.media = MediaClient(self)
+        self.community_notes = CommunityNotesClient(self)
+        self.users = UsersClient(self)
+        self.articles = ArticlesClient(self)
+        self.news = NewsClient(self)
+        self.activity = ActivityClient(self)
+        self.account_activity = AccountActivityClient(self)
+        self.posts = PostsClient(self)
+        self.compliance = ComplianceClient(self)
+        self.direct_messages = DirectMessagesClient(self)
+        self.bots = BotsClient(self)
+        self.general = GeneralClient(self)
+        self.usage = UsageClient(self)
+        self.trends = TrendsClient(self)
 
 
     @property
@@ -201,14 +201,20 @@ class Client:
 
 
     def _send_with_retry(
-        self, method_name: str, url: str, **kwargs
+        self,
+        method_name: str,
+        url: str,
+        headers_factory: Optional[Callable[[], Dict[str, str]]] = None,
+        **kwargs,
     ) -> requests.Response:
         """Execute an HTTP request with optional timeout and Retry-After / exponential backoff."""
         if self.timeout is not None and "timeout" not in kwargs:
             kwargs["timeout"] = self.timeout
-        request_fn = getattr(self.session, method_name)
+        request_fn = getattr(self.session, method_name.lower())
         attempt = 0
         while True:
+            if headers_factory is not None:
+                kwargs["headers"] = headers_factory()
             response = request_fn(url, **kwargs)
             status_code = getattr(response, "status_code", None)
             if (
