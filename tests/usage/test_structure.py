@@ -43,47 +43,6 @@ class TestUsageStructure:
         self.usage_client = getattr(self.client, "usage")
 
 
-    def test_get_credits_exists(self):
-        """Test that get_credits method exists with correct signature."""
-        # Check method exists
-        method = getattr(UsageClient, "get_credits", None)
-        assert method is not None, f"Method get_credits does not exist on UsageClient"
-        # Check method is callable
-        assert callable(method), f"get_credits is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get_credits should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_credits"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_credits_return_annotation(self):
-        """Test that get_credits has proper return type annotation."""
-        method = getattr(UsageClient, "get_credits")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_credits should have return type annotation"
-
-
     def test_get_exists(self):
         """Test that get method exists with correct signature."""
         # Check method exists
@@ -128,11 +87,52 @@ class TestUsageStructure:
         ), f"Method get should have return type annotation"
 
 
+    def test_get_credits_exists(self):
+        """Test that get_credits method exists with correct signature."""
+        # Check method exists
+        method = getattr(UsageClient, "get_credits", None)
+        assert method is not None, f"Method get_credits does not exist on UsageClient"
+        # Check method is callable
+        assert callable(method), f"get_credits is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get_credits should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_credits"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_credits_return_annotation(self):
+        """Test that get_credits has proper return type annotation."""
+        method = getattr(UsageClient, "get_credits")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_credits should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "get_credits",
             "get",
+            "get_credits",
         ]
         for expected_method in expected_methods:
             assert hasattr(

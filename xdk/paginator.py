@@ -141,8 +141,6 @@ class Cursor(Generic[ResponseType]):
 
 
 @overload
-
-
 def cursor(
     method: PaginatableMethod[ResponseType], *args: Any, **kwargs: Any
 ) -> Cursor[ResponseType]: ...

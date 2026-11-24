@@ -12,15 +12,22 @@ Generated automatically - do not edit manually.
 
 from . import schemas
 from .client import Client
+from .oauth1_auth import OAuth1, OAuth1AccessToken, OAuth1RequestToken
+from .oauth2_auth import OAuth2PKCEAuth
 from .paginator import Cursor, cursor, PaginationError
 from .streaming import StreamConfig, StreamError, StreamErrorType, StreamState
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 __all__ = [
     "Client",
     "Cursor",
     "cursor",
+    "OAuth1",
+    "OAuth1AccessToken",
+    "OAuth1RequestToken",
+    "OAuth2PKCEAuth",
     "PaginationError",
+    "schemas",
     "StreamConfig",
     "StreamError",
     "StreamErrorType",

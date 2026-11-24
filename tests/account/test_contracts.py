@@ -25,7 +25,7 @@ class TestAccountContracts:
     def setup_class(self):
         """Set up test fixtures."""
         # Provide all authentication types for comprehensive test coverage
-        # Tests mock the session, so actual HTTP requests won't be made
+        from examples.mock_x_api_server import MockXApiServer
         from xdk.oauth1_auth import OAuth1
         oauth1 = OAuth1(
             api_key="test_api_key",
@@ -41,6 +41,20 @@ class TestAccountContracts:
             auth=oauth1,
         )
         self.account_client = getattr(self.client, "account")
+        self.loopback_server = MockXApiServer()
+        self.loopback_client = Client(
+            base_url=self.loopback_server.base_url,
+            bearer_token="test_bearer_token",
+            access_token="test_access_token",
+            auth=oauth1,
+        )
+        self.loopback_account_client = getattr(self.loopback_client, "account")
+
+
+    def teardown_class(self):
+        """Shut down shared loopback TCP server."""
+        if getattr(self, "loopback_server", None) is not None:
+            self.loopback_server.close()
 
 
     def test_get_developer_request_structure(self):
@@ -240,6 +254,39 @@ class TestAccountContracts:
                 )
 
 
+    def test_get_developer_loopback_http_roundtrip(self):
+        """Execute get_developer end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = '{"data":{"account_id":"test_value","created_at":"test_value","name":"test_value"}}'
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                200,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        method = getattr(self.loopback_account_client, "get_developer")
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "GET"
+        assert recorded.first_header("authorization") is not None
+
+
     def test_ensure_request_structure(self):
         """Test ensure request structure."""
         # Mock the session to capture request details
@@ -255,50 +302,18 @@ class TestAccountContracts:
             kwargs = {}
             # Add required parameters
             # Add request body if required
-            # Import and create proper request model instance
             from xdk.account.models import EnsureRequest
-            # Rebuild model to resolve forward references before instantiation
             try:
                 EnsureRequest.model_rebuild()
             except Exception:
-                pass  # Model may already be fully defined
-            # Create instance with required fields (using dummy values for testing)
-            import typing
-            required_kwargs = {}
-            request_model = EnsureRequest
-            for field_name, field_info in getattr(
-                request_model, "model_fields", {}
-            ).items():
-                if field_info.is_required():
-                    annotation = field_info.annotation
-                    annotation_str = str(annotation) if annotation else "str"
-                    literals = (
-                        [
-                            arg
-                            for arg in typing.get_args(annotation)
-                            if isinstance(arg, (str, int, bool))
-                        ]
-                        if typing.get_origin(annotation) is typing.Literal
-                        else []
-                    )
-                    if literals:
-                        required_kwargs[field_name] = literals[0]
-                    elif "int" in annotation_str.lower():
-                        required_kwargs[field_name] = 42
-                    elif "bool" in annotation_str.lower():
-                        required_kwargs[field_name] = True
-                    elif "list" in annotation_str.lower() or "List" in annotation_str:
-                        required_kwargs[field_name] = []
-                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
-                        required_kwargs[field_name] = {}
-                    else:
-                        required_kwargs[field_name] = "test_value"
+                pass
+            req_json_str = '{"metadata":"test_value"}'
             try:
-                kwargs["body"] = request_model(**required_kwargs)
+                kwargs["body"] = EnsureRequest.model_validate_json(req_json_str)
             except Exception:
-                # Typed models may reject fabricated values; build without
-                # validation since this test only exercises request plumbing.
-                kwargs["body"] = request_model.model_construct(**required_kwargs)
+                kwargs["body"] = EnsureRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
             # Call the method
             try:
                 method = getattr(self.account_client, "ensure")
@@ -450,50 +465,18 @@ class TestAccountContracts:
             # Prepare minimal valid parameters
             kwargs = {}
             # Add request body if required
-            # Import and create proper request model instance
             from xdk.account.models import EnsureRequest
-            # Rebuild model to resolve forward references before instantiation
             try:
                 EnsureRequest.model_rebuild()
             except Exception:
-                pass  # Model may already be fully defined
-            # Create instance with required fields (using dummy values for testing)
-            import typing
-            required_kwargs = {}
-            request_model = EnsureRequest
-            for field_name, field_info in getattr(
-                request_model, "model_fields", {}
-            ).items():
-                if field_info.is_required():
-                    annotation = field_info.annotation
-                    annotation_str = str(annotation) if annotation else "str"
-                    literals = (
-                        [
-                            arg
-                            for arg in typing.get_args(annotation)
-                            if isinstance(arg, (str, int, bool))
-                        ]
-                        if typing.get_origin(annotation) is typing.Literal
-                        else []
-                    )
-                    if literals:
-                        required_kwargs[field_name] = literals[0]
-                    elif "int" in annotation_str.lower():
-                        required_kwargs[field_name] = 42
-                    elif "bool" in annotation_str.lower():
-                        required_kwargs[field_name] = True
-                    elif "list" in annotation_str.lower() or "List" in annotation_str:
-                        required_kwargs[field_name] = []
-                    elif "dict" in annotation_str.lower() or "Dict" in annotation_str:
-                        required_kwargs[field_name] = {}
-                    else:
-                        required_kwargs[field_name] = "test_value"
+                pass
+            req_json_str = '{"metadata":"test_value"}'
             try:
-                kwargs["body"] = request_model(**required_kwargs)
+                kwargs["body"] = EnsureRequest.model_validate_json(req_json_str)
             except Exception:
-                # Typed models may reject fabricated values; build without
-                # validation since this test only exercises request plumbing.
-                kwargs["body"] = request_model.model_construct(**required_kwargs)
+                kwargs["body"] = EnsureRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
             # Call method and verify response structure
             method = getattr(self.account_client, "ensure")
             import inspect
@@ -527,3 +510,46 @@ class TestAccountContracts:
                 pytest.fail(
                     f"Accessing optional field 'data' should not cause errors: {e}"
                 )
+
+
+    def test_ensure_loopback_http_roundtrip(self):
+        """Execute ensure end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = '{"data":{"account_id":"test_value","created":true}}'
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                200,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        from xdk.account.models import EnsureRequest
+        try:
+            EnsureRequest.model_rebuild()
+        except Exception:
+            pass
+        req_json_str = '{"metadata":"test_value"}'
+        try:
+            kwargs["body"] = EnsureRequest.model_validate_json(req_json_str)
+        except Exception:
+            kwargs["body"] = EnsureRequest.model_construct(**json.loads(req_json_str))
+        method = getattr(self.loopback_account_client, "ensure")
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "POST"
+        assert recorded.first_header("authorization") is not None

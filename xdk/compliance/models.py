@@ -29,13 +29,13 @@ CreateJobsRequest = schemas.CreateComplianceJobsRequest
 CreateJobsResponse = schemas.CreateComplianceJobsResponse
 
 
+# Response model for upload_job_submission
+UploadJobSubmissionResponse = schemas.UploadComplianceJobSubmissionResponse
+
+
 # Response model for get_jobs_by_id
 GetJobsByIdResponse = schemas.GetComplianceJobsByIdResponse
 
 
 # Response model for delete_jobs_by_id
 DeleteJobsByIdResponse = schemas.DeleteComplianceJobsByIdResponse
-
-
-# Response model for upload_job_submission
-UploadJobSubmissionResponse = schemas.UploadComplianceJobSubmissionResponse

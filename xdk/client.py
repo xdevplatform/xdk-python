@@ -11,6 +11,7 @@ and OAuth2 PKCE flows. All functionality is generated from the OpenAPI specifica
 Generated automatically - do not edit manually.
 """
 
+import time
 import requests
 from typing import Dict, List, Optional, Union, Any, Callable
 
@@ -18,53 +19,53 @@ from .oauth2_auth import OAuth2PKCEAuth
 from .oauth1_auth import OAuth1
 from .paginator import Cursor, cursor, PaginationError
 
-from .direct_messages.client import DirectMessagesClient
+from .stream.client import StreamClient
 
-from .calls.client import CallsClient
+from .lists.client import ListsClient
 
-from .compliance.client import ComplianceClient
+from .articles.client import ArticlesClient
 
-from .news.client import NewsClient
-
-from .users.client import UsersClient
+from .account.client import AccountClient
 
 from .bots.client import BotsClient
 
 from .usage.client import UsageClient
 
-from .broadcasts.client import BroadcastsClient
-
-from .account_activity.client import AccountActivityClient
-
-from .trends.client import TrendsClient
-
-from .lists.client import ListsClient
-
-from .webhooks.client import WebhooksClient
-
 from .general.client import GeneralClient
 
-from .media.client import MediaClient
+from .broadcasts.client import BroadcastsClient
 
-from .communities.client import CommunitiesClient
-
-from .chat.client import ChatClient
-
-from .account.client import AccountClient
-
-from .community_notes.client import CommunityNotesClient
-
-from .stream.client import StreamClient
-
-from .connections.client import ConnectionsClient
-
-from .articles.client import ArticlesClient
+from .calls.client import CallsClient
 
 from .spaces.client import SpacesClient
 
-from .posts.client import PostsClient
+from .chat.client import ChatClient
 
 from .activity.client import ActivityClient
+
+from .communities.client import CommunitiesClient
+
+from .users.client import UsersClient
+
+from .posts.client import PostsClient
+
+from .account_activity.client import AccountActivityClient
+
+from .webhooks.client import WebhooksClient
+
+from .direct_messages.client import DirectMessagesClient
+
+from .community_notes.client import CommunityNotesClient
+
+from .media.client import MediaClient
+
+from .trends.client import TrendsClient
+
+from .compliance.client import ComplianceClient
+
+from .news.client import NewsClient
+
+from .connections.client import ConnectionsClient
 
 
 class Client:
@@ -83,6 +84,10 @@ class Client:
         scope: Union[str, List[str]] = None,
         authorization_base_url: str = "https://x.com/i",
         auth: OAuth1 = None,
+        oauth2_auth: Optional[OAuth2PKCEAuth] = None,
+        timeout: Optional[float] = None,
+        max_retries: int = 0,
+        retry_backoff: float = 0.5,
     ):
         """Initialize the X API client.
         Args:
@@ -96,21 +101,27 @@ class Client:
             scope: Space-separated string or list of strings for OAuth2 authorization scopes.
             authorization_base_url: The base URL for OAuth2 authorization (defaults to https://x.com/i).
             auth: OAuth1 instance for OAuth1.0a authentication.
+            oauth2_auth: Optional pre-configured OAuth2PKCEAuth instance.
+            timeout: Optional default request timeout in seconds.
+            max_retries: Maximum retry attempts on transient 429/5xx responses (defaults to 0).
+            retry_backoff: Initial backoff delay in seconds for transient retries (defaults to 0.5).
         """
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "xdk-python/0.11.0"})
-        self.base_url = base_url
+        self.session.headers.update({"User-Agent": "xdk-python/0.11.1"})
+        self.base_url = base_url.rstrip("/")
         self.bearer_token = bearer_token
+        self.timeout = timeout
+        self.max_retries = max_retries
+        self.retry_backoff = retry_backoff
         # Extract access_token from token dict if provided, otherwise use direct access_token parameter
         # This matches TypeScript's behavior where accessToken can be passed directly
         if token and isinstance(token, dict) and "access_token" in token:
             self._access_token = token["access_token"]
         else:
             self._access_token = access_token
-        # Set up OAuth2 PKCE authentication if credentials are provided
-        # This is only needed for OAuth2 flows (getting authorization URL, exchanging codes, refreshing tokens)
-        self.oauth2_auth = None
-        if client_id or token:
+        # Set up OAuth2 PKCE authentication if credentials or instance are provided
+        self.oauth2_auth = oauth2_auth
+        if self.oauth2_auth is None and (client_id or token):
             self.oauth2_auth = OAuth2PKCEAuth(
                 base_url=base_url,
                 authorization_base_url=authorization_base_url,
@@ -120,78 +131,107 @@ class Client:
                 token=token,
                 scope=scope,
             )
-            # If we have oauth2_auth with a token, ensure access_token is set
-            if (
-                self.oauth2_auth
-                and self.oauth2_auth.token
-                and "access_token" in self.oauth2_auth.token
-            ):
-                self._access_token = self.oauth2_auth.token["access_token"]
+        if (
+            self.oauth2_auth
+            and self.oauth2_auth.token
+            and "access_token" in self.oauth2_auth.token
+        ):
+            self._access_token = self.oauth2_auth.token["access_token"]
         # Set up OAuth1 authentication if provided
         self.auth = auth
         # Initialize clients for each tag
-        self.direct_messages = DirectMessagesClient(self)
-        self.calls = CallsClient(self)
-        self.compliance = ComplianceClient(self)
-        self.news = NewsClient(self)
-        self.users = UsersClient(self)
+        self.stream = StreamClient(self)
+        self.lists = ListsClient(self)
+        self.articles = ArticlesClient(self)
+        self.account = AccountClient(self)
         self.bots = BotsClient(self)
         self.usage = UsageClient(self)
-        self.broadcasts = BroadcastsClient(self)
-        self.account_activity = AccountActivityClient(self)
-        self.trends = TrendsClient(self)
-        self.lists = ListsClient(self)
-        self.webhooks = WebhooksClient(self)
         self.general = GeneralClient(self)
-        self.media = MediaClient(self)
-        self.communities = CommunitiesClient(self)
-        self.chat = ChatClient(self)
-        self.account = AccountClient(self)
-        self.community_notes = CommunityNotesClient(self)
-        self.stream = StreamClient(self)
-        self.connections = ConnectionsClient(self)
-        self.articles = ArticlesClient(self)
+        self.broadcasts = BroadcastsClient(self)
+        self.calls = CallsClient(self)
         self.spaces = SpacesClient(self)
-        self.posts = PostsClient(self)
+        self.chat = ChatClient(self)
         self.activity = ActivityClient(self)
+        self.communities = CommunitiesClient(self)
+        self.users = UsersClient(self)
+        self.posts = PostsClient(self)
+        self.account_activity = AccountActivityClient(self)
+        self.webhooks = WebhooksClient(self)
+        self.direct_messages = DirectMessagesClient(self)
+        self.community_notes = CommunityNotesClient(self)
+        self.media = MediaClient(self)
+        self.trends = TrendsClient(self)
+        self.compliance = ComplianceClient(self)
+        self.news = NewsClient(self)
+        self.connections = ConnectionsClient(self)
+
 
     @property
-
-
     def oauth2_session(self):
         """Get the OAuth2 session if available."""
         if self.oauth2_auth:
             return self.oauth2_auth.oauth2_session
         return None
 
+
     @property
-
-
     def token(self):
         """Get the current OAuth2 token if available."""
         if self.oauth2_auth:
             return self.oauth2_auth.token
         return None
 
+
     @property
-
-
     def access_token(self):
-        """Get the current access token if available."""
-        # First check if we have a direct access_token (matches TypeScript behavior)
+        """Get the current access token if available (syncs dynamically with oauth2_auth)."""
+        if self.oauth2_auth and self.oauth2_auth.access_token:
+            return self.oauth2_auth.access_token
         if hasattr(self, "_access_token") and self._access_token:
             return self._access_token
-        # Fall back to oauth2_auth if available
-        if self.oauth2_auth:
-            return self.oauth2_auth.access_token
         return None
 
+
     @access_token.setter
-
-
     def access_token(self, value):
         """Set the access token."""
         self._access_token = value
+        if self.oauth2_auth and isinstance(self.oauth2_auth.token, dict):
+            self.oauth2_auth.token["access_token"] = value
+
+
+    def _send_with_retry(
+        self, method_name: str, url: str, **kwargs
+    ) -> requests.Response:
+        """Execute an HTTP request with optional timeout and Retry-After / exponential backoff."""
+        if self.timeout is not None and "timeout" not in kwargs:
+            kwargs["timeout"] = self.timeout
+        request_fn = getattr(self.session, method_name)
+        attempt = 0
+        while True:
+            response = request_fn(url, **kwargs)
+            status_code = getattr(response, "status_code", None)
+            if (
+                self.max_retries > 0
+                and attempt < self.max_retries
+                and isinstance(status_code, int)
+                and status_code in (429, 500, 502, 503, 504)
+            ):
+                delay = self.retry_backoff * (2**attempt)
+                resp_headers = getattr(response, "headers", None)
+                if resp_headers and hasattr(resp_headers, "get"):
+                    retry_after = resp_headers.get("Retry-After") or resp_headers.get(
+                        "retry-after"
+                    )
+                    if retry_after is not None:
+                        try:
+                            delay = min(float(retry_after), 5.0)
+                        except (TypeError, ValueError):
+                            pass
+                attempt += 1
+                time.sleep(max(0.0, delay))
+                continue
+            return response
 
 
     def get_authorization_url(self, state=None):

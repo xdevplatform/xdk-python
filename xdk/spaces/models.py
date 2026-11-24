@@ -21,21 +21,21 @@ from .. import schemas
 GetByCreatorIdsResponse = schemas.GetSpacesByCreatorIdsResponse
 
 
-# Response model for get_by_ids
-GetByIdsResponse = schemas.GetSpacesByIdsResponse
-
-
-# Response model for get_buyers
-GetBuyersResponse = schemas.GetSpacesBuyersResponse
-
-
-# Response model for get_posts
-GetPostsResponse = schemas.GetSpacesPostsResponse
+# Response model for get_by_id
+GetByIdResponse = schemas.GetSpacesByIdResponse
 
 
 # Response model for search
 SearchResponse = schemas.SearchSpacesResponse
 
 
-# Response model for get_by_id
-GetByIdResponse = schemas.GetSpacesByIdResponse
+# Response model for get_posts
+GetPostsResponse = schemas.GetSpacesPostsResponse
+
+
+# Response model for get_buyers
+GetBuyersResponse = schemas.GetSpacesBuyersResponse
+
+
+# Response model for get_by_ids
+GetByIdsResponse = schemas.GetSpacesByIdsResponse

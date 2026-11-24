@@ -555,13 +555,6 @@ class TestChatPagination:
             cursor(non_paginatable_method)
 
 
-        def non_paginatable_method(id: str) -> dict:
-            return {"id": id}
-
-        with pytest.raises(PaginationError):
-            cursor(non_paginatable_method)
-
-
     def test_cursor_class_functionality(self):
         """Test basic Cursor class functionality."""
         # Test that Cursor can be imported and instantiated

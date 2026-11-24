@@ -17,12 +17,16 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_subscription_count
-GetSubscriptionCountResponse = schemas.GetAccountActivitySubscriptionCountResponse
+# Response model for delete_subscription
+DeleteSubscriptionResponse = schemas.DeleteAccountActivitySubscriptionResponse
 
 
 # Response model for get_subscriptions
 GetSubscriptionsResponse = schemas.GetAccountActivitySubscriptionsResponse
+
+
+# Response model for get_subscription_count
+GetSubscriptionCountResponse = schemas.GetAccountActivitySubscriptionCountResponse
 
 
 # Response model for validate_subscription
@@ -59,7 +63,3 @@ class CreateSubscriptionRequest(
 
 # Response model for create_subscription
 CreateSubscriptionResponse = schemas.CreateAccountActivitySubscriptionResponse
-
-
-# Response model for delete_subscription
-DeleteSubscriptionResponse = schemas.DeleteAccountActivitySubscriptionResponse

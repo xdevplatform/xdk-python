@@ -17,24 +17,28 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_chat_moderators
-GetChatModeratorsResponse = schemas.GetChatModeratorsResponse
+# Response model for go_live_scheduled_broadcast
+GoLiveScheduledBroadcastResponse = schemas.GoLiveScheduledBroadcastResponse
 
 
-# Request model for add_chat_moderator
-AddChatModeratorRequest = schemas.AddChatModeratorRequest
+# Response model for unmute_chat_user
+UnmuteChatUserResponse = schemas.UnmuteChatUserResponse
 
 
-# Response model for add_chat_moderator
-AddChatModeratorResponse = schemas.AddChatModeratorResponse
+# Response model for list_sources
+ListSourcesResponse = schemas.ListSourcesResponse
 
 
-# Request model for update_broadcast_state
-UpdateBroadcastStateRequest = schemas.UpdateBroadcastStateRequest
+# Request model for create_source
+CreateSourceRequest = schemas.CreateSourceRequest
 
 
-# Response model for update_broadcast_state
-UpdateBroadcastStateResponse = schemas.UpdateBroadcastStateResponse
+# Response model for create_source
+CreateSourceResponse = schemas.CreateSourceResponse
+
+
+# Response model for list_live_categories
+ListLiveCategoriesResponse = schemas.ListLiveCategoriesResponse
 
 
 # Response model for get_scheduled_broadcast
@@ -53,6 +57,10 @@ UpdateScheduledBroadcastResponse = schemas.UpdateScheduledBroadcastResponse
 DeleteScheduledBroadcastResponse = schemas.DeleteScheduledBroadcastResponse
 
 
+# Response model for get_source_stream_key
+GetSourceStreamKeyResponse = schemas.GetSourceStreamKeyResponse
+
+
 # Response model for get_user_source
 GetUserSourceResponse = schemas.GetUserSourceResponse
 
@@ -69,12 +77,36 @@ UpdateUserSourceResponse = schemas.UpdateUserSourceResponse
 DeleteUserSourceResponse = schemas.DeleteUserSourceResponse
 
 
-# Response model for go_live_scheduled_broadcast
-GoLiveScheduledBroadcastResponse = schemas.GoLiveScheduledBroadcastResponse
+# Response model for list
+ListResponse = schemas.ListBroadcastsResponse
 
 
-# Response model for unmute_broadcast_chat_user
-UnmuteBroadcastChatUserResponse = schemas.UnmuteBroadcastChatUserResponse
+# Request model for create_broadcast
+CreateBroadcastRequest = schemas.CreateBroadcastRequest
+
+
+# Response model for create_broadcast
+CreateBroadcastResponse = schemas.CreateBroadcastResponse
+
+
+# Response model for get_chat_moderators
+GetChatModeratorsResponse = schemas.GetChatModeratorsResponse
+
+
+# Request model for add_chat_moderator
+AddChatModeratorRequest = schemas.AddChatModeratorRequest
+
+
+# Response model for add_chat_moderator
+AddChatModeratorResponse = schemas.AddChatModeratorResponse
+
+
+# Request model for update_user_broadcast_state
+UpdateUserBroadcastStateRequest = schemas.UpdateUserBroadcastStateRequest
+
+
+# Response model for update_user_broadcast_state
+UpdateUserBroadcastStateResponse = schemas.UpdateUserBroadcastStateResponse
 
 
 # Response model for list_user_sources
@@ -89,24 +121,32 @@ CreateUserSourceRequest = schemas.CreateUserSourceRequest
 CreateUserSourceResponse = schemas.CreateUserSourceResponse
 
 
+# Response model for remove_chat_moderator
+RemoveChatModeratorResponse = schemas.RemoveChatModeratorResponse
+
+
+# Request model for update_broadcast_state
+UpdateBroadcastStateRequest = schemas.UpdateBroadcastStateRequest
+
+
+# Response model for update_broadcast_state
+UpdateBroadcastStateResponse = schemas.UpdateBroadcastStateResponse
+
+
+# Response model for get_chat_muted_users
+GetChatMutedUsersResponse = schemas.GetChatMutedUsersResponse
+
+
+# Request model for mute_chat_user
+MuteChatUserRequest = schemas.MuteChatUserRequest
+
+
+# Response model for mute_chat_user
+MuteChatUserResponse = schemas.MuteChatUserResponse
+
+
 # Response model for get_region
 GetRegionResponse = schemas.GetRegionResponse
-
-
-# Response model for list_live_categories
-ListLiveCategoriesResponse = schemas.ListLiveCategoriesResponse
-
-
-# Request model for update_user_broadcast_state
-UpdateUserBroadcastStateRequest = schemas.UpdateUserBroadcastStateRequest
-
-
-# Response model for update_user_broadcast_state
-UpdateUserBroadcastStateResponse = schemas.UpdateUserBroadcastStateResponse
-
-
-# Response model for get_source_stream_key
-GetSourceStreamKeyResponse = schemas.GetSourceStreamKeyResponse
 
 
 # Response model for list_user
@@ -121,68 +161,36 @@ CreateUserBroadcastRequest = schemas.CreateUserBroadcastRequest
 CreateUserBroadcastResponse = schemas.CreateUserBroadcastResponse
 
 
+# Response model for get_broadcast_chat
+GetBroadcastChatResponse = schemas.GetBroadcastChatResponse
+
+
+# Request model for send_broadcast_chat
+SendBroadcastChatRequest = schemas.SendBroadcastChatRequest
+
+
+# Response model for send_broadcast_chat
+SendBroadcastChatResponse = schemas.SendBroadcastChatResponse
+
+
+# Response model for unmute_broadcast_chat_user
+UnmuteBroadcastChatUserResponse = schemas.UnmuteBroadcastChatUserResponse
+
+
+# Response model for get_user_broadcast
+GetUserBroadcastResponse = schemas.GetUserBroadcastResponse
+
+
+# Response model for delete_user_broadcast
+DeleteUserBroadcastResponse = schemas.DeleteUserBroadcastResponse
+
+
 # Request model for mute_broadcast_chat_user
 MuteBroadcastChatUserRequest = schemas.MuteBroadcastChatUserRequest
 
 
 # Response model for mute_broadcast_chat_user
 MuteBroadcastChatUserResponse = schemas.MuteBroadcastChatUserResponse
-
-
-# Response model for remove_chat_moderator
-RemoveChatModeratorResponse = schemas.RemoveChatModeratorResponse
-
-
-# Response model for list_sources
-ListSourcesResponse = schemas.ListSourcesResponse
-
-
-# Request model for create_source
-CreateSourceRequest = schemas.CreateSourceRequest
-
-
-# Response model for create_source
-CreateSourceResponse = schemas.CreateSourceResponse
-
-
-# Response model for unmute_chat_user
-UnmuteChatUserResponse = schemas.UnmuteChatUserResponse
-
-
-# Response model for list
-ListResponse = schemas.ListBroadcastsResponse
-
-
-# Request model for create_broadcast
-CreateBroadcastRequest = schemas.CreateBroadcastRequest
-
-
-# Response model for create_broadcast
-CreateBroadcastResponse = schemas.CreateBroadcastResponse
-
-
-# Response model for list_scheduled
-ListScheduledResponse = schemas.ListScheduledBroadcastsResponse
-
-
-# Request model for create_scheduled_broadcast
-CreateScheduledBroadcastRequest = schemas.CreateScheduledBroadcastRequest
-
-
-# Response model for create_scheduled_broadcast
-CreateScheduledBroadcastResponse = schemas.CreateScheduledBroadcastResponse
-
-
-# Response model for get_chat_muted_users
-GetChatMutedUsersResponse = schemas.GetChatMutedUsersResponse
-
-
-# Request model for mute_chat_user
-MuteChatUserRequest = schemas.MuteChatUserRequest
-
-
-# Response model for mute_chat_user
-MuteChatUserResponse = schemas.MuteChatUserResponse
 
 
 # Response model for get_broadcast
@@ -205,16 +213,16 @@ DeleteBroadcastResponse = schemas.DeleteBroadcastResponse
 DeleteBroadcastChatMessageResponse = schemas.DeleteBroadcastChatMessageResponse
 
 
-# Response model for get_broadcast_chat
-GetBroadcastChatResponse = schemas.GetBroadcastChatResponse
+# Response model for list_scheduled
+ListScheduledResponse = schemas.ListScheduledBroadcastsResponse
 
 
-# Request model for send_broadcast_chat
-SendBroadcastChatRequest = schemas.SendBroadcastChatRequest
+# Request model for create_scheduled_broadcast
+CreateScheduledBroadcastRequest = schemas.CreateScheduledBroadcastRequest
 
 
-# Response model for send_broadcast_chat
-SendBroadcastChatResponse = schemas.SendBroadcastChatResponse
+# Response model for create_scheduled_broadcast
+CreateScheduledBroadcastResponse = schemas.CreateScheduledBroadcastResponse
 
 
 # Response model for get_source
@@ -231,11 +239,3 @@ UpdateSourceResponse = schemas.UpdateSourceResponse
 
 # Response model for delete_source
 DeleteSourceResponse = schemas.DeleteSourceResponse
-
-
-# Response model for get_user_broadcast
-GetUserBroadcastResponse = schemas.GetUserBroadcastResponse
-
-
-# Response model for delete_user_broadcast
-DeleteUserBroadcastResponse = schemas.DeleteUserBroadcastResponse

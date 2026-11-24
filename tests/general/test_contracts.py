@@ -25,7 +25,7 @@ class TestGeneralContracts:
     def setup_class(self):
         """Set up test fixtures."""
         # Provide all authentication types for comprehensive test coverage
-        # Tests mock the session, so actual HTTP requests won't be made
+        from examples.mock_x_api_server import MockXApiServer
         from xdk.oauth1_auth import OAuth1
         oauth1 = OAuth1(
             api_key="test_api_key",
@@ -41,6 +41,20 @@ class TestGeneralContracts:
             auth=oauth1,
         )
         self.general_client = getattr(self.client, "general")
+        self.loopback_server = MockXApiServer()
+        self.loopback_client = Client(
+            base_url=self.loopback_server.base_url,
+            bearer_token="test_bearer_token",
+            access_token="test_access_token",
+            auth=oauth1,
+        )
+        self.loopback_general_client = getattr(self.loopback_client, "general")
+
+
+    def teardown_class(self):
+        """Shut down shared loopback TCP server."""
+        if getattr(self, "loopback_server", None) is not None:
+            self.loopback_server.close()
 
 
     def test_get_open_api_spec_request_structure(self):
@@ -231,3 +245,36 @@ class TestGeneralContracts:
                         assert hasattr(
                             target, _key
                         ), f"Response should have '{_key}' field"
+
+
+    def test_get_open_api_spec_loopback_http_roundtrip(self):
+        """Execute get_open_api_spec end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = "{}"
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                200,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        method = getattr(self.loopback_general_client, "get_open_api_spec")
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "GET"
+        assert recorded.first_header("authorization") is None

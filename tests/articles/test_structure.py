@@ -43,6 +43,51 @@ class TestArticlesStructure:
         self.articles_client = getattr(self.client, "articles")
 
 
+    def test_article_create_draft_exists(self):
+        """Test that article_create_draft method exists with correct signature."""
+        # Check method exists
+        method = getattr(ArticlesClient, "article_create_draft", None)
+        assert (
+            method is not None
+        ), f"Method article_create_draft does not exist on ArticlesClient"
+        # Check method is callable
+        assert callable(method), f"article_create_draft is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"article_create_draft should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from article_create_draft"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_article_create_draft_return_annotation(self):
+        """Test that article_create_draft has proper return type annotation."""
+        method = getattr(ArticlesClient, "article_create_draft")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method article_create_draft should have return type annotation"
+
+
     def test_article_publish_exists(self):
         """Test that article_publish method exists with correct signature."""
         # Check method exists
@@ -90,56 +135,11 @@ class TestArticlesStructure:
         ), f"Method article_publish should have return type annotation"
 
 
-    def test_article_create_draft_exists(self):
-        """Test that article_create_draft method exists with correct signature."""
-        # Check method exists
-        method = getattr(ArticlesClient, "article_create_draft", None)
-        assert (
-            method is not None
-        ), f"Method article_create_draft does not exist on ArticlesClient"
-        # Check method is callable
-        assert callable(method), f"article_create_draft is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"article_create_draft should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from article_create_draft"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_article_create_draft_return_annotation(self):
-        """Test that article_create_draft has proper return type annotation."""
-        method = getattr(ArticlesClient, "article_create_draft")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method article_create_draft should have return type annotation"
-
-
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "article_publish",
             "article_create_draft",
+            "article_publish",
         ]
         for expected_method in expected_methods:
             assert hasattr(

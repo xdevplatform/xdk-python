@@ -17,32 +17,12 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for finalize_upload
-FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
+# Request model for add_post_to_amplify_programs
+AddPostToAmplifyProgramsRequest = schemas.AddPostToAmplifyProgramsRequest
 
 
-# Response model for get_amplify_programs
-GetAmplifyProgramsResponse = schemas.GetAmplifyProgramsResponse
-
-
-# Request model for create_metadata
-CreateMetadataRequest = schemas.CreateMediaMetadataRequest
-
-
-# Response model for create_metadata
-CreateMetadataResponse = schemas.CreateMediaMetadataResponse
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.InitializeMediaUploadRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.InitializeMediaUploadResponse
-
-
-# Response model for get_amplify_program_posts
-GetAmplifyProgramPostsResponse = schemas.GetAmplifyProgramPostsResponse
+# Response model for add_post_to_amplify_programs
+AddPostToAmplifyProgramsResponse = schemas.AddPostToAmplifyProgramsResponse
 
 
 # Response model for get_upload_status
@@ -57,40 +37,28 @@ UploadRequest = schemas.MediaUploadRequest
 UploadResponse = schemas.MediaUploadResponse
 
 
-# Request model for add_post_to_amplify_programs
-AddPostToAmplifyProgramsRequest = schemas.AddPostToAmplifyProgramsRequest
-
-
-# Response model for add_post_to_amplify_programs
-AddPostToAmplifyProgramsResponse = schemas.AddPostToAmplifyProgramsResponse
-
-
 # Response model for get_by_keys
 GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
 
 
-# Request model for append_upload
-AppendUploadRequest = schemas.AppendMediaUploadRequest
+# Response model for get_analytics
+GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
 
 
-# Response model for append_upload
-AppendUploadResponse = schemas.AppendMediaUploadResponse
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.InitializeMediaUploadRequest
 
 
-# Request model for create_subtitles
-CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.InitializeMediaUploadResponse
 
 
-# Response model for create_subtitles
-CreateSubtitlesResponse = schemas.CreateMediaSubtitlesResponse
+# Response model for get_library_categories
+GetLibraryCategoriesResponse = schemas.GetMediaLibraryCategoriesResponse
 
 
-# Request model for delete_subtitles
-DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
-
-
-# Response model for delete_subtitles
-DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
+# Response model for finalize_upload
+FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
 
 
 # Request model for add_to_library
@@ -101,20 +69,12 @@ AddToLibraryRequest = schemas.AddMediaToLibraryRequest
 AddToLibraryResponse = schemas.AddMediaToLibraryResponse
 
 
-# Response model for get_library_categories
-GetLibraryCategoriesResponse = schemas.GetMediaLibraryCategoriesResponse
+# Request model for create_metadata
+CreateMetadataRequest = schemas.CreateMediaMetadataRequest
 
 
-# Response model for get_analytics
-GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
-
-
-# Response model for get_by_key
-GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
-
-
-# Response model for get_amplify_program
-GetAmplifyProgramResponse = schemas.GetAmplifyProgramResponse
+# Response model for create_metadata
+CreateMetadataResponse = schemas.CreateMediaMetadataResponse
 
 
 # Request model for update_in_library
@@ -153,3 +113,43 @@ class RemoveFromLibraryRequest(RootModel[schemas.RemoveMediaFromLibraryRequest])
 
 # Response model for remove_from_library
 RemoveFromLibraryResponse = schemas.RemoveMediaFromLibraryResponse
+
+
+# Request model for append_upload
+AppendUploadRequest = schemas.AppendMediaUploadRequest
+
+
+# Response model for append_upload
+AppendUploadResponse = schemas.AppendMediaUploadResponse
+
+
+# Response model for get_amplify_program_posts
+GetAmplifyProgramPostsResponse = schemas.GetAmplifyProgramPostsResponse
+
+
+# Response model for get_by_key
+GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
+
+
+# Response model for get_amplify_programs
+GetAmplifyProgramsResponse = schemas.GetAmplifyProgramsResponse
+
+
+# Response model for get_amplify_program
+GetAmplifyProgramResponse = schemas.GetAmplifyProgramResponse
+
+
+# Request model for create_subtitles
+CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
+
+
+# Response model for create_subtitles
+CreateSubtitlesResponse = schemas.CreateMediaSubtitlesResponse
+
+
+# Request model for delete_subtitles
+DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
+
+
+# Response model for delete_subtitles
+DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse

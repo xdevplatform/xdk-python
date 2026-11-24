@@ -50,15 +50,7 @@ class ConnectionsClient:
             DeleteAllResponse: Response data
         """
         url = self.client.base_url + "/2/connections/all"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
+        # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
         # Prepare request data
@@ -158,11 +150,19 @@ class ConnectionsClient:
                     raise ValueError(
                         f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
                     )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "delete",
+                url,
+                params=params,
+                headers=headers,
+            )
+        else:
+            response = self.client.session.delete(
+                url,
+                params=params,
+                headers=headers,
+            )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
@@ -225,15 +225,7 @@ class ConnectionsClient:
             you can call it once and break, or use the pagination_token parameter to start at a specific page.
         """
         url = self.client.base_url + "/2/connections"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
+        # Per-request authentication headers are built dynamically below without mutating session.headers
         headers = {}
         # Prepare request data
         json_data = None
@@ -372,11 +364,19 @@ class ConnectionsClient:
                         raise ValueError(
                             f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and page_available_bearer) or (s == 'OAuth2UserToken' and page_available_oauth2) or (s == 'UserToken' and page_available_oauth1)]}"
                         )
-            response = self.client.session.get(
-                url,
-                params=page_params,
-                headers=page_headers,
-            )
+            if self.client.timeout is not None or self.client.max_retries > 0:
+                response = self.client._send_with_retry(
+                    "get",
+                    url,
+                    params=page_params,
+                    headers=page_headers,
+                )
+            else:
+                response = self.client.session.get(
+                    url,
+                    params=page_params,
+                    headers=page_headers,
+                )
             # Check for errors
             response.raise_for_status()
             # Parse the response data
@@ -445,15 +445,7 @@ class ConnectionsClient:
             DeleteByUuidsResponse: Response data
         """
         url = self.client.base_url + "/2/connections"
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
+        # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
         headers["Content-Type"] = "application/json"
@@ -564,12 +556,21 @@ class ConnectionsClient:
                     raise ValueError(
                         f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
                     )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-            json=json_data,
-        )
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "delete",
+                url,
+                params=params,
+                headers=headers,
+                json=json_data,
+            )
+        else:
+            response = self.client.session.delete(
+                url,
+                params=params,
+                headers=headers,
+                json=json_data,
+            )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
@@ -609,15 +610,7 @@ class ConnectionsClient:
         url = url.replace(
             "{endpoint_id}", urllib.parse.quote(str(endpoint_id), safe="")
         )
-        # Priority: bearer_token > access_token (matches TypeScript behavior)
-        if self.client.bearer_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.bearer_token}"
-            )
-        elif self.client.access_token:
-            self.client.session.headers["Authorization"] = (
-                f"Bearer {self.client.access_token}"
-            )
+        # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
         # Prepare request data
@@ -717,11 +710,19 @@ class ConnectionsClient:
                     raise ValueError(
                         f"Authentication required for this endpoint. Required schemes: {required_schemes}. Available: {[s for s in required_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
                     )
-        response = self.client.session.delete(
-            url,
-            params=params,
-            headers=headers,
-        )
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "delete",
+                url,
+                params=params,
+                headers=headers,
+            )
+        else:
+            response = self.client.session.delete(
+                url,
+                params=params,
+                headers=headers,
+            )
         # Check for errors
         response.raise_for_status()
         # Parse the response data

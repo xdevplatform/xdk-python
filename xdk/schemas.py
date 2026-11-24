@@ -71,6 +71,10 @@ class ActivitySubscriptionFilter(BaseModel):
     keyword: Optional["Keyword"] = Field(
         default=None, description="A keyword to filter on."
     )
+    qualifiers: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Event-specific string predicates applied to the subscription.",
+    )
     user_id: Optional["UserId"] = Field(
         default=None, description="Unique identifier of a User"
     )
@@ -1184,6 +1188,7 @@ class BroadcastChatMessage(BaseModel):
     created_at_ms: Optional[str] = Field(default=None)
     id: Optional[str] = Field(default=None)
     relay_source: Optional[str] = Field(default=None)
+    relay_user: Optional[str] = Field(default=None)
     reply_to: Optional[str] = Field(default=None)
     text: Optional[str] = Field(default=None)
 
@@ -1788,6 +1793,7 @@ class CreateActivitySubscriptionRequest(BaseModel):
         "profile.update.verified_badge",
         "profile.update.affiliate_badge",
         "profile.update.handle",
+        "trends.new",
         "news.new",
         "follow.follow",
         "follow.unfollow",
@@ -11541,6 +11547,10 @@ class SendBroadcastChatRequest(BaseModel):
         default=None,
         description="The platform this message was relayed from, shown as that platform's icon next to the message: `youtube`, `twitch`, `kick`, `facebook`, `rumble`, `tiktok` or `instagram`. Only apps approved for chat relay may set it.",
     )
+    relay_user: Optional[str] = Field(
+        default=None,
+        description="The name of the person who wrote this message on the platform it was relayed from, shown next to that platform's icon. Display text only, not an X account. Requires `relay_source`. Links are not allowed.",
+    )
     reply_to: Optional[str] = Field(
         default=None,
         description="Message id to reply to, returned as timestamp when sent.",
@@ -11836,6 +11846,33 @@ class Trend(BaseModel):
     """Model for Trend"""
 
     trend_name: Optional[str] = Field(default=None)
+    tweet_count: Optional[int] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class TrendActivityLocation(BaseModel):
+    """The location where the trend surfaced."""
+
+    name: str
+    woeid: int
+    country: Optional[str] = Field(default=None)
+    country_code: Optional[str] = Field(default=None)
+    parent_id: Optional[int] = Field(default=None)
+    place_type: Optional[Union[Literal["town", "country", "supername"], str]] = Field(
+        default=None
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class TrendActivityResponsePayload(BaseModel):
+    """A newly surfaced trend in a WOEID location."""
+
+    location: "TrendActivityLocation" = Field(
+        description="The location where the trend surfaced."
+    )
+    trend_name: str
     tweet_count: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
@@ -14372,6 +14409,7 @@ ActivityEventId = str
 ActivityStreamingResponsePayload = Union[
     ProfileUpdateActivityResponsePayload,
     NewsActivityResponsePayload,
+    TrendActivityResponsePayload,
     FollowActivityResponsePayload,
     Post,
     PostDeleteActivityResponsePayload,

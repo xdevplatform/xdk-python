@@ -43,116 +43,22 @@ class TestBroadcastsStructure:
         self.broadcasts_client = getattr(self.client, "broadcasts")
 
 
-    def test_get_chat_moderators_exists(self):
-        """Test that get_chat_moderators method exists with correct signature."""
+    def test_go_live_scheduled_broadcast_exists(self):
+        """Test that go_live_scheduled_broadcast method exists with correct signature."""
         # Check method exists
-        method = getattr(BroadcastsClient, "get_chat_moderators", None)
+        method = getattr(BroadcastsClient, "go_live_scheduled_broadcast", None)
         assert (
             method is not None
-        ), f"Method get_chat_moderators does not exist on BroadcastsClient"
+        ), f"Method go_live_scheduled_broadcast does not exist on BroadcastsClient"
         # Check method is callable
-        assert callable(method), f"get_chat_moderators is not callable"
+        assert callable(method), f"go_live_scheduled_broadcast is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
         assert (
             len(params) >= 1
-        ), f"get_chat_moderators should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_chat_moderators"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "user_fields",
-            "expansions",
-            "post_fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_chat_moderators_return_annotation(self):
-        """Test that get_chat_moderators has proper return type annotation."""
-        method = getattr(BroadcastsClient, "get_chat_moderators")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_chat_moderators should have return type annotation"
-
-
-    def test_add_chat_moderator_exists(self):
-        """Test that add_chat_moderator method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "add_chat_moderator", None)
-        assert (
-            method is not None
-        ), f"Method add_chat_moderator does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"add_chat_moderator is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"add_chat_moderator should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from add_chat_moderator"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_add_chat_moderator_return_annotation(self):
-        """Test that add_chat_moderator has proper return type annotation."""
-        method = getattr(BroadcastsClient, "add_chat_moderator")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method add_chat_moderator should have return type annotation"
-
-
-    def test_update_broadcast_state_exists(self):
-        """Test that update_broadcast_state method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "update_broadcast_state", None)
-        assert (
-            method is not None
-        ), f"Method update_broadcast_state does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"update_broadcast_state is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"update_broadcast_state should have at least 'self' parameter"
+        ), f"go_live_scheduled_broadcast should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
@@ -163,7 +69,7 @@ class TestBroadcastsStructure:
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from update_broadcast_state"
+            ), f"Required parameter '{required_param}' missing from go_live_scheduled_broadcast"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = []
         for optional_param in optional_params:
@@ -174,14 +80,194 @@ class TestBroadcastsStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_update_broadcast_state_return_annotation(self):
-        """Test that update_broadcast_state has proper return type annotation."""
-        method = getattr(BroadcastsClient, "update_broadcast_state")
+    def test_go_live_scheduled_broadcast_return_annotation(self):
+        """Test that go_live_scheduled_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "go_live_scheduled_broadcast")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method update_broadcast_state should have return type annotation"
+        ), f"Method go_live_scheduled_broadcast should have return type annotation"
+
+
+    def test_unmute_chat_user_exists(self):
+        """Test that unmute_chat_user method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "unmute_chat_user", None)
+        assert (
+            method is not None
+        ), f"Method unmute_chat_user does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"unmute_chat_user is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"unmute_chat_user should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "user_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from unmute_chat_user"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "broadcast_id",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_unmute_chat_user_return_annotation(self):
+        """Test that unmute_chat_user has proper return type annotation."""
+        method = getattr(BroadcastsClient, "unmute_chat_user")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method unmute_chat_user should have return type annotation"
+
+
+    def test_list_sources_exists(self):
+        """Test that list_sources method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "list_sources", None)
+        assert (
+            method is not None
+        ), f"Method list_sources does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"list_sources is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"list_sources should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from list_sources"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_list_sources_return_annotation(self):
+        """Test that list_sources has proper return type annotation."""
+        method = getattr(BroadcastsClient, "list_sources")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method list_sources should have return type annotation"
+
+
+    def test_create_source_exists(self):
+        """Test that create_source method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "create_source", None)
+        assert (
+            method is not None
+        ), f"Method create_source does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"create_source is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"create_source should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_source"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_source_return_annotation(self):
+        """Test that create_source has proper return type annotation."""
+        method = getattr(BroadcastsClient, "create_source")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_source should have return type annotation"
+
+
+    def test_list_live_categories_exists(self):
+        """Test that list_live_categories method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "list_live_categories", None)
+        assert (
+            method is not None
+        ), f"Method list_live_categories does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"list_live_categories is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"list_live_categories should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from list_live_categories"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_list_live_categories_return_annotation(self):
+        """Test that list_live_categories has proper return type annotation."""
+        method = getattr(BroadcastsClient, "list_live_categories")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method list_live_categories should have return type annotation"
 
 
     def test_get_scheduled_broadcast_exists(self):
@@ -325,6 +411,53 @@ class TestBroadcastsStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method delete_scheduled_broadcast should have return type annotation"
+
+
+    def test_get_source_stream_key_exists(self):
+        """Test that get_source_stream_key method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "get_source_stream_key", None)
+        assert (
+            method is not None
+        ), f"Method get_source_stream_key does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"get_source_stream_key is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_source_stream_key should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_source_stream_key"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_source_stream_key_return_annotation(self):
+        """Test that get_source_stream_key has proper return type annotation."""
+        method = getattr(BroadcastsClient, "get_source_stream_key")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_source_stream_key should have return type annotation"
 
 
     def test_get_user_source_exists(self):
@@ -471,701 +604,6 @@ class TestBroadcastsStructure:
         ), f"Method delete_user_source should have return type annotation"
 
 
-    def test_go_live_scheduled_broadcast_exists(self):
-        """Test that go_live_scheduled_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "go_live_scheduled_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method go_live_scheduled_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"go_live_scheduled_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"go_live_scheduled_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from go_live_scheduled_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_go_live_scheduled_broadcast_return_annotation(self):
-        """Test that go_live_scheduled_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "go_live_scheduled_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method go_live_scheduled_broadcast should have return type annotation"
-
-
-    def test_unmute_broadcast_chat_user_exists(self):
-        """Test that unmute_broadcast_chat_user method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "unmute_broadcast_chat_user", None)
-        assert (
-            method is not None
-        ), f"Method unmute_broadcast_chat_user does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"unmute_broadcast_chat_user is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"unmute_broadcast_chat_user should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-            "user_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from unmute_broadcast_chat_user"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_unmute_broadcast_chat_user_return_annotation(self):
-        """Test that unmute_broadcast_chat_user has proper return type annotation."""
-        method = getattr(BroadcastsClient, "unmute_broadcast_chat_user")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method unmute_broadcast_chat_user should have return type annotation"
-
-
-    def test_list_user_sources_exists(self):
-        """Test that list_user_sources method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "list_user_sources", None)
-        assert (
-            method is not None
-        ), f"Method list_user_sources does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"list_user_sources is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"list_user_sources should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from list_user_sources"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_list_user_sources_return_annotation(self):
-        """Test that list_user_sources has proper return type annotation."""
-        method = getattr(BroadcastsClient, "list_user_sources")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method list_user_sources should have return type annotation"
-
-
-    def test_create_user_source_exists(self):
-        """Test that create_user_source method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "create_user_source", None)
-        assert (
-            method is not None
-        ), f"Method create_user_source does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"create_user_source is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"create_user_source should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_user_source"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_user_source_return_annotation(self):
-        """Test that create_user_source has proper return type annotation."""
-        method = getattr(BroadcastsClient, "create_user_source")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_user_source should have return type annotation"
-
-
-    def test_get_region_exists(self):
-        """Test that get_region method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "get_region", None)
-        assert (
-            method is not None
-        ), f"Method get_region does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"get_region is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get_region should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_region"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_region_return_annotation(self):
-        """Test that get_region has proper return type annotation."""
-        method = getattr(BroadcastsClient, "get_region")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_region should have return type annotation"
-
-
-    def test_list_live_categories_exists(self):
-        """Test that list_live_categories method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "list_live_categories", None)
-        assert (
-            method is not None
-        ), f"Method list_live_categories does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"list_live_categories is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"list_live_categories should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from list_live_categories"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_list_live_categories_return_annotation(self):
-        """Test that list_live_categories has proper return type annotation."""
-        method = getattr(BroadcastsClient, "list_live_categories")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method list_live_categories should have return type annotation"
-
-
-    def test_update_user_broadcast_state_exists(self):
-        """Test that update_user_broadcast_state method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "update_user_broadcast_state", None)
-        assert (
-            method is not None
-        ), f"Method update_user_broadcast_state does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"update_user_broadcast_state is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"update_user_broadcast_state should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-            "broadcast_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from update_user_broadcast_state"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_update_user_broadcast_state_return_annotation(self):
-        """Test that update_user_broadcast_state has proper return type annotation."""
-        method = getattr(BroadcastsClient, "update_user_broadcast_state")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method update_user_broadcast_state should have return type annotation"
-
-
-    def test_get_source_stream_key_exists(self):
-        """Test that get_source_stream_key method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "get_source_stream_key", None)
-        assert (
-            method is not None
-        ), f"Method get_source_stream_key does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"get_source_stream_key is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"get_source_stream_key should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_source_stream_key"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_source_stream_key_return_annotation(self):
-        """Test that get_source_stream_key has proper return type annotation."""
-        method = getattr(BroadcastsClient, "get_source_stream_key")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_source_stream_key should have return type annotation"
-
-
-    def test_list_user_exists(self):
-        """Test that list_user method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "list_user", None)
-        assert (
-            method is not None
-        ), f"Method list_user does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"list_user is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"list_user should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from list_user"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "pagination_token",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_list_user_return_annotation(self):
-        """Test that list_user has proper return type annotation."""
-        method = getattr(BroadcastsClient, "list_user")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method list_user should have return type annotation"
-
-
-    def test_create_user_broadcast_exists(self):
-        """Test that create_user_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "create_user_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method create_user_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"create_user_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"create_user_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_user_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_user_broadcast_return_annotation(self):
-        """Test that create_user_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "create_user_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_user_broadcast should have return type annotation"
-
-
-    def test_mute_broadcast_chat_user_exists(self):
-        """Test that mute_broadcast_chat_user method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "mute_broadcast_chat_user", None)
-        assert (
-            method is not None
-        ), f"Method mute_broadcast_chat_user does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"mute_broadcast_chat_user is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"mute_broadcast_chat_user should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from mute_broadcast_chat_user"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_mute_broadcast_chat_user_return_annotation(self):
-        """Test that mute_broadcast_chat_user has proper return type annotation."""
-        method = getattr(BroadcastsClient, "mute_broadcast_chat_user")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method mute_broadcast_chat_user should have return type annotation"
-
-
-    def test_remove_chat_moderator_exists(self):
-        """Test that remove_chat_moderator method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "remove_chat_moderator", None)
-        assert (
-            method is not None
-        ), f"Method remove_chat_moderator does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"remove_chat_moderator is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"remove_chat_moderator should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "user_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from remove_chat_moderator"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_remove_chat_moderator_return_annotation(self):
-        """Test that remove_chat_moderator has proper return type annotation."""
-        method = getattr(BroadcastsClient, "remove_chat_moderator")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method remove_chat_moderator should have return type annotation"
-
-
-    def test_list_sources_exists(self):
-        """Test that list_sources method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "list_sources", None)
-        assert (
-            method is not None
-        ), f"Method list_sources does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"list_sources is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"list_sources should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from list_sources"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_list_sources_return_annotation(self):
-        """Test that list_sources has proper return type annotation."""
-        method = getattr(BroadcastsClient, "list_sources")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method list_sources should have return type annotation"
-
-
-    def test_create_source_exists(self):
-        """Test that create_source method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "create_source", None)
-        assert (
-            method is not None
-        ), f"Method create_source does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"create_source is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"create_source should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from create_source"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_create_source_return_annotation(self):
-        """Test that create_source has proper return type annotation."""
-        method = getattr(BroadcastsClient, "create_source")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_source should have return type annotation"
-
-
-    def test_unmute_chat_user_exists(self):
-        """Test that unmute_chat_user method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "unmute_chat_user", None)
-        assert (
-            method is not None
-        ), f"Method unmute_chat_user does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"unmute_chat_user is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"unmute_chat_user should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "user_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from unmute_chat_user"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "broadcast_id",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_unmute_chat_user_return_annotation(self):
-        """Test that unmute_chat_user has proper return type annotation."""
-        method = getattr(BroadcastsClient, "unmute_chat_user")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method unmute_chat_user should have return type annotation"
-
-
     def test_list_exists(self):
         """Test that list method exists with correct signature."""
         # Check method exists
@@ -1276,20 +714,22 @@ class TestBroadcastsStructure:
         ), f"Method create_broadcast should have return type annotation"
 
 
-    def test_list_scheduled_exists(self):
-        """Test that list_scheduled method exists with correct signature."""
+    def test_get_chat_moderators_exists(self):
+        """Test that get_chat_moderators method exists with correct signature."""
         # Check method exists
-        method = getattr(BroadcastsClient, "list_scheduled", None)
+        method = getattr(BroadcastsClient, "get_chat_moderators", None)
         assert (
             method is not None
-        ), f"Method list_scheduled does not exist on BroadcastsClient"
+        ), f"Method get_chat_moderators does not exist on BroadcastsClient"
         # Check method is callable
-        assert callable(method), f"list_scheduled is not callable"
+        assert callable(method), f"get_chat_moderators is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
-        assert len(params) >= 1, f"list_scheduled should have at least 'self' parameter"
+        assert (
+            len(params) >= 1
+        ), f"get_chat_moderators should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
@@ -1298,13 +738,12 @@ class TestBroadcastsStructure:
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from list_scheduled"
+            ), f"Required parameter '{required_param}' missing from get_chat_moderators"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
-            "max_results",
-            "oldest_start_time",
-            "newest_start_time",
-            "pagination_token",
+            "user_fields",
+            "expansions",
+            "post_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -1314,51 +753,32 @@ class TestBroadcastsStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_list_scheduled_return_annotation(self):
-        """Test that list_scheduled has proper return type annotation."""
-        method = getattr(BroadcastsClient, "list_scheduled")
+    def test_get_chat_moderators_return_annotation(self):
+        """Test that get_chat_moderators has proper return type annotation."""
+        method = getattr(BroadcastsClient, "get_chat_moderators")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method list_scheduled should have return type annotation"
+        ), f"Method get_chat_moderators should have return type annotation"
 
 
-    def test_list_scheduled_pagination_params(self):
-        """Test that list_scheduled has pagination parameters."""
-        method = getattr(BroadcastsClient, "list_scheduled")
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have pagination-related parameters
-        pagination_params = [
-            "pagination_token",
-            "max_results",
-            "next_token",
-            "cursor",
-            "limit",
-        ]
-        has_pagination_param = any(param in params for param in pagination_params)
-        assert (
-            has_pagination_param
-        ), f"Paginated method list_scheduled should have pagination parameters"
-
-
-    def test_create_scheduled_broadcast_exists(self):
-        """Test that create_scheduled_broadcast method exists with correct signature."""
+    def test_add_chat_moderator_exists(self):
+        """Test that add_chat_moderator method exists with correct signature."""
         # Check method exists
-        method = getattr(BroadcastsClient, "create_scheduled_broadcast", None)
+        method = getattr(BroadcastsClient, "add_chat_moderator", None)
         assert (
             method is not None
-        ), f"Method create_scheduled_broadcast does not exist on BroadcastsClient"
+        ), f"Method add_chat_moderator does not exist on BroadcastsClient"
         # Check method is callable
-        assert callable(method), f"create_scheduled_broadcast is not callable"
+        assert callable(method), f"add_chat_moderator is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
         assert (
             len(params) >= 1
-        ), f"create_scheduled_broadcast should have at least 'self' parameter"
+        ), f"add_chat_moderator should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
@@ -1367,7 +787,7 @@ class TestBroadcastsStructure:
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from create_scheduled_broadcast"
+            ), f"Required parameter '{required_param}' missing from add_chat_moderator"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = []
         for optional_param in optional_params:
@@ -1378,14 +798,250 @@ class TestBroadcastsStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_create_scheduled_broadcast_return_annotation(self):
-        """Test that create_scheduled_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "create_scheduled_broadcast")
+    def test_add_chat_moderator_return_annotation(self):
+        """Test that add_chat_moderator has proper return type annotation."""
+        method = getattr(BroadcastsClient, "add_chat_moderator")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method create_scheduled_broadcast should have return type annotation"
+        ), f"Method add_chat_moderator should have return type annotation"
+
+
+    def test_update_user_broadcast_state_exists(self):
+        """Test that update_user_broadcast_state method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "update_user_broadcast_state", None)
+        assert (
+            method is not None
+        ), f"Method update_user_broadcast_state does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"update_user_broadcast_state is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"update_user_broadcast_state should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+            "broadcast_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from update_user_broadcast_state"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_update_user_broadcast_state_return_annotation(self):
+        """Test that update_user_broadcast_state has proper return type annotation."""
+        method = getattr(BroadcastsClient, "update_user_broadcast_state")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method update_user_broadcast_state should have return type annotation"
+
+
+    def test_list_user_sources_exists(self):
+        """Test that list_user_sources method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "list_user_sources", None)
+        assert (
+            method is not None
+        ), f"Method list_user_sources does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"list_user_sources is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"list_user_sources should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from list_user_sources"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_list_user_sources_return_annotation(self):
+        """Test that list_user_sources has proper return type annotation."""
+        method = getattr(BroadcastsClient, "list_user_sources")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method list_user_sources should have return type annotation"
+
+
+    def test_create_user_source_exists(self):
+        """Test that create_user_source method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "create_user_source", None)
+        assert (
+            method is not None
+        ), f"Method create_user_source does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"create_user_source is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"create_user_source should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_user_source"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_user_source_return_annotation(self):
+        """Test that create_user_source has proper return type annotation."""
+        method = getattr(BroadcastsClient, "create_user_source")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_user_source should have return type annotation"
+
+
+    def test_remove_chat_moderator_exists(self):
+        """Test that remove_chat_moderator method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "remove_chat_moderator", None)
+        assert (
+            method is not None
+        ), f"Method remove_chat_moderator does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"remove_chat_moderator is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"remove_chat_moderator should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "user_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from remove_chat_moderator"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_remove_chat_moderator_return_annotation(self):
+        """Test that remove_chat_moderator has proper return type annotation."""
+        method = getattr(BroadcastsClient, "remove_chat_moderator")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method remove_chat_moderator should have return type annotation"
+
+
+    def test_update_broadcast_state_exists(self):
+        """Test that update_broadcast_state method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "update_broadcast_state", None)
+        assert (
+            method is not None
+        ), f"Method update_broadcast_state does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"update_broadcast_state is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"update_broadcast_state should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from update_broadcast_state"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_update_broadcast_state_return_annotation(self):
+        """Test that update_broadcast_state has proper return type annotation."""
+        method = getattr(BroadcastsClient, "update_broadcast_state")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method update_broadcast_state should have return type annotation"
 
 
     def test_get_chat_muted_users_exists(self):
@@ -1499,6 +1155,453 @@ class TestBroadcastsStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method mute_chat_user should have return type annotation"
+
+
+    def test_get_region_exists(self):
+        """Test that get_region method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "get_region", None)
+        assert (
+            method is not None
+        ), f"Method get_region does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"get_region is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get_region should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_region"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_region_return_annotation(self):
+        """Test that get_region has proper return type annotation."""
+        method = getattr(BroadcastsClient, "get_region")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_region should have return type annotation"
+
+
+    def test_list_user_exists(self):
+        """Test that list_user method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "list_user", None)
+        assert (
+            method is not None
+        ), f"Method list_user does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"list_user is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"list_user should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from list_user"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "pagination_token",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_list_user_return_annotation(self):
+        """Test that list_user has proper return type annotation."""
+        method = getattr(BroadcastsClient, "list_user")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method list_user should have return type annotation"
+
+
+    def test_create_user_broadcast_exists(self):
+        """Test that create_user_broadcast method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "create_user_broadcast", None)
+        assert (
+            method is not None
+        ), f"Method create_user_broadcast does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"create_user_broadcast is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"create_user_broadcast should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from create_user_broadcast"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_create_user_broadcast_return_annotation(self):
+        """Test that create_user_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "create_user_broadcast")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method create_user_broadcast should have return type annotation"
+
+
+    def test_get_broadcast_chat_exists(self):
+        """Test that get_broadcast_chat method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "get_broadcast_chat", None)
+        assert (
+            method is not None
+        ), f"Method get_broadcast_chat does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"get_broadcast_chat is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_broadcast_chat should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_broadcast_chat"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "max_results",
+            "pagination_token",
+            "broadcast_chat_message_fields",
+            "expansions",
+            "user_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_broadcast_chat_return_annotation(self):
+        """Test that get_broadcast_chat has proper return type annotation."""
+        method = getattr(BroadcastsClient, "get_broadcast_chat")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_broadcast_chat should have return type annotation"
+
+
+    def test_get_broadcast_chat_pagination_params(self):
+        """Test that get_broadcast_chat has pagination parameters."""
+        method = getattr(BroadcastsClient, "get_broadcast_chat")
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have pagination-related parameters
+        pagination_params = [
+            "pagination_token",
+            "max_results",
+            "next_token",
+            "cursor",
+            "limit",
+        ]
+        has_pagination_param = any(param in params for param in pagination_params)
+        assert (
+            has_pagination_param
+        ), f"Paginated method get_broadcast_chat should have pagination parameters"
+
+
+    def test_send_broadcast_chat_exists(self):
+        """Test that send_broadcast_chat method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "send_broadcast_chat", None)
+        assert (
+            method is not None
+        ), f"Method send_broadcast_chat does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"send_broadcast_chat is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"send_broadcast_chat should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from send_broadcast_chat"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_send_broadcast_chat_return_annotation(self):
+        """Test that send_broadcast_chat has proper return type annotation."""
+        method = getattr(BroadcastsClient, "send_broadcast_chat")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method send_broadcast_chat should have return type annotation"
+
+
+    def test_unmute_broadcast_chat_user_exists(self):
+        """Test that unmute_broadcast_chat_user method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "unmute_broadcast_chat_user", None)
+        assert (
+            method is not None
+        ), f"Method unmute_broadcast_chat_user does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"unmute_broadcast_chat_user is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"unmute_broadcast_chat_user should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+            "user_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from unmute_broadcast_chat_user"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_unmute_broadcast_chat_user_return_annotation(self):
+        """Test that unmute_broadcast_chat_user has proper return type annotation."""
+        method = getattr(BroadcastsClient, "unmute_broadcast_chat_user")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method unmute_broadcast_chat_user should have return type annotation"
+
+
+    def test_get_user_broadcast_exists(self):
+        """Test that get_user_broadcast method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "get_user_broadcast", None)
+        assert (
+            method is not None
+        ), f"Method get_user_broadcast does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"get_user_broadcast is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"get_user_broadcast should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+            "broadcast_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_user_broadcast"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_user_broadcast_return_annotation(self):
+        """Test that get_user_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "get_user_broadcast")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_user_broadcast should have return type annotation"
+
+
+    def test_delete_user_broadcast_exists(self):
+        """Test that delete_user_broadcast method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "delete_user_broadcast", None)
+        assert (
+            method is not None
+        ), f"Method delete_user_broadcast does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"delete_user_broadcast is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"delete_user_broadcast should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+            "broadcast_id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from delete_user_broadcast"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_delete_user_broadcast_return_annotation(self):
+        """Test that delete_user_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "delete_user_broadcast")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method delete_user_broadcast should have return type annotation"
+
+
+    def test_mute_broadcast_chat_user_exists(self):
+        """Test that mute_broadcast_chat_user method exists with correct signature."""
+        # Check method exists
+        method = getattr(BroadcastsClient, "mute_broadcast_chat_user", None)
+        assert (
+            method is not None
+        ), f"Method mute_broadcast_chat_user does not exist on BroadcastsClient"
+        # Check method is callable
+        assert callable(method), f"mute_broadcast_chat_user is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"mute_broadcast_chat_user should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from mute_broadcast_chat_user"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_mute_broadcast_chat_user_return_annotation(self):
+        """Test that mute_broadcast_chat_user has proper return type annotation."""
+        method = getattr(BroadcastsClient, "mute_broadcast_chat_user")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method mute_broadcast_chat_user should have return type annotation"
 
 
     def test_get_broadcast_exists(self):
@@ -1690,40 +1793,35 @@ class TestBroadcastsStructure:
         ), f"Method delete_broadcast_chat_message should have return type annotation"
 
 
-    def test_get_broadcast_chat_exists(self):
-        """Test that get_broadcast_chat method exists with correct signature."""
+    def test_list_scheduled_exists(self):
+        """Test that list_scheduled method exists with correct signature."""
         # Check method exists
-        method = getattr(BroadcastsClient, "get_broadcast_chat", None)
+        method = getattr(BroadcastsClient, "list_scheduled", None)
         assert (
             method is not None
-        ), f"Method get_broadcast_chat does not exist on BroadcastsClient"
+        ), f"Method list_scheduled does not exist on BroadcastsClient"
         # Check method is callable
-        assert callable(method), f"get_broadcast_chat is not callable"
+        assert callable(method), f"list_scheduled is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"get_broadcast_chat should have at least 'self' parameter"
+        assert len(params) >= 1, f"list_scheduled should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
         # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
+        required_params = []
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from get_broadcast_chat"
+            ), f"Required parameter '{required_param}' missing from list_scheduled"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
             "max_results",
+            "oldest_start_time",
+            "newest_start_time",
             "pagination_token",
-            "broadcast_chat_message_fields",
-            "expansions",
-            "user_fields",
         ]
         for optional_param in optional_params:
             if optional_param in params:
@@ -1733,19 +1831,19 @@ class TestBroadcastsStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_get_broadcast_chat_return_annotation(self):
-        """Test that get_broadcast_chat has proper return type annotation."""
-        method = getattr(BroadcastsClient, "get_broadcast_chat")
+    def test_list_scheduled_return_annotation(self):
+        """Test that list_scheduled has proper return type annotation."""
+        method = getattr(BroadcastsClient, "list_scheduled")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_broadcast_chat should have return type annotation"
+        ), f"Method list_scheduled should have return type annotation"
 
 
-    def test_get_broadcast_chat_pagination_params(self):
-        """Test that get_broadcast_chat has pagination parameters."""
-        method = getattr(BroadcastsClient, "get_broadcast_chat")
+    def test_list_scheduled_pagination_params(self):
+        """Test that list_scheduled has pagination parameters."""
+        method = getattr(BroadcastsClient, "list_scheduled")
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have pagination-related parameters
@@ -1759,36 +1857,34 @@ class TestBroadcastsStructure:
         has_pagination_param = any(param in params for param in pagination_params)
         assert (
             has_pagination_param
-        ), f"Paginated method get_broadcast_chat should have pagination parameters"
+        ), f"Paginated method list_scheduled should have pagination parameters"
 
 
-    def test_send_broadcast_chat_exists(self):
-        """Test that send_broadcast_chat method exists with correct signature."""
+    def test_create_scheduled_broadcast_exists(self):
+        """Test that create_scheduled_broadcast method exists with correct signature."""
         # Check method exists
-        method = getattr(BroadcastsClient, "send_broadcast_chat", None)
+        method = getattr(BroadcastsClient, "create_scheduled_broadcast", None)
         assert (
             method is not None
-        ), f"Method send_broadcast_chat does not exist on BroadcastsClient"
+        ), f"Method create_scheduled_broadcast does not exist on BroadcastsClient"
         # Check method is callable
-        assert callable(method), f"send_broadcast_chat is not callable"
+        assert callable(method), f"create_scheduled_broadcast is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
         assert (
             len(params) >= 1
-        ), f"send_broadcast_chat should have at least 'self' parameter"
+        ), f"create_scheduled_broadcast should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
         # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
+        required_params = []
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from send_broadcast_chat"
+            ), f"Required parameter '{required_param}' missing from create_scheduled_broadcast"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = []
         for optional_param in optional_params:
@@ -1799,14 +1895,14 @@ class TestBroadcastsStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_send_broadcast_chat_return_annotation(self):
-        """Test that send_broadcast_chat has proper return type annotation."""
-        method = getattr(BroadcastsClient, "send_broadcast_chat")
+    def test_create_scheduled_broadcast_return_annotation(self):
+        """Test that create_scheduled_broadcast has proper return type annotation."""
+        method = getattr(BroadcastsClient, "create_scheduled_broadcast")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method send_broadcast_chat should have return type annotation"
+        ), f"Method create_scheduled_broadcast should have return type annotation"
 
 
     def test_get_source_exists(self):
@@ -1944,146 +2040,50 @@ class TestBroadcastsStructure:
         ), f"Method delete_source should have return type annotation"
 
 
-    def test_get_user_broadcast_exists(self):
-        """Test that get_user_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "get_user_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method get_user_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"get_user_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"get_user_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-            "broadcast_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from get_user_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_user_broadcast_return_annotation(self):
-        """Test that get_user_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "get_user_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_user_broadcast should have return type annotation"
-
-
-    def test_delete_user_broadcast_exists(self):
-        """Test that delete_user_broadcast method exists with correct signature."""
-        # Check method exists
-        method = getattr(BroadcastsClient, "delete_user_broadcast", None)
-        assert (
-            method is not None
-        ), f"Method delete_user_broadcast does not exist on BroadcastsClient"
-        # Check method is callable
-        assert callable(method), f"delete_user_broadcast is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"delete_user_broadcast should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-            "broadcast_id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from delete_user_broadcast"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_delete_user_broadcast_return_annotation(self):
-        """Test that delete_user_broadcast has proper return type annotation."""
-        method = getattr(BroadcastsClient, "delete_user_broadcast")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method delete_user_broadcast should have return type annotation"
-
-
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "get_chat_moderators",
-            "add_chat_moderator",
-            "update_broadcast_state",
+            "go_live_scheduled_broadcast",
+            "unmute_chat_user",
+            "list_sources",
+            "create_source",
+            "list_live_categories",
             "get_scheduled_broadcast",
             "update_scheduled_broadcast",
             "delete_scheduled_broadcast",
+            "get_source_stream_key",
             "get_user_source",
             "update_user_source",
             "delete_user_source",
-            "go_live_scheduled_broadcast",
-            "unmute_broadcast_chat_user",
-            "list_user_sources",
-            "create_user_source",
-            "get_region",
-            "list_live_categories",
-            "update_user_broadcast_state",
-            "get_source_stream_key",
-            "list_user",
-            "create_user_broadcast",
-            "mute_broadcast_chat_user",
-            "remove_chat_moderator",
-            "list_sources",
-            "create_source",
-            "unmute_chat_user",
             "list",
             "create_broadcast",
-            "list_scheduled",
-            "create_scheduled_broadcast",
+            "get_chat_moderators",
+            "add_chat_moderator",
+            "update_user_broadcast_state",
+            "list_user_sources",
+            "create_user_source",
+            "remove_chat_moderator",
+            "update_broadcast_state",
             "get_chat_muted_users",
             "mute_chat_user",
+            "get_region",
+            "list_user",
+            "create_user_broadcast",
+            "get_broadcast_chat",
+            "send_broadcast_chat",
+            "unmute_broadcast_chat_user",
+            "get_user_broadcast",
+            "delete_user_broadcast",
+            "mute_broadcast_chat_user",
             "get_broadcast",
             "update_broadcast",
             "delete_broadcast",
             "delete_broadcast_chat_message",
-            "get_broadcast_chat",
-            "send_broadcast_chat",
+            "list_scheduled",
+            "create_scheduled_broadcast",
             "get_source",
             "update_source",
             "delete_source",
-            "get_user_broadcast",
-            "delete_user_broadcast",
         ]
         for expected_method in expected_methods:
             assert hasattr(

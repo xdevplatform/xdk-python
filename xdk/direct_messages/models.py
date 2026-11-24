@@ -17,6 +17,26 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
+# Request model for create_conversation
+CreateConversationRequest = schemas.CreateDirectMessagesConversationRequest
+
+
+# Response model for create_conversation
+CreateConversationResponse = schemas.CreateDirectMessagesConversationResponse
+
+
+# Response model for get_events
+GetEventsResponse = schemas.GetDirectMessagesEventsResponse
+
+
+# Request model for create_by_conversation_id
+CreateByConversationIdRequest = schemas.CreateDirectMessagesByConversationIdRequest
+
+
+# Response model for create_by_conversation_id
+CreateByConversationIdResponse = schemas.CreateDirectMessagesByConversationIdResponse
+
+
 # Response model for get_events_by_conversation_id
 GetEventsByConversationIdResponse = (
     schemas.GetDirectMessagesEventsByConversationIdResponse
@@ -39,27 +59,7 @@ GetEventsByIdResponse = schemas.GetDirectMessagesEventsByIdResponse
 DeleteEventsResponse = schemas.DeleteDirectMessagesEventsResponse
 
 
-# Request model for create_conversation
-CreateConversationRequest = schemas.CreateDirectMessagesConversationRequest
-
-
-# Response model for create_conversation
-CreateConversationResponse = schemas.CreateDirectMessagesConversationResponse
-
-
 # Response model for get_events_by_participant_id
 GetEventsByParticipantIdResponse = (
     schemas.GetDirectMessagesEventsByParticipantIdResponse
 )
-
-
-# Response model for get_events
-GetEventsResponse = schemas.GetDirectMessagesEventsResponse
-
-
-# Request model for create_by_conversation_id
-CreateByConversationIdRequest = schemas.CreateDirectMessagesByConversationIdRequest
-
-
-# Response model for create_by_conversation_id
-CreateByConversationIdResponse = schemas.CreateDirectMessagesByConversationIdResponse

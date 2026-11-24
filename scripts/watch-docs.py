@@ -85,19 +85,6 @@ def start_server():
         return None
 
 
-        def run_server():
-            with socketserver.TCPServer(("", PORT), Handler) as httpd:
-                print(f"📚 Starting documentation server on http://localhost:{PORT}")
-                httpd.serve_forever()
-
-        server_thread = threading.Thread(target=run_server, daemon=True)
-        server_thread.start()
-        return server_thread
-    except Exception as e:
-        print(f"⚠️  Could not start HTTP server: {e}")
-        return None
-
-
 # Initial documentation generation
 regenerate_docs()
 server_thread = start_server()

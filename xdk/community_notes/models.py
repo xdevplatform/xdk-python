@@ -21,18 +21,6 @@ from .. import schemas
 DeleteResponse = schemas.DeleteCommunityNotesResponse
 
 
-# Response model for search_eligible_posts
-SearchEligiblePostsResponse = schemas.SearchEligiblePostsResponse
-
-
-# Request model for evaluate
-EvaluateRequest = schemas.EvaluateCommunityNotesRequest
-
-
-# Response model for evaluate
-EvaluateResponse = schemas.EvaluateCommunityNotesResponse
-
-
 # Request model for create
 CreateRequest = schemas.CreateCommunityNotesRequest
 
@@ -43,3 +31,15 @@ CreateResponse = schemas.CreateCommunityNotesResponse
 
 # Response model for search_written
 SearchWrittenResponse = schemas.SearchCommunityNotesWrittenResponse
+
+
+# Request model for evaluate
+EvaluateRequest = schemas.EvaluateCommunityNotesRequest
+
+
+# Response model for evaluate
+EvaluateResponse = schemas.EvaluateCommunityNotesResponse
+
+
+# Response model for search_eligible_posts
+SearchEligiblePostsResponse = schemas.SearchEligiblePostsResponse

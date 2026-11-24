@@ -46,6 +46,7 @@ class GeneralClient:
             GetOpenApiSpecResponse: Response data
         """
         url = self.client.base_url + "/2/openapi.json"
+        # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
         # Prepare request data
@@ -62,13 +63,8 @@ class GeneralClient:
         available_bearer = bool(self.client.bearer_token)
         available_oauth2 = bool(self.client.access_token)
         available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # No security requirements - use default priority
-        if available_bearer:
-            selected_auth = "bearer_token"
-        elif available_oauth2:
-            selected_auth = "oauth2_user_context"
-        elif available_oauth1:
-            selected_auth = "oauth1"
+        # Unauthenticated endpoint (no security requirements in OpenAPI spec)
+        selected_auth = None
         # Apply selected authentication
         if selected_auth == "oauth1":
             # OAuth1 authentication - build proper OAuth1 header dynamically
@@ -104,11 +100,19 @@ class GeneralClient:
                                 f"Bearer {self.client.access_token}"
                             )
         # Make the request
-        response = self.client.session.get(
-            url,
-            params=params,
-            headers=headers,
-        )
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "get",
+                url,
+                params=params,
+                headers=headers,
+            )
+        else:
+            response = self.client.session.get(
+                url,
+                params=params,
+                headers=headers,
+            )
         # Check for errors
         response.raise_for_status()
         # Parse the response data

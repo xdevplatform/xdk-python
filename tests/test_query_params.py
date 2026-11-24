@@ -31,12 +31,11 @@ class TestQueryAndPathParams:
     def setup_method(self):
         self.client = Client(bearer_token="test_bearer_token")
 
+
     @pytest.mark.parametrize(
         "value, expected",
         [(True, "true"), (False, "false")],
     )
-
-
     def test_update_rules_serializes_booleans_lowercase(self, value, expected):
         with mock.patch.object(
             self.client.session,
