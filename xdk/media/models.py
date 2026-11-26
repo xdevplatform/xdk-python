@@ -17,48 +17,12 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_by_key
-GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
-
-
-# Request model for initialize_upload
-InitializeUploadRequest = schemas.InitializeMediaUploadRequest
-
-
-# Response model for initialize_upload
-InitializeUploadResponse = schemas.InitializeMediaUploadResponse
-
-
-# Request model for add_post_to_amplify_programs
-AddPostToAmplifyProgramsRequest = schemas.AddPostToAmplifyProgramsRequest
-
-
-# Response model for add_post_to_amplify_programs
-AddPostToAmplifyProgramsResponse = schemas.AddPostToAmplifyProgramsResponse
-
-
-# Response model for get_library_categories
-GetLibraryCategoriesResponse = schemas.GetMediaLibraryCategoriesResponse
-
-
-# Request model for add_to_library
-AddToLibraryRequest = schemas.AddMediaToLibraryRequest
-
-
-# Response model for add_to_library
-AddToLibraryResponse = schemas.AddMediaToLibraryResponse
-
-
 # Request model for append_upload
 AppendUploadRequest = schemas.AppendMediaUploadRequest
 
 
 # Response model for append_upload
 AppendUploadResponse = schemas.AppendMediaUploadResponse
-
-
-# Response model for get_amplify_program
-GetAmplifyProgramResponse = schemas.GetAmplifyProgramResponse
 
 
 # Request model for create_metadata
@@ -69,32 +33,40 @@ CreateMetadataRequest = schemas.CreateMediaMetadataRequest
 CreateMetadataResponse = schemas.CreateMediaMetadataResponse
 
 
+# Request model for add_post_to_amplify_programs
+AddPostToAmplifyProgramsRequest = schemas.AddPostToAmplifyProgramsRequest
+
+
+# Response model for add_post_to_amplify_programs
+AddPostToAmplifyProgramsResponse = schemas.AddPostToAmplifyProgramsResponse
+
+
 # Response model for get_analytics
 GetAnalyticsResponse = schemas.GetMediaAnalyticsResponse
 
 
-# Response model for get_amplify_program_posts
-GetAmplifyProgramPostsResponse = schemas.GetAmplifyProgramPostsResponse
+# Request model for initialize_upload
+InitializeUploadRequest = schemas.InitializeMediaUploadRequest
+
+
+# Response model for initialize_upload
+InitializeUploadResponse = schemas.InitializeMediaUploadResponse
 
 
 # Response model for finalize_upload
 FinalizeUploadResponse = schemas.FinalizeMediaUploadResponse
 
 
+# Request model for add_to_library
+AddToLibraryRequest = schemas.AddMediaToLibraryRequest
+
+
+# Response model for add_to_library
+AddToLibraryResponse = schemas.AddMediaToLibraryResponse
+
+
 # Response model for get_by_keys
 GetByKeysResponse = schemas.GetMediaByMediaKeysResponse
-
-
-# Response model for get_upload_status
-GetUploadStatusResponse = schemas.GetMediaUploadStatusResponse
-
-
-# Request model for upload
-UploadRequest = schemas.MediaUploadRequest
-
-
-# Response model for upload
-UploadResponse = schemas.MediaUploadResponse
 
 
 # Request model for update_in_library
@@ -135,6 +107,18 @@ class RemoveFromLibraryRequest(RootModel[schemas.RemoveMediaFromLibraryRequest])
 RemoveFromLibraryResponse = schemas.RemoveMediaFromLibraryResponse
 
 
+# Response model for get_amplify_program_posts
+GetAmplifyProgramPostsResponse = schemas.GetAmplifyProgramPostsResponse
+
+
+# Response model for get_amplify_programs
+GetAmplifyProgramsResponse = schemas.GetAmplifyProgramsResponse
+
+
+# Response model for get_amplify_program
+GetAmplifyProgramResponse = schemas.GetAmplifyProgramResponse
+
+
 # Request model for create_subtitles
 CreateSubtitlesRequest = schemas.CreateMediaSubtitlesRequest
 
@@ -151,5 +135,21 @@ DeleteSubtitlesRequest = schemas.DeleteMediaSubtitlesRequest
 DeleteSubtitlesResponse = schemas.DeleteMediaSubtitlesResponse
 
 
-# Response model for get_amplify_programs
-GetAmplifyProgramsResponse = schemas.GetAmplifyProgramsResponse
+# Response model for get_upload_status
+GetUploadStatusResponse = schemas.GetMediaUploadStatusResponse
+
+
+# Request model for upload
+UploadRequest = schemas.MediaUploadRequest
+
+
+# Response model for upload
+UploadResponse = schemas.MediaUploadResponse
+
+
+# Response model for get_by_key
+GetByKeyResponse = schemas.GetMediaByMediaKeyResponse
+
+
+# Response model for get_library_categories
+GetLibraryCategoriesResponse = schemas.GetMediaLibraryCategoriesResponse

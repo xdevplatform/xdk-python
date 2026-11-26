@@ -4031,6 +4031,99 @@ class DeleteChatConversationActionSignaturesMessageEventSignatureMessageSigningK
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
+class DeleteChatConversationLegacyActionSignatures(BaseModel):
+    """Model for DeleteChatConversationLegacyActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "DeleteChatConversationLegacyActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationLegacyActionSignaturesMessageEventSignature(BaseModel):
+    """Model for DeleteChatConversationLegacyActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "DeleteChatConversationLegacyActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationLegacyActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for DeleteChatConversationLegacyActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationLegacyRequest(BaseModel):
+    """Model for DeleteChatConversationLegacyRequest"""
+
+    action_signatures: Optional[
+        List["DeleteChatConversationLegacyActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationLegacyResponse(BaseModel):
+    """Model for DeleteChatConversationLegacyResponse"""
+
+    data: Optional["DeleteChatConversationLegacyResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class DeleteChatConversationLegacyResponseData(BaseModel):
+    """Model for DeleteChatConversationLegacyResponseData"""
+
+    deleted: bool = Field(description="Whether the conversation was deleted.")
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
 class DeleteChatConversationMessageTtlActionSignatures(BaseModel):
     """Model for DeleteChatConversationMessageTtlActionSignatures"""
 
@@ -11964,6 +12057,101 @@ class UnarchiveChatConversationActionSignaturesMessageEventSignatureMessageSigni
     )
     signing_public_key: Optional[str] = Field(
         default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationLegacyActionSignatures(BaseModel):
+    """Model for UnarchiveChatConversationLegacyActionSignatures"""
+
+    encoded_message_event_detail: str = Field(
+        description="Base64-encoded Thrift MessageEventDetail for the signed action."
+    )
+    message_event_signature: (
+        "UnarchiveChatConversationLegacyActionSignaturesMessageEventSignature"
+    )
+    message_id: str = Field(
+        description="Client-generated ID of the message being signed."
+    )
+    signature_payload: Optional[str] = Field(
+        default=None,
+        description="Payload string the client signed; used only in server-side failure logs.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationLegacyActionSignaturesMessageEventSignature(BaseModel):
+    """Model for UnarchiveChatConversationLegacyActionSignaturesMessageEventSignature"""
+
+    public_key_version: str = Field(
+        description="The version of the public key used for signing."
+    )
+    signature: str = Field(description="The signature of the message event.")
+    signature_version: str = Field(
+        description="The version of the signature algorithm."
+    )
+    message_signing_key_info_list: Optional[
+        List[
+            "UnarchiveChatConversationLegacyActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"
+        ]
+    ] = Field(
+        default=None,
+        description="List of signing key information for message verification.",
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The public key used for signing."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationLegacyActionSignaturesMessageEventSignatureMessageSigningKeyInfoList(
+    BaseModel
+):
+    """Model for UnarchiveChatConversationLegacyActionSignaturesMessageEventSignatureMessageSigningKeyInfoList"""
+
+    member_id: Optional[str] = Field(
+        default=None, description="The member ID associated with this signing key."
+    )
+    public_key_version: Optional[str] = Field(
+        default=None, description="The version of the public key."
+    )
+    signing_public_key: Optional[str] = Field(
+        default=None, description="The signing public key."
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationLegacyRequest(BaseModel):
+    """Model for UnarchiveChatConversationLegacyRequest"""
+
+    action_signatures: Optional[
+        List["UnarchiveChatConversationLegacyActionSignatures"]
+    ] = Field(
+        default=None,
+        description="Signatures for this action, forwarded in the order they are sent.",
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationLegacyResponse(BaseModel):
+    """Model for UnarchiveChatConversationLegacyResponse"""
+
+    data: Optional["UnarchiveChatConversationLegacyResponseData"] = Field(default=None)
+    errors: Optional[List["Problem"]] = Field(default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class UnarchiveChatConversationLegacyResponseData(BaseModel):
+    """Model for UnarchiveChatConversationLegacyResponseData"""
+
+    archived: bool = Field(
+        description="Whether the conversation is archived for the authenticated user."
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")

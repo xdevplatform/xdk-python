@@ -64,7 +64,7 @@ class _CanaryHttpServer(ThreadingHTTPServer):
 
 class XdkPythonCanaryApp:
     SDK_NAME = "python"
-    SDK_VERSION = "0.11.2"
+    SDK_VERSION = "0.12.0"
 
 
     def __init__(self, enable_live_probes: bool = False) -> None:

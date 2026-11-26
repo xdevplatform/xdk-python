@@ -17,63 +17,16 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-
-class LikesComplianceResponse(RootModel[schemas.StreamLikesComplianceResponse]):
-    """Response model for likes_compliance"""
-
-
-    def __init__(self, root: Any = None, **kwargs: Any) -> None:
-        if root is None:
-            super().__init__(kwargs)
-        else:
-            super().__init__(root)
-
-
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith("_"):
-            raise AttributeError(name)
-        root = object.__getattribute__(self, "root")
-        if isinstance(root, dict) and name in root:
-            return root[name]
-        if hasattr(root, name):
-            return getattr(root, name)
-        if name in ("data", "errors", "includes", "meta"):
-            return None
-        raise AttributeError(
-            f"{type(self).__name__!r} object has no attribute {name!r}"
-        )
-
-
-# Response model for posts_firehose_ja
-PostsFirehoseJaResponse = schemas.StreamPostsFirehoseJaResponse
-
-
-# Response model for posts_sample10
-PostsSample10Response = schemas.StreamPostsSample10Response
-
-
-# Response model for posts
-PostsResponse = schemas.StreamPostsResponse
-
-
-# Response model for posts_firehose_pt
-PostsFirehosePtResponse = schemas.StreamPostsFirehosePtResponse
-
-
-# Response model for likes_sample10
-LikesSample10Response = schemas.StreamLikesSample10Response
+# Response model for posts_firehose_ko
+PostsFirehoseKoResponse = schemas.StreamPostsFirehoseKoResponse
 
 
 # Response model for posts_sample
 PostsSampleResponse = schemas.StreamPostsSampleResponse
 
 
-# Response model for posts_firehose
-PostsFirehoseResponse = schemas.StreamPostsFirehoseResponse
-
-
-# Response model for posts_firehose_ko
-PostsFirehoseKoResponse = schemas.StreamPostsFirehoseKoResponse
+# Response model for posts_firehose_ja
+PostsFirehoseJaResponse = schemas.StreamPostsFirehoseJaResponse
 
 
 class PostsComplianceResponse(RootModel[schemas.StreamPostsComplianceResponse]):
@@ -102,42 +55,8 @@ class PostsComplianceResponse(RootModel[schemas.StreamPostsComplianceResponse]):
         )
 
 
-# Response model for get_rule_counts
-GetRuleCountsResponse = schemas.GetRuleCountsResponse
-
-
-# Response model for posts_firehose_en
-PostsFirehoseEnResponse = schemas.StreamPostsFirehoseEnResponse
-
-
-# Response model for likes_firehose
-LikesFirehoseResponse = schemas.StreamLikesFirehoseResponse
-
-
-class LabelsComplianceResponse(RootModel[schemas.StreamLabelsComplianceResponse]):
-    """Response model for labels_compliance"""
-
-
-    def __init__(self, root: Any = None, **kwargs: Any) -> None:
-        if root is None:
-            super().__init__(kwargs)
-        else:
-            super().__init__(root)
-
-
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith("_"):
-            raise AttributeError(name)
-        root = object.__getattribute__(self, "root")
-        if isinstance(root, dict) and name in root:
-            return root[name]
-        if hasattr(root, name):
-            return getattr(root, name)
-        if name in ("data", "errors", "includes", "meta"):
-            return None
-        raise AttributeError(
-            f"{type(self).__name__!r} object has no attribute {name!r}"
-        )
+# Response model for activity
+ActivityResponse = schemas.ActivityStreamResponse
 
 
 class UsersComplianceResponse(RootModel[schemas.StreamUsersComplianceResponse]):
@@ -166,8 +85,54 @@ class UsersComplianceResponse(RootModel[schemas.StreamUsersComplianceResponse]):
         )
 
 
-# Response model for activity
-ActivityResponse = schemas.ActivityStreamResponse
+# Response model for posts_firehose_en
+PostsFirehoseEnResponse = schemas.StreamPostsFirehoseEnResponse
+
+
+# Response model for posts_sample10
+PostsSample10Response = schemas.StreamPostsSample10Response
+
+
+# Response model for posts
+PostsResponse = schemas.StreamPostsResponse
+
+
+# Response model for posts_firehose
+PostsFirehoseResponse = schemas.StreamPostsFirehoseResponse
+
+
+class LikesComplianceResponse(RootModel[schemas.StreamLikesComplianceResponse]):
+    """Response model for likes_compliance"""
+
+
+    def __init__(self, root: Any = None, **kwargs: Any) -> None:
+        if root is None:
+            super().__init__(kwargs)
+        else:
+            super().__init__(root)
+
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        root = object.__getattribute__(self, "root")
+        if isinstance(root, dict) and name in root:
+            return root[name]
+        if hasattr(root, name):
+            return getattr(root, name)
+        if name in ("data", "errors", "includes", "meta"):
+            return None
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
+
+
+# Response model for get_rule_counts
+GetRuleCountsResponse = schemas.GetRuleCountsResponse
+
+
+# Response model for posts_firehose_pt
+PostsFirehosePtResponse = schemas.StreamPostsFirehosePtResponse
 
 
 # Response model for get_rules
@@ -180,3 +145,37 @@ UpdateRulesRequest = schemas.UpdateRulesRequest
 
 # Response model for update_rules
 UpdateRulesResponse = schemas.UpdateRulesResponse
+
+
+# Response model for likes_firehose
+LikesFirehoseResponse = schemas.StreamLikesFirehoseResponse
+
+
+# Response model for likes_sample10
+LikesSample10Response = schemas.StreamLikesSample10Response
+
+
+class LabelsComplianceResponse(RootModel[schemas.StreamLabelsComplianceResponse]):
+    """Response model for labels_compliance"""
+
+
+    def __init__(self, root: Any = None, **kwargs: Any) -> None:
+        if root is None:
+            super().__init__(kwargs)
+        else:
+            super().__init__(root)
+
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        root = object.__getattribute__(self, "root")
+        if isinstance(root, dict) and name in root:
+            return root[name]
+        if hasattr(root, name):
+            return getattr(root, name)
+        if name in ("data", "errors", "includes", "meta"):
+            return None
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )

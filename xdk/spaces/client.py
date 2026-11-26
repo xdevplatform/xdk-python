@@ -24,12 +24,12 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    GetByIdResponse,
-    GetByIdsResponse,
-    GetPostsResponse,
-    GetByCreatorIdsResponse,
     SearchResponse,
+    GetPostsResponse,
+    GetByIdsResponse,
+    GetByCreatorIdsResponse,
     GetBuyersResponse,
+    GetByIdResponse,
 )
 
 
@@ -41,9 +41,11 @@ class SpacesClient:
         self.client = client
 
 
-    def get_by_id(
+    def search(
         self,
-        id: str,
+        query: str,
+        state: Optional[Literal["live", "scheduled", "all"]] = None,
+        max_results: Optional[int] = None,
         space_fields: Optional[
             List[
                 Literal[
@@ -108,23 +110,30 @@ class SpacesClient:
             ]
         ] = None,
         topic_fields: Optional[List[Literal["description", "id", "name"]]] = None,
-    ) -> GetByIdResponse:
+    ) -> SearchResponse:
         """
-        Get Space by ID
-        Retrieves details of a specific Space by its ID.
+        Search Spaces
+        Retrieves a list of Spaces matching the specified search query.
         Args:
-            id: id
+            query: query
+            state: state
+            max_results: max_results
             space_fields: A comma separated list of Space fields to display.
             expansions: A comma separated list of fields to expand.
             user_fields: A comma separated list of User fields to display.
             topic_fields: A comma separated list of Topic fields to display.
             Returns:
-            GetByIdResponse: Response data
+            SearchResponse: Response data
         """
-        url = self.client.base_url + "/2/spaces/{id}"
-        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        url = self.client.base_url + "/2/spaces/search"
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
+        if query is not None:
+            params["query"] = query
+        if state is not None:
+            params["state"] = state
+        if max_results is not None:
+            params["max_results"] = max_results
         if space_fields is not None:
             params["space.fields"] = ",".join(str(item) for item in space_fields)
         if expansions is not None:
@@ -232,202 +241,7 @@ class SpacesClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return GetByIdResponse.model_validate(response_data)
-
-
-    def get_by_ids(
-        self,
-        ids: List[str],
-        space_fields: Optional[
-            List[
-                Literal[
-                    "created_at",
-                    "ended_at",
-                    "id",
-                    "is_ticketed",
-                    "lang",
-                    "participant_count",
-                    "scheduled_start",
-                    "started_at",
-                    "state",
-                    "subscriber_count",
-                    "title",
-                    "updated_at",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "creator_id",
-                    "host_ids",
-                    "invited_user_ids",
-                    "speaker_ids",
-                    "topic_ids",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "active_follower_count",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "org_only",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_chat",
-                    "receives_your_dm",
-                    "subscriber_count",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        topic_fields: Optional[List[Literal["description", "id", "name"]]] = None,
-    ) -> GetByIdsResponse:
-        """
-        Get Spaces by IDs
-        Retrieves details of multiple Spaces by their IDs.
-        Args:
-            ids: ids
-            space_fields: A comma separated list of Space fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            topic_fields: A comma separated list of Topic fields to display.
-            Returns:
-            GetByIdsResponse: Response data
-        """
-        url = self.client.base_url + "/2/spaces"
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        if ids is not None:
-            params["ids"] = ",".join(str(item) for item in ids)
-        if space_fields is not None:
-            params["space.fields"] = ",".join(str(item) for item in space_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if topic_fields is not None:
-            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements in OpenAPI spec: omit Authorization header
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        acceptable_schemes.append("OAuth2UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        if not selected_auth and acceptable_schemes:
-            raise ValueError(
-                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
-                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-            )
-        def _build_request_headers() -> Dict[str, str]:
-            req_headers = headers.copy()
-            if selected_auth == "oauth1":
-                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
-                full_url = url
-                if params:
-                    query_string = urllib.parse.urlencode(params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                req_headers["Authorization"] = self.client.auth.build_request_header(
-                    method="GET",
-                    url=full_url,
-                    body="",
-                )
-            elif selected_auth == "bearer_token":
-                if self.client.bearer_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif selected_auth == "oauth2_user_context":
-                if (
-                    self.client.oauth2_auth
-                    and self.client.token
-                    and self.client.is_token_expired()
-                ):
-                    self.client.refresh_token()
-                if self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            return req_headers
-        # Make the request
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "get",
-                url,
-                params=params,
-                headers_factory=_build_request_headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=_build_request_headers(),
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetByIdsResponse.model_validate(response_data)
+        return SearchResponse.model_validate(response_data)
 
 
     def get_posts(
@@ -794,6 +608,201 @@ class SpacesClient:
             # time.sleep(0.1)  # Small delay to avoid rate limits
 
 
+    def get_by_ids(
+        self,
+        ids: List[str],
+        space_fields: Optional[
+            List[
+                Literal[
+                    "created_at",
+                    "ended_at",
+                    "id",
+                    "is_ticketed",
+                    "lang",
+                    "participant_count",
+                    "scheduled_start",
+                    "started_at",
+                    "state",
+                    "subscriber_count",
+                    "title",
+                    "updated_at",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "creator_id",
+                    "host_ids",
+                    "invited_user_ids",
+                    "speaker_ids",
+                    "topic_ids",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        topic_fields: Optional[List[Literal["description", "id", "name"]]] = None,
+    ) -> GetByIdsResponse:
+        """
+        Get Spaces by IDs
+        Retrieves details of multiple Spaces by their IDs.
+        Args:
+            ids: ids
+            space_fields: A comma separated list of Space fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            topic_fields: A comma separated list of Topic fields to display.
+            Returns:
+            GetByIdsResponse: Response data
+        """
+        url = self.client.base_url + "/2/spaces"
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        if ids is not None:
+            params["ids"] = ",".join(str(item) for item in ids)
+        if space_fields is not None:
+            params["space.fields"] = ",".join(str(item) for item in space_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if topic_fields is not None:
+            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        acceptable_schemes.append("OAuth2UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="GET",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "get",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+            )
+        else:
+            response = self.client.session.get(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByIdsResponse.model_validate(response_data)
+
+
     def get_by_creator_ids(
         self,
         user_ids: List[str],
@@ -987,209 +996,6 @@ class SpacesClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return GetByCreatorIdsResponse.model_validate(response_data)
-
-
-    def search(
-        self,
-        query: str,
-        state: Optional[Literal["live", "scheduled", "all"]] = None,
-        max_results: Optional[int] = None,
-        space_fields: Optional[
-            List[
-                Literal[
-                    "created_at",
-                    "ended_at",
-                    "id",
-                    "is_ticketed",
-                    "lang",
-                    "participant_count",
-                    "scheduled_start",
-                    "started_at",
-                    "state",
-                    "subscriber_count",
-                    "title",
-                    "updated_at",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[
-            List[
-                Literal[
-                    "creator_id",
-                    "host_ids",
-                    "invited_user_ids",
-                    "speaker_ids",
-                    "topic_ids",
-                ]
-            ]
-        ] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "active_follower_count",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "org_only",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_chat",
-                    "receives_your_dm",
-                    "subscriber_count",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-        topic_fields: Optional[List[Literal["description", "id", "name"]]] = None,
-    ) -> SearchResponse:
-        """
-        Search Spaces
-        Retrieves a list of Spaces matching the specified search query.
-        Args:
-            query: query
-            state: state
-            max_results: max_results
-            space_fields: A comma separated list of Space fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
-            topic_fields: A comma separated list of Topic fields to display.
-            Returns:
-            SearchResponse: Response data
-        """
-        url = self.client.base_url + "/2/spaces/search"
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        if query is not None:
-            params["query"] = query
-        if state is not None:
-            params["state"] = state
-        if max_results is not None:
-            params["max_results"] = max_results
-        if space_fields is not None:
-            params["space.fields"] = ",".join(str(item) for item in space_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        if topic_fields is not None:
-            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements in OpenAPI spec: omit Authorization header
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        acceptable_schemes.append("OAuth2UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        if not selected_auth and acceptable_schemes:
-            raise ValueError(
-                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
-                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-            )
-        def _build_request_headers() -> Dict[str, str]:
-            req_headers = headers.copy()
-            if selected_auth == "oauth1":
-                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
-                full_url = url
-                if params:
-                    query_string = urllib.parse.urlencode(params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                req_headers["Authorization"] = self.client.auth.build_request_header(
-                    method="GET",
-                    url=full_url,
-                    body="",
-                )
-            elif selected_auth == "bearer_token":
-                if self.client.bearer_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif selected_auth == "oauth2_user_context":
-                if (
-                    self.client.oauth2_auth
-                    and self.client.token
-                    and self.client.is_token_expired()
-                ):
-                    self.client.refresh_token()
-                if self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            return req_headers
-        # Make the request
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "get",
-                url,
-                params=params,
-                headers_factory=_build_request_headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=_build_request_headers(),
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return SearchResponse.model_validate(response_data)
 
 
     def get_buyers(
@@ -1484,3 +1290,197 @@ class SpacesClient:
 
             # Optional: Add rate limit backoff here if needed
             # time.sleep(0.1)  # Small delay to avoid rate limits
+
+
+    def get_by_id(
+        self,
+        id: str,
+        space_fields: Optional[
+            List[
+                Literal[
+                    "created_at",
+                    "ended_at",
+                    "id",
+                    "is_ticketed",
+                    "lang",
+                    "participant_count",
+                    "scheduled_start",
+                    "started_at",
+                    "state",
+                    "subscriber_count",
+                    "title",
+                    "updated_at",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[
+            List[
+                Literal[
+                    "creator_id",
+                    "host_ids",
+                    "invited_user_ids",
+                    "speaker_ids",
+                    "topic_ids",
+                ]
+            ]
+        ] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+        topic_fields: Optional[List[Literal["description", "id", "name"]]] = None,
+    ) -> GetByIdResponse:
+        """
+        Get Space by ID
+        Retrieves details of a specific Space by its ID.
+        Args:
+            id: id
+            space_fields: A comma separated list of Space fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            topic_fields: A comma separated list of Topic fields to display.
+            Returns:
+            GetByIdResponse: Response data
+        """
+        url = self.client.base_url + "/2/spaces/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        if space_fields is not None:
+            params["space.fields"] = ",".join(str(item) for item in space_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        if topic_fields is not None:
+            params["topic.fields"] = ",".join(str(item) for item in topic_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        acceptable_schemes.append("OAuth2UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="GET",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "get",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+            )
+        else:
+            response = self.client.session.get(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetByIdResponse.model_validate(response_data)

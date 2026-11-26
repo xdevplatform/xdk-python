@@ -59,6 +59,868 @@ class TestDirectMessagesContracts:
             self.loopback_server.close()
 
 
+    def test_create_by_participant_id_request_structure(self):
+        """Test create_by_participant_id request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 201
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["participant_id"] = "test_participant_id"
+            # Add request body if required
+            from xdk.direct_messages.models import CreateByParticipantIdRequest
+            try:
+                CreateByParticipantIdRequest.model_rebuild()
+            except Exception:
+                pass
+            req_json_str = (
+                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
+            )
+            try:
+                kwargs["body"] = CreateByParticipantIdRequest.model_validate_json(
+                    req_json_str
+                )
+            except Exception:
+                kwargs["body"] = CreateByParticipantIdRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
+            # Call the method
+            try:
+                method = getattr(
+                    self.direct_messages_client, "create_by_participant_id"
+                )
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 201
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.post.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.post.call_count >= 1
+                else:
+                    mock_session.post.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.post.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/dm_conversations/with/{participant_id}/messages"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.post.assert_called_once()
+                else:
+                    pytest.fail(
+                        f"Contract test failed for create_by_participant_id: {e}"
+                    )
+
+
+    def test_create_by_participant_id_required_parameters(self):
+        """Test that create_by_participant_id handles parameters correctly."""
+        method = getattr(self.direct_messages_client, "create_by_participant_id")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.post.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_create_by_participant_id_response_structure(self):
+        """Test create_by_participant_id response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["participant_id"] = "test_value"
+            # Add request body if required
+            from xdk.direct_messages.models import CreateByParticipantIdRequest
+            try:
+                CreateByParticipantIdRequest.model_rebuild()
+            except Exception:
+                pass
+            req_json_str = (
+                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
+            )
+            try:
+                kwargs["body"] = CreateByParticipantIdRequest.model_validate_json(
+                    req_json_str
+                )
+            except Exception:
+                kwargs["body"] = CreateByParticipantIdRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
+            # Call method and verify response structure
+            method = getattr(self.direct_messages_client, "create_by_participant_id")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_create_by_participant_id_loopback_http_roundtrip(self):
+        """Execute create_by_participant_id end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = (
+            '{"data":{"dm_conversation_id":"test_value","dm_event_id":"test_value"}}'
+        )
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                201,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        kwargs["participant_id"] = "test_participant_id"
+        from xdk.direct_messages.models import CreateByParticipantIdRequest
+        try:
+            CreateByParticipantIdRequest.model_rebuild()
+        except Exception:
+            pass
+        req_json_str = (
+            '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
+        )
+        try:
+            kwargs["body"] = CreateByParticipantIdRequest.model_validate_json(
+                req_json_str
+            )
+        except Exception:
+            kwargs["body"] = CreateByParticipantIdRequest.model_construct(
+                **json.loads(req_json_str)
+            )
+        method = getattr(
+            self.loopback_direct_messages_client, "create_by_participant_id"
+        )
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "POST"
+        assert recorded.first_header("authorization") is not None
+
+
+    def test_create_by_conversation_id_request_structure(self):
+        """Test create_by_conversation_id request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 201
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            kwargs["dm_conversation_id"] = "test_dm_conversation_id"
+            # Add request body if required
+            from xdk.direct_messages.models import CreateByConversationIdRequest
+            try:
+                CreateByConversationIdRequest.model_rebuild()
+            except Exception:
+                pass
+            req_json_str = (
+                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
+            )
+            try:
+                kwargs["body"] = CreateByConversationIdRequest.model_validate_json(
+                    req_json_str
+                )
+            except Exception:
+                kwargs["body"] = CreateByConversationIdRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
+            # Call the method
+            try:
+                method = getattr(
+                    self.direct_messages_client, "create_by_conversation_id"
+                )
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 201
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.post.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.post.call_count >= 1
+                else:
+                    mock_session.post.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.post.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/dm_conversations/{dm_conversation_id}/messages"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.post.assert_called_once()
+                else:
+                    pytest.fail(
+                        f"Contract test failed for create_by_conversation_id: {e}"
+                    )
+
+
+    def test_create_by_conversation_id_required_parameters(self):
+        """Test that create_by_conversation_id handles parameters correctly."""
+        method = getattr(self.direct_messages_client, "create_by_conversation_id")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.post.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_create_by_conversation_id_response_structure(self):
+        """Test create_by_conversation_id response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            kwargs["dm_conversation_id"] = "test_value"
+            # Add request body if required
+            from xdk.direct_messages.models import CreateByConversationIdRequest
+            try:
+                CreateByConversationIdRequest.model_rebuild()
+            except Exception:
+                pass
+            req_json_str = (
+                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
+            )
+            try:
+                kwargs["body"] = CreateByConversationIdRequest.model_validate_json(
+                    req_json_str
+                )
+            except Exception:
+                kwargs["body"] = CreateByConversationIdRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
+            # Call method and verify response structure
+            method = getattr(self.direct_messages_client, "create_by_conversation_id")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_create_by_conversation_id_loopback_http_roundtrip(self):
+        """Execute create_by_conversation_id end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = (
+            '{"data":{"dm_conversation_id":"test_value","dm_event_id":"test_value"}}'
+        )
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                201,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        kwargs["dm_conversation_id"] = "test_dm_conversation_id"
+        from xdk.direct_messages.models import CreateByConversationIdRequest
+        try:
+            CreateByConversationIdRequest.model_rebuild()
+        except Exception:
+            pass
+        req_json_str = (
+            '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
+        )
+        try:
+            kwargs["body"] = CreateByConversationIdRequest.model_validate_json(
+                req_json_str
+            )
+        except Exception:
+            kwargs["body"] = CreateByConversationIdRequest.model_construct(
+                **json.loads(req_json_str)
+            )
+        method = getattr(
+            self.loopback_direct_messages_client, "create_by_conversation_id"
+        )
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "POST"
+        assert recorded.first_header("authorization") is not None
+
+
+    def test_create_conversation_request_structure(self):
+        """Test create_conversation request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 201
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            # Add request body if required
+            from xdk.direct_messages.models import CreateConversationRequest
+            try:
+                CreateConversationRequest.model_rebuild()
+            except Exception:
+                pass
+            req_json_str = '{"conversation_type":"Group","message":{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"},"participant_ids":["test_value"]}'
+            try:
+                kwargs["body"] = CreateConversationRequest.model_validate_json(
+                    req_json_str
+                )
+            except Exception:
+                kwargs["body"] = CreateConversationRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
+            # Call the method
+            try:
+                method = getattr(self.direct_messages_client, "create_conversation")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 201
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.post.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.post.call_count >= 1
+                else:
+                    mock_session.post.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.post.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/dm_conversations"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.post.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for create_conversation: {e}")
+
+
+    def test_create_conversation_required_parameters(self):
+        """Test that create_conversation handles parameters correctly."""
+        method = getattr(self.direct_messages_client, "create_conversation")
+        # Test with missing required parameters - mock the request to avoid network calls
+        with patch.object(self.client, "session") as mock_session:
+            # Mock a 400 response (typical for missing required parameters)
+            mock_response = Mock()
+            mock_response.status_code = 400
+            mock_response.json.return_value = {"error": "Missing required parameters"}
+            mock_response.raise_for_status.side_effect = Exception("Bad Request")
+            mock_session.post.return_value = mock_response
+            # Call without required parameters should either raise locally or via server response
+            # For generator methods (paginated), we need to iterate to trigger the exception
+            import types
+            with pytest.raises((TypeError, ValueError, Exception)):
+                result = method()
+                # Check if it's a generator (paginated method)
+                if isinstance(result, types.GeneratorType):
+                    # For generators, exception is raised when iterating
+                    next(result)
+
+
+    def test_create_conversation_response_structure(self):
+        """Test create_conversation response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.post.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            # Add request body if required
+            from xdk.direct_messages.models import CreateConversationRequest
+            try:
+                CreateConversationRequest.model_rebuild()
+            except Exception:
+                pass
+            req_json_str = '{"conversation_type":"Group","message":{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"},"participant_ids":["test_value"]}'
+            try:
+                kwargs["body"] = CreateConversationRequest.model_validate_json(
+                    req_json_str
+                )
+            except Exception:
+                kwargs["body"] = CreateConversationRequest.model_construct(
+                    **json.loads(req_json_str)
+                )
+            # Call method and verify response structure
+            method = getattr(self.direct_messages_client, "create_conversation")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_create_conversation_loopback_http_roundtrip(self):
+        """Execute create_conversation end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = (
+            '{"data":{"dm_conversation_id":"test_value","dm_event_id":"test_value"}}'
+        )
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                201,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        from xdk.direct_messages.models import CreateConversationRequest
+        try:
+            CreateConversationRequest.model_rebuild()
+        except Exception:
+            pass
+        req_json_str = '{"conversation_type":"Group","message":{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"},"participant_ids":["test_value"]}'
+        try:
+            kwargs["body"] = CreateConversationRequest.model_validate_json(req_json_str)
+        except Exception:
+            kwargs["body"] = CreateConversationRequest.model_construct(
+                **json.loads(req_json_str)
+            )
+        method = getattr(self.loopback_direct_messages_client, "create_conversation")
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "POST"
+        assert recorded.first_header("authorization") is not None
+
+
     def test_get_events_by_id_request_structure(self):
         """Test get_events_by_id request structure."""
         # Mock the session to capture request details
@@ -533,42 +1395,28 @@ class TestDirectMessagesContracts:
         assert recorded.first_header("authorization") is not None
 
 
-    def test_create_by_conversation_id_request_structure(self):
-        """Test create_by_conversation_id request structure."""
+    def test_dm_conversations_media_download_request_structure(self):
+        """Test dm_conversations_media_download request structure."""
         # Mock the session to capture request details
         with patch.object(self.client, "session") as mock_session:
             mock_response = Mock()
-            mock_response.status_code = 201
+            mock_response.status_code = 200
             # Minimal spec-valid payload generated from the OpenAPI response schema
             mock_response.json.return_value = json.loads(r"""{}""")
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
+            mock_session.get.return_value = mock_response
             # Prepare test parameters
             kwargs = {}
             # Add required parameters
-            kwargs["dm_conversation_id"] = "test_dm_conversation_id"
+            kwargs["dm_id"] = "test_dm_id"
+            kwargs["media_id"] = "test_media_id"
+            kwargs["resource_id"] = "test_resource_id"
             # Add request body if required
-            from xdk.direct_messages.models import CreateByConversationIdRequest
-            try:
-                CreateByConversationIdRequest.model_rebuild()
-            except Exception:
-                pass
-            req_json_str = (
-                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
-            )
-            try:
-                kwargs["body"] = CreateByConversationIdRequest.model_validate_json(
-                    req_json_str
-                )
-            except Exception:
-                kwargs["body"] = CreateByConversationIdRequest.model_construct(
-                    **json.loads(req_json_str)
-                )
             # Call the method
             try:
                 method = getattr(
-                    self.direct_messages_client, "create_by_conversation_id"
+                    self.direct_messages_client, "dm_conversations_media_download"
                 )
                 # Check if this is a true streaming operation (has stream_config parameter)
                 import types
@@ -578,7 +1426,7 @@ class TestDirectMessagesContracts:
                 # Set up streaming mock only for actual streaming operations
                 if has_stream_config_param:
                     mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 201
+                    mock_streaming_response.status_code = 200
                     mock_streaming_response.raise_for_status.return_value = None
                     # Make it a proper context manager
                     mock_streaming_response.__enter__ = Mock(
@@ -592,7 +1440,7 @@ class TestDirectMessagesContracts:
                     )
                     # First call returns mock response, second call raises to prevent infinite reconnect loop
                     from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.post.side_effect = [
+                    mock_session.get.side_effect = [
                         mock_streaming_response,
                         StreamError(
                             "Test complete", StreamErrorType.AUTHENTICATION_ERROR
@@ -641,16 +1489,18 @@ class TestDirectMessagesContracts:
                 # Verify the request was made
                 if is_streaming:
                     # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.post.call_count >= 1
+                    assert mock_session.get.call_count >= 1
                 else:
-                    mock_session.post.assert_called_once()
+                    mock_session.get.assert_called_once()
                 # Verify request structure
-                call_args = mock_session.post.call_args
+                call_args = mock_session.get.call_args
                 # Check URL structure
                 called_url = (
                     call_args[0][0] if call_args[0] else call_args[1].get("url", "")
                 )
-                expected_path = "/2/dm_conversations/{dm_conversation_id}/messages"
+                expected_path = (
+                    "/2/dm_conversations/media/{dm_id}/{media_id}/{resource_id}"
+                )
                 assert expected_path.replace("{", "").replace(
                     "}", ""
                 ) in called_url or any(
@@ -676,16 +1526,16 @@ class TestDirectMessagesContracts:
                     or "not fully defined" in err_str
                 ):
                     # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.post.assert_called_once()
+                    mock_session.get.assert_called_once()
                 else:
                     pytest.fail(
-                        f"Contract test failed for create_by_conversation_id: {e}"
+                        f"Contract test failed for dm_conversations_media_download: {e}"
                     )
 
 
-    def test_create_by_conversation_id_required_parameters(self):
-        """Test that create_by_conversation_id handles parameters correctly."""
-        method = getattr(self.direct_messages_client, "create_by_conversation_id")
+    def test_dm_conversations_media_download_required_parameters(self):
+        """Test that dm_conversations_media_download handles parameters correctly."""
+        method = getattr(self.direct_messages_client, "dm_conversations_media_download")
         # Test with missing required parameters - mock the request to avoid network calls
         with patch.object(self.client, "session") as mock_session:
             # Mock a 400 response (typical for missing required parameters)
@@ -693,7 +1543,7 @@ class TestDirectMessagesContracts:
             mock_response.status_code = 400
             mock_response.json.return_value = {"error": "Missing required parameters"}
             mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.post.return_value = mock_response
+            mock_session.get.return_value = mock_response
             # Call without required parameters should either raise locally or via server response
             # For generator methods (paginated), we need to iterate to trigger the exception
             import types
@@ -705,40 +1555,28 @@ class TestDirectMessagesContracts:
                     next(result)
 
 
-    def test_create_by_conversation_id_response_structure(self):
-        """Test create_by_conversation_id response structure validation."""
+    def test_dm_conversations_media_download_response_structure(self):
+        """Test dm_conversations_media_download response structure validation."""
         with patch.object(self.client, "session") as mock_session:
             # Create mock response from the OpenAPI response schema (minimal valid payload)
             mock_response_data = json.loads(r"""{}""")
             mock_response = Mock()
-            mock_response.status_code = 201
+            mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
             mock_response.content = b"binary_data"
             mock_response.raise_for_status.return_value = None
             mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
+            mock_session.get.return_value = mock_response
             # Prepare minimal valid parameters
             kwargs = {}
-            kwargs["dm_conversation_id"] = "test_value"
+            kwargs["dm_id"] = "test_value"
+            kwargs["media_id"] = "test_value"
+            kwargs["resource_id"] = "test_value"
             # Add request body if required
-            from xdk.direct_messages.models import CreateByConversationIdRequest
-            try:
-                CreateByConversationIdRequest.model_rebuild()
-            except Exception:
-                pass
-            req_json_str = (
-                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
-            )
-            try:
-                kwargs["body"] = CreateByConversationIdRequest.model_validate_json(
-                    req_json_str
-                )
-            except Exception:
-                kwargs["body"] = CreateByConversationIdRequest.model_construct(
-                    **json.loads(req_json_str)
-                )
             # Call method and verify response structure
-            method = getattr(self.direct_messages_client, "create_by_conversation_id")
+            method = getattr(
+                self.direct_messages_client, "dm_conversations_media_download"
+            )
             import inspect
             if "stream_config" in inspect.signature(method).parameters:
                 # Streaming operations yield from a live connection; response
@@ -763,50 +1601,29 @@ class TestDirectMessagesContracts:
                         assert hasattr(
                             target, _key
                         ), f"Response should have '{_key}' field"
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
 
 
-    def test_create_by_conversation_id_loopback_http_roundtrip(self):
-        """Execute create_by_conversation_id end-to-end over real TCP loopback HTTP."""
+    def test_dm_conversations_media_download_loopback_http_roundtrip(self):
+        """Execute dm_conversations_media_download end-to-end over real TCP loopback HTTP."""
         import types as _types
         from examples.mock_x_api_server import MockResponse
         from xdk.streaming import StreamConfig
         self.loopback_server.reset()
-        full_mock_json = (
-            '{"data":{"dm_conversation_id":"test_value","dm_event_id":"test_value"}}'
-        )
+        full_mock_json = "{}"
+        expected_binary = b"\x00\x01XDK\xff"
         self.loopback_server.set_responder(
-            lambda _req: MockResponse.json(
-                201,
-                full_mock_json,
+            lambda _req: MockResponse.raw_bytes(
+                200,
+                "application/octet-stream",
+                expected_binary,
             )
         )
         kwargs = {}
-        kwargs["dm_conversation_id"] = "test_dm_conversation_id"
-        from xdk.direct_messages.models import CreateByConversationIdRequest
-        try:
-            CreateByConversationIdRequest.model_rebuild()
-        except Exception:
-            pass
-        req_json_str = (
-            '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
-        )
-        try:
-            kwargs["body"] = CreateByConversationIdRequest.model_validate_json(
-                req_json_str
-            )
-        except Exception:
-            kwargs["body"] = CreateByConversationIdRequest.model_construct(
-                **json.loads(req_json_str)
-            )
+        kwargs["dm_id"] = "test_dm_id"
+        kwargs["media_id"] = "test_media_id"
+        kwargs["resource_id"] = "test_resource_id"
         method = getattr(
-            self.loopback_direct_messages_client, "create_by_conversation_id"
+            self.loopback_direct_messages_client, "dm_conversations_media_download"
         )
         result = method(**kwargs)
         if isinstance(result, _types.GeneratorType):
@@ -816,13 +1633,11 @@ class TestDirectMessagesContracts:
                 dumped = first_item.model_dump()
                 assert isinstance(dumped, (dict, list))
         else:
-            assert result is not None
-            if hasattr(result, "model_dump"):
-                dumped = result.model_dump()
-                assert isinstance(dumped, (dict, list))
+            assert isinstance(result, bytes)
+            assert result == expected_binary
         recorded = self.loopback_server.last_request()
         assert recorded is not None
-        assert recorded.method == "POST"
+        assert recorded.method == "GET"
         assert recorded.first_header("authorization") is not None
 
 
@@ -1071,1051 +1886,6 @@ class TestDirectMessagesContracts:
         assert recorded.first_header("authorization") is not None
 
 
-    def test_create_conversation_request_structure(self):
-        """Test create_conversation request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 201
-            # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            # Add request body if required
-            from xdk.direct_messages.models import CreateConversationRequest
-            try:
-                CreateConversationRequest.model_rebuild()
-            except Exception:
-                pass
-            req_json_str = '{"conversation_type":"Group","message":{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"},"participant_ids":["test_value"]}'
-            try:
-                kwargs["body"] = CreateConversationRequest.model_validate_json(
-                    req_json_str
-                )
-            except Exception:
-                kwargs["body"] = CreateConversationRequest.model_construct(
-                    **json.loads(req_json_str)
-                )
-            # Call the method
-            try:
-                method = getattr(self.direct_messages_client, "create_conversation")
-                # Check if this is a true streaming operation (has stream_config parameter)
-                import types
-                import inspect
-                sig = inspect.signature(method)
-                has_stream_config_param = "stream_config" in sig.parameters
-                # Set up streaming mock only for actual streaming operations
-                if has_stream_config_param:
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 201
-                    mock_streaming_response.raise_for_status.return_value = None
-                    # Make it a proper context manager
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Set up iter_content to return an iterator that yields test data then stops
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content = Mock(
-                        side_effect=lambda *args, **kw: iter([test_data])
-                    )
-                    # First call returns mock response, second call raises to prevent infinite reconnect loop
-                    from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.post.side_effect = [
-                        mock_streaming_response,
-                        StreamError(
-                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
-                        ),
-                    ]
-                    # Pass stream_config with max_retries=0 to exit quickly on error
-                    from xdk.streaming import StreamConfig
-                    kwargs["stream_config"] = StreamConfig(max_retries=0)
-                result = method(**kwargs)
-                # Check if result is a generator (streaming or paginated)
-                is_generator = isinstance(result, types.GeneratorType)
-                is_streaming = has_stream_config_param and is_generator
-                if is_generator:
-                    # Consume the generator to trigger the HTTP request
-                    # For both streaming and paginated methods, request happens on iteration
-                    try:
-                        # Try to get first item - this will trigger the HTTP request
-                        next(result)
-                    except StopIteration:
-                        # Generator exhausted immediately - request was still made
-                        pass
-                    except (
-                        requests.exceptions.RequestException,
-                        json.JSONDecodeError,
-                        AttributeError,
-                        ValueError,
-                    ) as e:
-                        # These exceptions can occur during streaming/pagination
-                        pass
-                    except Exception as e:
-                        # Accept validation errors - we're testing request structure, not response parsing
-                        # Also accept streaming errors
-                        err_str = str(e).lower()
-                        err_type = type(e).__name__
-                        if (
-                            "validation" in err_str
-                            or "ValidationError" in err_type
-                            or "PydanticUserError" in err_type
-                            or "Max retries" in str(e)
-                            or "StreamError" in err_type
-                            or "not fully defined" in err_str
-                        ):
-                            pass
-                        else:
-                            raise
-                # Verify the request was made
-                if is_streaming:
-                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.post.call_count >= 1
-                else:
-                    mock_session.post.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.post.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/dm_conversations"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                # Accept validation errors - we're testing request structure, not response parsing
-                err_str = str(e).lower()
-                err_type = type(e).__name__
-                if (
-                    "validation" in err_str
-                    or "ValidationError" in err_type
-                    or "PydanticUserError" in err_type
-                    or "not fully defined" in err_str
-                ):
-                    # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.post.assert_called_once()
-                else:
-                    pytest.fail(f"Contract test failed for create_conversation: {e}")
-
-
-    def test_create_conversation_required_parameters(self):
-        """Test that create_conversation handles parameters correctly."""
-        method = getattr(self.direct_messages_client, "create_conversation")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.post.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            # For generator methods (paginated), we need to iterate to trigger the exception
-            import types
-            with pytest.raises((TypeError, ValueError, Exception)):
-                result = method()
-                # Check if it's a generator (paginated method)
-                if isinstance(result, types.GeneratorType):
-                    # For generators, exception is raised when iterating
-                    next(result)
-
-
-    def test_create_conversation_response_structure(self):
-        """Test create_conversation response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
-            mock_response = Mock()
-            mock_response.status_code = 201
-            mock_response.json.return_value = mock_response_data
-            mock_response.content = b"binary_data"
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            # Add request body if required
-            from xdk.direct_messages.models import CreateConversationRequest
-            try:
-                CreateConversationRequest.model_rebuild()
-            except Exception:
-                pass
-            req_json_str = '{"conversation_type":"Group","message":{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"},"participant_ids":["test_value"]}'
-            try:
-                kwargs["body"] = CreateConversationRequest.model_validate_json(
-                    req_json_str
-                )
-            except Exception:
-                kwargs["body"] = CreateConversationRequest.model_construct(
-                    **json.loads(req_json_str)
-                )
-            # Call method and verify response structure
-            method = getattr(self.direct_messages_client, "create_conversation")
-            import inspect
-            if "stream_config" in inspect.signature(method).parameters:
-                # Streaming operations yield from a live connection; response
-                # structure is validated by the streaming tests instead.
-                return
-            result = method(**kwargs)
-            # Verify response round-trips the spec-valid payload: every key in
-            # the mocked response must surface on the model (RootModel
-            # wrappers expose the payload via .root instead).
-            import types as _types
-            if isinstance(result, _types.GeneratorType):
-                # Paginated methods return generators; validate the first page.
-                _pages = list(result)
-                target = _pages[0] if _pages else None
-            else:
-                target = result.root if hasattr(result, "root") else result
-            if target is not None and isinstance(mock_response_data, dict):
-                for _key in mock_response_data:
-                    if isinstance(target, dict):
-                        assert _key in target, f"Response should have '{_key}' key"
-                    else:
-                        assert hasattr(
-                            target, _key
-                        ), f"Response should have '{_key}' field"
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_create_conversation_loopback_http_roundtrip(self):
-        """Execute create_conversation end-to-end over real TCP loopback HTTP."""
-        import types as _types
-        from examples.mock_x_api_server import MockResponse
-        from xdk.streaming import StreamConfig
-        self.loopback_server.reset()
-        full_mock_json = (
-            '{"data":{"dm_conversation_id":"test_value","dm_event_id":"test_value"}}'
-        )
-        self.loopback_server.set_responder(
-            lambda _req: MockResponse.json(
-                201,
-                full_mock_json,
-            )
-        )
-        kwargs = {}
-        from xdk.direct_messages.models import CreateConversationRequest
-        try:
-            CreateConversationRequest.model_rebuild()
-        except Exception:
-            pass
-        req_json_str = '{"conversation_type":"Group","message":{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"},"participant_ids":["test_value"]}'
-        try:
-            kwargs["body"] = CreateConversationRequest.model_validate_json(req_json_str)
-        except Exception:
-            kwargs["body"] = CreateConversationRequest.model_construct(
-                **json.loads(req_json_str)
-            )
-        method = getattr(self.loopback_direct_messages_client, "create_conversation")
-        result = method(**kwargs)
-        if isinstance(result, _types.GeneratorType):
-            first_item = next(result)
-            assert first_item is not None
-            if hasattr(first_item, "model_dump"):
-                dumped = first_item.model_dump()
-                assert isinstance(dumped, (dict, list))
-        else:
-            assert result is not None
-            if hasattr(result, "model_dump"):
-                dumped = result.model_dump()
-                assert isinstance(dumped, (dict, list))
-        recorded = self.loopback_server.last_request()
-        assert recorded is not None
-        assert recorded.method == "POST"
-        assert recorded.first_header("authorization") is not None
-
-
-    def test_get_events_request_structure(self):
-        """Test get_events request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(self.direct_messages_client, "get_events")
-                # Check if this is a true streaming operation (has stream_config parameter)
-                import types
-                import inspect
-                sig = inspect.signature(method)
-                has_stream_config_param = "stream_config" in sig.parameters
-                # Set up streaming mock only for actual streaming operations
-                if has_stream_config_param:
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    # Make it a proper context manager
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Set up iter_content to return an iterator that yields test data then stops
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content = Mock(
-                        side_effect=lambda *args, **kw: iter([test_data])
-                    )
-                    # First call returns mock response, second call raises to prevent infinite reconnect loop
-                    from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.get.side_effect = [
-                        mock_streaming_response,
-                        StreamError(
-                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
-                        ),
-                    ]
-                    # Pass stream_config with max_retries=0 to exit quickly on error
-                    from xdk.streaming import StreamConfig
-                    kwargs["stream_config"] = StreamConfig(max_retries=0)
-                result = method(**kwargs)
-                # Check if result is a generator (streaming or paginated)
-                is_generator = isinstance(result, types.GeneratorType)
-                is_streaming = has_stream_config_param and is_generator
-                if is_generator:
-                    # Consume the generator to trigger the HTTP request
-                    # For both streaming and paginated methods, request happens on iteration
-                    try:
-                        # Try to get first item - this will trigger the HTTP request
-                        next(result)
-                    except StopIteration:
-                        # Generator exhausted immediately - request was still made
-                        pass
-                    except (
-                        requests.exceptions.RequestException,
-                        json.JSONDecodeError,
-                        AttributeError,
-                        ValueError,
-                    ) as e:
-                        # These exceptions can occur during streaming/pagination
-                        pass
-                    except Exception as e:
-                        # Accept validation errors - we're testing request structure, not response parsing
-                        # Also accept streaming errors
-                        err_str = str(e).lower()
-                        err_type = type(e).__name__
-                        if (
-                            "validation" in err_str
-                            or "ValidationError" in err_type
-                            or "PydanticUserError" in err_type
-                            or "Max retries" in str(e)
-                            or "StreamError" in err_type
-                            or "not fully defined" in err_str
-                        ):
-                            pass
-                        else:
-                            raise
-                # Verify the request was made
-                if is_streaming:
-                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.get.call_count >= 1
-                else:
-                    mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/dm_events"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                # Accept validation errors - we're testing request structure, not response parsing
-                err_str = str(e).lower()
-                err_type = type(e).__name__
-                if (
-                    "validation" in err_str
-                    or "ValidationError" in err_type
-                    or "PydanticUserError" in err_type
-                    or "not fully defined" in err_str
-                ):
-                    # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.get.assert_called_once()
-                else:
-                    pytest.fail(f"Contract test failed for get_events: {e}")
-
-
-    def test_get_events_required_parameters(self):
-        """Test that get_events handles parameters correctly."""
-        method = getattr(self.direct_messages_client, "get_events")
-        # No required parameters, method should be callable without args
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.content = b""
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            try:
-                method()
-            except Exception as e:
-                pytest.fail(f"Method with no required params should be callable: {e}")
-
-
-    def test_get_events_response_structure(self):
-        """Test get_events response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.content = b"binary_data"
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(self.direct_messages_client, "get_events")
-            import inspect
-            if "stream_config" in inspect.signature(method).parameters:
-                # Streaming operations yield from a live connection; response
-                # structure is validated by the streaming tests instead.
-                return
-            result = method(**kwargs)
-            # Verify response round-trips the spec-valid payload: every key in
-            # the mocked response must surface on the model (RootModel
-            # wrappers expose the payload via .root instead).
-            import types as _types
-            if isinstance(result, _types.GeneratorType):
-                # Paginated methods return generators; validate the first page.
-                _pages = list(result)
-                target = _pages[0] if _pages else None
-            else:
-                target = result.root if hasattr(result, "root") else result
-            if target is not None and isinstance(mock_response_data, dict):
-                for _key in mock_response_data:
-                    if isinstance(target, dict):
-                        assert _key in target, f"Response should have '{_key}' key"
-                    else:
-                        assert hasattr(
-                            target, _key
-                        ), f"Response should have '{_key}' field"
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_get_events_loopback_http_roundtrip(self):
-        """Execute get_events end-to-end over real TCP loopback HTTP."""
-        import types as _types
-        from examples.mock_x_api_server import MockResponse
-        from xdk.streaming import StreamConfig
-        self.loopback_server.reset()
-        full_mock_json = '{"data":[{"attachments":{},"created_at":"2025-01-15T12:00:00.000Z","dm_conversation_id":"test_value","entities":{},"event_type":"test_value","id":"1234567890","participant_ids":["test_value"],"referenced_posts":[{"id":"1234567890"}],"sender_id":"test_value","text":"Hello from XDK!"}],"includes":{"calls":[{"id":"1234567890"}],"media":[{}],"places":[{"id":"1234567890","name":"test_value"}],"polls":[{"id":"1234567890"}],"posts":[{"id":"1234567890","text":"Hello from XDK!","username":"XDevelopers"}],"topics":[{"id":"1234567890","name":"test_value"}],"users":[{"id":"1234567890","name":"test_value","username":"XDevelopers"}]},"meta":{"result_count":1}}'
-        self.loopback_server.set_responder(
-            lambda _req: MockResponse.json(
-                200,
-                full_mock_json,
-            )
-        )
-        kwargs = {}
-        method = getattr(self.loopback_direct_messages_client, "get_events")
-        result = method(**kwargs)
-        if isinstance(result, _types.GeneratorType):
-            first_item = next(result)
-            assert first_item is not None
-            if hasattr(first_item, "model_dump"):
-                dumped = first_item.model_dump()
-                assert isinstance(dumped, (dict, list))
-        else:
-            assert result is not None
-            if hasattr(result, "model_dump"):
-                dumped = result.model_dump()
-                assert isinstance(dumped, (dict, list))
-        recorded = self.loopback_server.last_request()
-        assert recorded is not None
-        assert recorded.method == "GET"
-        assert recorded.first_header("authorization") is not None
-
-
-    def test_dm_conversations_media_download_request_structure(self):
-        """Test dm_conversations_media_download request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["dm_id"] = "test_dm_id"
-            kwargs["media_id"] = "test_media_id"
-            kwargs["resource_id"] = "test_resource_id"
-            # Add request body if required
-            # Call the method
-            try:
-                method = getattr(
-                    self.direct_messages_client, "dm_conversations_media_download"
-                )
-                # Check if this is a true streaming operation (has stream_config parameter)
-                import types
-                import inspect
-                sig = inspect.signature(method)
-                has_stream_config_param = "stream_config" in sig.parameters
-                # Set up streaming mock only for actual streaming operations
-                if has_stream_config_param:
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 200
-                    mock_streaming_response.raise_for_status.return_value = None
-                    # Make it a proper context manager
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Set up iter_content to return an iterator that yields test data then stops
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content = Mock(
-                        side_effect=lambda *args, **kw: iter([test_data])
-                    )
-                    # First call returns mock response, second call raises to prevent infinite reconnect loop
-                    from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.get.side_effect = [
-                        mock_streaming_response,
-                        StreamError(
-                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
-                        ),
-                    ]
-                    # Pass stream_config with max_retries=0 to exit quickly on error
-                    from xdk.streaming import StreamConfig
-                    kwargs["stream_config"] = StreamConfig(max_retries=0)
-                result = method(**kwargs)
-                # Check if result is a generator (streaming or paginated)
-                is_generator = isinstance(result, types.GeneratorType)
-                is_streaming = has_stream_config_param and is_generator
-                if is_generator:
-                    # Consume the generator to trigger the HTTP request
-                    # For both streaming and paginated methods, request happens on iteration
-                    try:
-                        # Try to get first item - this will trigger the HTTP request
-                        next(result)
-                    except StopIteration:
-                        # Generator exhausted immediately - request was still made
-                        pass
-                    except (
-                        requests.exceptions.RequestException,
-                        json.JSONDecodeError,
-                        AttributeError,
-                        ValueError,
-                    ) as e:
-                        # These exceptions can occur during streaming/pagination
-                        pass
-                    except Exception as e:
-                        # Accept validation errors - we're testing request structure, not response parsing
-                        # Also accept streaming errors
-                        err_str = str(e).lower()
-                        err_type = type(e).__name__
-                        if (
-                            "validation" in err_str
-                            or "ValidationError" in err_type
-                            or "PydanticUserError" in err_type
-                            or "Max retries" in str(e)
-                            or "StreamError" in err_type
-                            or "not fully defined" in err_str
-                        ):
-                            pass
-                        else:
-                            raise
-                # Verify the request was made
-                if is_streaming:
-                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.get.call_count >= 1
-                else:
-                    mock_session.get.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.get.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = (
-                    "/2/dm_conversations/media/{dm_id}/{media_id}/{resource_id}"
-                )
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                # Accept validation errors - we're testing request structure, not response parsing
-                err_str = str(e).lower()
-                err_type = type(e).__name__
-                if (
-                    "validation" in err_str
-                    or "ValidationError" in err_type
-                    or "PydanticUserError" in err_type
-                    or "not fully defined" in err_str
-                ):
-                    # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.get.assert_called_once()
-                else:
-                    pytest.fail(
-                        f"Contract test failed for dm_conversations_media_download: {e}"
-                    )
-
-
-    def test_dm_conversations_media_download_required_parameters(self):
-        """Test that dm_conversations_media_download handles parameters correctly."""
-        method = getattr(self.direct_messages_client, "dm_conversations_media_download")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.get.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            # For generator methods (paginated), we need to iterate to trigger the exception
-            import types
-            with pytest.raises((TypeError, ValueError, Exception)):
-                result = method()
-                # Check if it's a generator (paginated method)
-                if isinstance(result, types.GeneratorType):
-                    # For generators, exception is raised when iterating
-                    next(result)
-
-
-    def test_dm_conversations_media_download_response_structure(self):
-        """Test dm_conversations_media_download response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = mock_response_data
-            mock_response.content = b"binary_data"
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.get.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["dm_id"] = "test_value"
-            kwargs["media_id"] = "test_value"
-            kwargs["resource_id"] = "test_value"
-            # Add request body if required
-            # Call method and verify response structure
-            method = getattr(
-                self.direct_messages_client, "dm_conversations_media_download"
-            )
-            import inspect
-            if "stream_config" in inspect.signature(method).parameters:
-                # Streaming operations yield from a live connection; response
-                # structure is validated by the streaming tests instead.
-                return
-            result = method(**kwargs)
-            # Verify response round-trips the spec-valid payload: every key in
-            # the mocked response must surface on the model (RootModel
-            # wrappers expose the payload via .root instead).
-            import types as _types
-            if isinstance(result, _types.GeneratorType):
-                # Paginated methods return generators; validate the first page.
-                _pages = list(result)
-                target = _pages[0] if _pages else None
-            else:
-                target = result.root if hasattr(result, "root") else result
-            if target is not None and isinstance(mock_response_data, dict):
-                for _key in mock_response_data:
-                    if isinstance(target, dict):
-                        assert _key in target, f"Response should have '{_key}' key"
-                    else:
-                        assert hasattr(
-                            target, _key
-                        ), f"Response should have '{_key}' field"
-
-
-    def test_dm_conversations_media_download_loopback_http_roundtrip(self):
-        """Execute dm_conversations_media_download end-to-end over real TCP loopback HTTP."""
-        import types as _types
-        from examples.mock_x_api_server import MockResponse
-        from xdk.streaming import StreamConfig
-        self.loopback_server.reset()
-        full_mock_json = "{}"
-        expected_binary = b"\x00\x01XDK\xff"
-        self.loopback_server.set_responder(
-            lambda _req: MockResponse.raw_bytes(
-                200,
-                "application/octet-stream",
-                expected_binary,
-            )
-        )
-        kwargs = {}
-        kwargs["dm_id"] = "test_dm_id"
-        kwargs["media_id"] = "test_media_id"
-        kwargs["resource_id"] = "test_resource_id"
-        method = getattr(
-            self.loopback_direct_messages_client, "dm_conversations_media_download"
-        )
-        result = method(**kwargs)
-        if isinstance(result, _types.GeneratorType):
-            first_item = next(result)
-            assert first_item is not None
-            if hasattr(first_item, "model_dump"):
-                dumped = first_item.model_dump()
-                assert isinstance(dumped, (dict, list))
-        else:
-            assert isinstance(result, bytes)
-            assert result == expected_binary
-        recorded = self.loopback_server.last_request()
-        assert recorded is not None
-        assert recorded.method == "GET"
-        assert recorded.first_header("authorization") is not None
-
-
-    def test_create_by_participant_id_request_structure(self):
-        """Test create_by_participant_id request structure."""
-        # Mock the session to capture request details
-        with patch.object(self.client, "session") as mock_session:
-            mock_response = Mock()
-            mock_response.status_code = 201
-            # Minimal spec-valid payload generated from the OpenAPI response schema
-            mock_response.json.return_value = json.loads(r"""{}""")
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
-            # Prepare test parameters
-            kwargs = {}
-            # Add required parameters
-            kwargs["participant_id"] = "test_participant_id"
-            # Add request body if required
-            from xdk.direct_messages.models import CreateByParticipantIdRequest
-            try:
-                CreateByParticipantIdRequest.model_rebuild()
-            except Exception:
-                pass
-            req_json_str = (
-                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
-            )
-            try:
-                kwargs["body"] = CreateByParticipantIdRequest.model_validate_json(
-                    req_json_str
-                )
-            except Exception:
-                kwargs["body"] = CreateByParticipantIdRequest.model_construct(
-                    **json.loads(req_json_str)
-                )
-            # Call the method
-            try:
-                method = getattr(
-                    self.direct_messages_client, "create_by_participant_id"
-                )
-                # Check if this is a true streaming operation (has stream_config parameter)
-                import types
-                import inspect
-                sig = inspect.signature(method)
-                has_stream_config_param = "stream_config" in sig.parameters
-                # Set up streaming mock only for actual streaming operations
-                if has_stream_config_param:
-                    mock_streaming_response = Mock()
-                    mock_streaming_response.status_code = 201
-                    mock_streaming_response.raise_for_status.return_value = None
-                    # Make it a proper context manager
-                    mock_streaming_response.__enter__ = Mock(
-                        return_value=mock_streaming_response
-                    )
-                    mock_streaming_response.__exit__ = Mock(return_value=None)
-                    # Set up iter_content to return an iterator that yields test data then stops
-                    test_data = '{"data": "test"}\n'
-                    mock_streaming_response.iter_content = Mock(
-                        side_effect=lambda *args, **kw: iter([test_data])
-                    )
-                    # First call returns mock response, second call raises to prevent infinite reconnect loop
-                    from xdk.streaming import StreamError, StreamErrorType
-                    mock_session.post.side_effect = [
-                        mock_streaming_response,
-                        StreamError(
-                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
-                        ),
-                    ]
-                    # Pass stream_config with max_retries=0 to exit quickly on error
-                    from xdk.streaming import StreamConfig
-                    kwargs["stream_config"] = StreamConfig(max_retries=0)
-                result = method(**kwargs)
-                # Check if result is a generator (streaming or paginated)
-                is_generator = isinstance(result, types.GeneratorType)
-                is_streaming = has_stream_config_param and is_generator
-                if is_generator:
-                    # Consume the generator to trigger the HTTP request
-                    # For both streaming and paginated methods, request happens on iteration
-                    try:
-                        # Try to get first item - this will trigger the HTTP request
-                        next(result)
-                    except StopIteration:
-                        # Generator exhausted immediately - request was still made
-                        pass
-                    except (
-                        requests.exceptions.RequestException,
-                        json.JSONDecodeError,
-                        AttributeError,
-                        ValueError,
-                    ) as e:
-                        # These exceptions can occur during streaming/pagination
-                        pass
-                    except Exception as e:
-                        # Accept validation errors - we're testing request structure, not response parsing
-                        # Also accept streaming errors
-                        err_str = str(e).lower()
-                        err_type = type(e).__name__
-                        if (
-                            "validation" in err_str
-                            or "ValidationError" in err_type
-                            or "PydanticUserError" in err_type
-                            or "Max retries" in str(e)
-                            or "StreamError" in err_type
-                            or "not fully defined" in err_str
-                        ):
-                            pass
-                        else:
-                            raise
-                # Verify the request was made
-                if is_streaming:
-                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
-                    assert mock_session.post.call_count >= 1
-                else:
-                    mock_session.post.assert_called_once()
-                # Verify request structure
-                call_args = mock_session.post.call_args
-                # Check URL structure
-                called_url = (
-                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-                )
-                expected_path = "/2/dm_conversations/with/{participant_id}/messages"
-                assert expected_path.replace("{", "").replace(
-                    "}", ""
-                ) in called_url or any(
-                    param in called_url for param in ["test_", "42"]
-                ), f"URL should contain path template elements: {called_url}"
-                # Verify response structure
-                if is_streaming:
-                    # For streaming, verify we got a generator
-                    assert isinstance(
-                        result, types.GeneratorType
-                    ), "Streaming method should return a generator"
-                else:
-                    # For regular operations, verify we got a result
-                    assert result is not None, "Method should return a result"
-            except Exception as e:
-                # Accept validation errors - we're testing request structure, not response parsing
-                err_str = str(e).lower()
-                err_type = type(e).__name__
-                if (
-                    "validation" in err_str
-                    or "ValidationError" in err_type
-                    or "PydanticUserError" in err_type
-                    or "not fully defined" in err_str
-                ):
-                    # Validation error is acceptable - request was made, just response parsing failed
-                    mock_session.post.assert_called_once()
-                else:
-                    pytest.fail(
-                        f"Contract test failed for create_by_participant_id: {e}"
-                    )
-
-
-    def test_create_by_participant_id_required_parameters(self):
-        """Test that create_by_participant_id handles parameters correctly."""
-        method = getattr(self.direct_messages_client, "create_by_participant_id")
-        # Test with missing required parameters - mock the request to avoid network calls
-        with patch.object(self.client, "session") as mock_session:
-            # Mock a 400 response (typical for missing required parameters)
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.json.return_value = {"error": "Missing required parameters"}
-            mock_response.raise_for_status.side_effect = Exception("Bad Request")
-            mock_session.post.return_value = mock_response
-            # Call without required parameters should either raise locally or via server response
-            # For generator methods (paginated), we need to iterate to trigger the exception
-            import types
-            with pytest.raises((TypeError, ValueError, Exception)):
-                result = method()
-                # Check if it's a generator (paginated method)
-                if isinstance(result, types.GeneratorType):
-                    # For generators, exception is raised when iterating
-                    next(result)
-
-
-    def test_create_by_participant_id_response_structure(self):
-        """Test create_by_participant_id response structure validation."""
-        with patch.object(self.client, "session") as mock_session:
-            # Create mock response from the OpenAPI response schema (minimal valid payload)
-            mock_response_data = json.loads(r"""{}""")
-            mock_response = Mock()
-            mock_response.status_code = 201
-            mock_response.json.return_value = mock_response_data
-            mock_response.content = b"binary_data"
-            mock_response.raise_for_status.return_value = None
-            mock_response.headers = {"content-type": "application/json"}
-            mock_session.post.return_value = mock_response
-            # Prepare minimal valid parameters
-            kwargs = {}
-            kwargs["participant_id"] = "test_value"
-            # Add request body if required
-            from xdk.direct_messages.models import CreateByParticipantIdRequest
-            try:
-                CreateByParticipantIdRequest.model_rebuild()
-            except Exception:
-                pass
-            req_json_str = (
-                '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
-            )
-            try:
-                kwargs["body"] = CreateByParticipantIdRequest.model_validate_json(
-                    req_json_str
-                )
-            except Exception:
-                kwargs["body"] = CreateByParticipantIdRequest.model_construct(
-                    **json.loads(req_json_str)
-                )
-            # Call method and verify response structure
-            method = getattr(self.direct_messages_client, "create_by_participant_id")
-            import inspect
-            if "stream_config" in inspect.signature(method).parameters:
-                # Streaming operations yield from a live connection; response
-                # structure is validated by the streaming tests instead.
-                return
-            result = method(**kwargs)
-            # Verify response round-trips the spec-valid payload: every key in
-            # the mocked response must surface on the model (RootModel
-            # wrappers expose the payload via .root instead).
-            import types as _types
-            if isinstance(result, _types.GeneratorType):
-                # Paginated methods return generators; validate the first page.
-                _pages = list(result)
-                target = _pages[0] if _pages else None
-            else:
-                target = result.root if hasattr(result, "root") else result
-            if target is not None and isinstance(mock_response_data, dict):
-                for _key in mock_response_data:
-                    if isinstance(target, dict):
-                        assert _key in target, f"Response should have '{_key}' key"
-                    else:
-                        assert hasattr(
-                            target, _key
-                        ), f"Response should have '{_key}' field"
-            # Optional field - just check it doesn't cause errors if accessed
-            try:
-                getattr(result, "data", None)
-            except Exception as e:
-                pytest.fail(
-                    f"Accessing optional field 'data' should not cause errors: {e}"
-                )
-
-
-    def test_create_by_participant_id_loopback_http_roundtrip(self):
-        """Execute create_by_participant_id end-to-end over real TCP loopback HTTP."""
-        import types as _types
-        from examples.mock_x_api_server import MockResponse
-        from xdk.streaming import StreamConfig
-        self.loopback_server.reset()
-        full_mock_json = (
-            '{"data":{"dm_conversation_id":"test_value","dm_event_id":"test_value"}}'
-        )
-        self.loopback_server.set_responder(
-            lambda _req: MockResponse.json(
-                201,
-                full_mock_json,
-            )
-        )
-        kwargs = {}
-        kwargs["participant_id"] = "test_participant_id"
-        from xdk.direct_messages.models import CreateByParticipantIdRequest
-        try:
-            CreateByParticipantIdRequest.model_rebuild()
-        except Exception:
-            pass
-        req_json_str = (
-            '{"attachments":[{"media_id":"1234567890"}],"text":"Hello from XDK!"}'
-        )
-        try:
-            kwargs["body"] = CreateByParticipantIdRequest.model_validate_json(
-                req_json_str
-            )
-        except Exception:
-            kwargs["body"] = CreateByParticipantIdRequest.model_construct(
-                **json.loads(req_json_str)
-            )
-        method = getattr(
-            self.loopback_direct_messages_client, "create_by_participant_id"
-        )
-        result = method(**kwargs)
-        if isinstance(result, _types.GeneratorType):
-            first_item = next(result)
-            assert first_item is not None
-            if hasattr(first_item, "model_dump"):
-                dumped = first_item.model_dump()
-                assert isinstance(dumped, (dict, list))
-        else:
-            assert result is not None
-            if hasattr(result, "model_dump"):
-                dumped = result.model_dump()
-                assert isinstance(dumped, (dict, list))
-        recorded = self.loopback_server.last_request()
-        assert recorded is not None
-        assert recorded.method == "POST"
-        assert recorded.first_header("authorization") is not None
-
-
     def test_get_events_by_participant_id_request_structure(self):
         """Test get_events_by_participant_id request structure."""
         # Mock the session to capture request details
@@ -2343,6 +2113,236 @@ class TestDirectMessagesContracts:
         method = getattr(
             self.loopback_direct_messages_client, "get_events_by_participant_id"
         )
+        result = method(**kwargs)
+        if isinstance(result, _types.GeneratorType):
+            first_item = next(result)
+            assert first_item is not None
+            if hasattr(first_item, "model_dump"):
+                dumped = first_item.model_dump()
+                assert isinstance(dumped, (dict, list))
+        else:
+            assert result is not None
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump()
+                assert isinstance(dumped, (dict, list))
+        recorded = self.loopback_server.last_request()
+        assert recorded is not None
+        assert recorded.method == "GET"
+        assert recorded.first_header("authorization") is not None
+
+
+    def test_get_events_request_structure(self):
+        """Test get_events request structure."""
+        # Mock the session to capture request details
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            # Minimal spec-valid payload generated from the OpenAPI response schema
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare test parameters
+            kwargs = {}
+            # Add required parameters
+            # Add request body if required
+            # Call the method
+            try:
+                method = getattr(self.direct_messages_client, "get_events")
+                # Check if this is a true streaming operation (has stream_config parameter)
+                import types
+                import inspect
+                sig = inspect.signature(method)
+                has_stream_config_param = "stream_config" in sig.parameters
+                # Set up streaming mock only for actual streaming operations
+                if has_stream_config_param:
+                    mock_streaming_response = Mock()
+                    mock_streaming_response.status_code = 200
+                    mock_streaming_response.raise_for_status.return_value = None
+                    # Make it a proper context manager
+                    mock_streaming_response.__enter__ = Mock(
+                        return_value=mock_streaming_response
+                    )
+                    mock_streaming_response.__exit__ = Mock(return_value=None)
+                    # Set up iter_content to return an iterator that yields test data then stops
+                    test_data = '{"data": "test"}\n'
+                    mock_streaming_response.iter_content = Mock(
+                        side_effect=lambda *args, **kw: iter([test_data])
+                    )
+                    # First call returns mock response, second call raises to prevent infinite reconnect loop
+                    from xdk.streaming import StreamError, StreamErrorType
+                    mock_session.get.side_effect = [
+                        mock_streaming_response,
+                        StreamError(
+                            "Test complete", StreamErrorType.AUTHENTICATION_ERROR
+                        ),
+                    ]
+                    # Pass stream_config with max_retries=0 to exit quickly on error
+                    from xdk.streaming import StreamConfig
+                    kwargs["stream_config"] = StreamConfig(max_retries=0)
+                result = method(**kwargs)
+                # Check if result is a generator (streaming or paginated)
+                is_generator = isinstance(result, types.GeneratorType)
+                is_streaming = has_stream_config_param and is_generator
+                if is_generator:
+                    # Consume the generator to trigger the HTTP request
+                    # For both streaming and paginated methods, request happens on iteration
+                    try:
+                        # Try to get first item - this will trigger the HTTP request
+                        next(result)
+                    except StopIteration:
+                        # Generator exhausted immediately - request was still made
+                        pass
+                    except (
+                        requests.exceptions.RequestException,
+                        json.JSONDecodeError,
+                        AttributeError,
+                        ValueError,
+                    ) as e:
+                        # These exceptions can occur during streaming/pagination
+                        pass
+                    except Exception as e:
+                        # Accept validation errors - we're testing request structure, not response parsing
+                        # Also accept streaming errors
+                        err_str = str(e).lower()
+                        err_type = type(e).__name__
+                        if (
+                            "validation" in err_str
+                            or "ValidationError" in err_type
+                            or "PydanticUserError" in err_type
+                            or "Max retries" in str(e)
+                            or "StreamError" in err_type
+                            or "not fully defined" in err_str
+                        ):
+                            pass
+                        else:
+                            raise
+                # Verify the request was made
+                if is_streaming:
+                    # Streaming methods may be called twice (first success, then error to stop reconnect loop)
+                    assert mock_session.get.call_count >= 1
+                else:
+                    mock_session.get.assert_called_once()
+                # Verify request structure
+                call_args = mock_session.get.call_args
+                # Check URL structure
+                called_url = (
+                    call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+                )
+                expected_path = "/2/dm_events"
+                assert expected_path.replace("{", "").replace(
+                    "}", ""
+                ) in called_url or any(
+                    param in called_url for param in ["test_", "42"]
+                ), f"URL should contain path template elements: {called_url}"
+                # Verify response structure
+                if is_streaming:
+                    # For streaming, verify we got a generator
+                    assert isinstance(
+                        result, types.GeneratorType
+                    ), "Streaming method should return a generator"
+                else:
+                    # For regular operations, verify we got a result
+                    assert result is not None, "Method should return a result"
+            except Exception as e:
+                # Accept validation errors - we're testing request structure, not response parsing
+                err_str = str(e).lower()
+                err_type = type(e).__name__
+                if (
+                    "validation" in err_str
+                    or "ValidationError" in err_type
+                    or "PydanticUserError" in err_type
+                    or "not fully defined" in err_str
+                ):
+                    # Validation error is acceptable - request was made, just response parsing failed
+                    mock_session.get.assert_called_once()
+                else:
+                    pytest.fail(f"Contract test failed for get_events: {e}")
+
+
+    def test_get_events_required_parameters(self):
+        """Test that get_events handles parameters correctly."""
+        method = getattr(self.direct_messages_client, "get_events")
+        # No required parameters, method should be callable without args
+        with patch.object(self.client, "session") as mock_session:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = json.loads(r"""{}""")
+            mock_response.content = b""
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            try:
+                method()
+            except Exception as e:
+                pytest.fail(f"Method with no required params should be callable: {e}")
+
+
+    def test_get_events_response_structure(self):
+        """Test get_events response structure validation."""
+        with patch.object(self.client, "session") as mock_session:
+            # Create mock response from the OpenAPI response schema (minimal valid payload)
+            mock_response_data = json.loads(r"""{}""")
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.content = b"binary_data"
+            mock_response.raise_for_status.return_value = None
+            mock_response.headers = {"content-type": "application/json"}
+            mock_session.get.return_value = mock_response
+            # Prepare minimal valid parameters
+            kwargs = {}
+            # Add request body if required
+            # Call method and verify response structure
+            method = getattr(self.direct_messages_client, "get_events")
+            import inspect
+            if "stream_config" in inspect.signature(method).parameters:
+                # Streaming operations yield from a live connection; response
+                # structure is validated by the streaming tests instead.
+                return
+            result = method(**kwargs)
+            # Verify response round-trips the spec-valid payload: every key in
+            # the mocked response must surface on the model (RootModel
+            # wrappers expose the payload via .root instead).
+            import types as _types
+            if isinstance(result, _types.GeneratorType):
+                # Paginated methods return generators; validate the first page.
+                _pages = list(result)
+                target = _pages[0] if _pages else None
+            else:
+                target = result.root if hasattr(result, "root") else result
+            if target is not None and isinstance(mock_response_data, dict):
+                for _key in mock_response_data:
+                    if isinstance(target, dict):
+                        assert _key in target, f"Response should have '{_key}' key"
+                    else:
+                        assert hasattr(
+                            target, _key
+                        ), f"Response should have '{_key}' field"
+            # Optional field - just check it doesn't cause errors if accessed
+            try:
+                getattr(result, "data", None)
+            except Exception as e:
+                pytest.fail(
+                    f"Accessing optional field 'data' should not cause errors: {e}"
+                )
+
+
+    def test_get_events_loopback_http_roundtrip(self):
+        """Execute get_events end-to-end over real TCP loopback HTTP."""
+        import types as _types
+        from examples.mock_x_api_server import MockResponse
+        from xdk.streaming import StreamConfig
+        self.loopback_server.reset()
+        full_mock_json = '{"data":[{"attachments":{},"created_at":"2025-01-15T12:00:00.000Z","dm_conversation_id":"test_value","entities":{},"event_type":"test_value","id":"1234567890","participant_ids":["test_value"],"referenced_posts":[{"id":"1234567890"}],"sender_id":"test_value","text":"Hello from XDK!"}],"includes":{"calls":[{"id":"1234567890"}],"media":[{}],"places":[{"id":"1234567890","name":"test_value"}],"polls":[{"id":"1234567890"}],"posts":[{"id":"1234567890","text":"Hello from XDK!","username":"XDevelopers"}],"topics":[{"id":"1234567890","name":"test_value"}],"users":[{"id":"1234567890","name":"test_value","username":"XDevelopers"}]},"meta":{"result_count":1}}'
+        self.loopback_server.set_responder(
+            lambda _req: MockResponse.json(
+                200,
+                full_mock_json,
+            )
+        )
+        kwargs = {}
+        method = getattr(self.loopback_direct_messages_client, "get_events")
         result = method(**kwargs)
         if isinstance(result, _types.GeneratorType):
             first_item = next(result)

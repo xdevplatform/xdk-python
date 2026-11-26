@@ -43,6 +43,53 @@ class TestCallsStructure:
         self.calls_client = getattr(self.client, "calls")
 
 
+    def test_get_call_exists(self):
+        """Test that get_call method exists with correct signature."""
+        # Check method exists
+        method = getattr(CallsClient, "get_call", None)
+        assert method is not None, f"Method get_call does not exist on CallsClient"
+        # Check method is callable
+        assert callable(method), f"get_call is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"get_call should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from get_call"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "call_fields",
+            "expansions",
+            "user_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_get_call_return_annotation(self):
+        """Test that get_call has proper return type annotation."""
+        method = getattr(CallsClient, "get_call")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method get_call should have return type annotation"
+
+
     def test_respond_to_scheduled_call_exists(self):
         """Test that respond_to_scheduled_call method exists with correct signature."""
         # Check method exists
@@ -88,6 +135,49 @@ class TestCallsStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method respond_to_scheduled_call should have return type annotation"
+
+
+    def test_join_call_exists(self):
+        """Test that join_call method exists with correct signature."""
+        # Check method exists
+        method = getattr(CallsClient, "join_call", None)
+        assert method is not None, f"Method join_call does not exist on CallsClient"
+        # Check method is callable
+        assert callable(method), f"join_call is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"join_call should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "id",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from join_call"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = []
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_join_call_return_annotation(self):
+        """Test that join_call has proper return type annotation."""
+        method = getattr(CallsClient, "join_call")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method join_call should have return type annotation"
 
 
     def test_get_scheduled_call_exists(self):
@@ -240,49 +330,6 @@ class TestCallsStructure:
         ), f"Method cancel_scheduled_call should have return type annotation"
 
 
-    def test_leave_call_exists(self):
-        """Test that leave_call method exists with correct signature."""
-        # Check method exists
-        method = getattr(CallsClient, "leave_call", None)
-        assert method is not None, f"Method leave_call does not exist on CallsClient"
-        # Check method is callable
-        assert callable(method), f"leave_call is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"leave_call should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from leave_call"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = []
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_leave_call_return_annotation(self):
-        """Test that leave_call has proper return type annotation."""
-        method = getattr(CallsClient, "leave_call")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method leave_call should have return type annotation"
-
-
     def test_create_call_exists(self):
         """Test that create_call method exists with correct signature."""
         # Check method exists
@@ -416,18 +463,18 @@ class TestCallsStructure:
         ), f"Method schedule_call should have return type annotation"
 
 
-    def test_get_call_exists(self):
-        """Test that get_call method exists with correct signature."""
+    def test_leave_call_exists(self):
+        """Test that leave_call method exists with correct signature."""
         # Check method exists
-        method = getattr(CallsClient, "get_call", None)
-        assert method is not None, f"Method get_call does not exist on CallsClient"
+        method = getattr(CallsClient, "leave_call", None)
+        assert method is not None, f"Method leave_call does not exist on CallsClient"
         # Check method is callable
-        assert callable(method), f"get_call is not callable"
+        assert callable(method), f"leave_call is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
-        assert len(params) >= 1, f"get_call should have at least 'self' parameter"
+        assert len(params) >= 1, f"leave_call should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
@@ -438,54 +485,7 @@ class TestCallsStructure:
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from get_call"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "call_fields",
-            "expansions",
-            "user_fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_get_call_return_annotation(self):
-        """Test that get_call has proper return type annotation."""
-        method = getattr(CallsClient, "get_call")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method get_call should have return type annotation"
-
-
-    def test_join_call_exists(self):
-        """Test that join_call method exists with correct signature."""
-        # Check method exists
-        method = getattr(CallsClient, "join_call", None)
-        assert method is not None, f"Method join_call does not exist on CallsClient"
-        # Check method is callable
-        assert callable(method), f"join_call is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"join_call should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "id",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from join_call"
+            ), f"Required parameter '{required_param}' missing from leave_call"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = []
         for optional_param in optional_params:
@@ -496,29 +496,29 @@ class TestCallsStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_join_call_return_annotation(self):
-        """Test that join_call has proper return type annotation."""
-        method = getattr(CallsClient, "join_call")
+    def test_leave_call_return_annotation(self):
+        """Test that leave_call has proper return type annotation."""
+        method = getattr(CallsClient, "leave_call")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method join_call should have return type annotation"
+        ), f"Method leave_call should have return type annotation"
 
 
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
+            "get_call",
             "respond_to_scheduled_call",
+            "join_call",
             "get_scheduled_call",
             "update_scheduled_call",
             "cancel_scheduled_call",
-            "leave_call",
             "create_call",
             "list_scheduled",
             "schedule_call",
-            "get_call",
-            "join_call",
+            "leave_call",
         ]
         for expected_method in expected_methods:
             assert hasattr(

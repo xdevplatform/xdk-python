@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     from ..client import Client
 from .models import (
     GetSubscriptionsResponse,
-    DeleteSubscriptionResponse,
     ValidateSubscriptionResponse,
     CreateSubscriptionRequest,
     CreateSubscriptionResponse,
+    DeleteSubscriptionResponse,
     GetSubscriptionCountResponse,
 )
 
@@ -158,127 +158,6 @@ class AccountActivityClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return GetSubscriptionsResponse.model_validate(response_data)
-
-
-    def delete_subscription(
-        self, webhook_id: schemas.WebhookConfigId, user_id: schemas.UserId
-    ) -> DeleteSubscriptionResponse:
-        """
-        Delete Subscription
-        Deletes an Account Activity subscription for the given webhook and user ID.
-        Args:
-            webhook_id: webhook_id
-            user_id: user_id
-            Returns:
-            DeleteSubscriptionResponse: Response data
-        """
-        url = (
-            self.client.base_url
-            + "/2/account_activity/webhooks/{webhook_id}/subscriptions/{user_id}/all"
-        )
-        url = url.replace("{webhook_id}", urllib.parse.quote(str(webhook_id), safe=""))
-        url = url.replace("{user_id}", urllib.parse.quote(str(user_id), safe=""))
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements in OpenAPI spec: omit Authorization header
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("BearerToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "DELETE" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        if not selected_auth and acceptable_schemes:
-            raise ValueError(
-                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
-                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-            )
-        def _build_request_headers() -> Dict[str, str]:
-            req_headers = headers.copy()
-            if selected_auth == "oauth1":
-                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
-                full_url = url
-                if params:
-                    query_string = urllib.parse.urlencode(params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                req_headers["Authorization"] = self.client.auth.build_request_header(
-                    method="DELETE",
-                    url=full_url,
-                    body="",
-                )
-            elif selected_auth == "bearer_token":
-                if self.client.bearer_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif selected_auth == "oauth2_user_context":
-                if (
-                    self.client.oauth2_auth
-                    and self.client.token
-                    and self.client.is_token_expired()
-                ):
-                    self.client.refresh_token()
-                if self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            return req_headers
-        # Make the request
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "delete",
-                url,
-                params=params,
-                headers_factory=_build_request_headers,
-            )
-        else:
-            response = self.client.session.delete(
-                url,
-                params=params,
-                headers=_build_request_headers(),
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return DeleteSubscriptionResponse.model_validate(response_data)
 
 
     def validate_subscription(
@@ -529,6 +408,127 @@ class AccountActivityClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return CreateSubscriptionResponse.model_validate(response_data)
+
+
+    def delete_subscription(
+        self, webhook_id: schemas.WebhookConfigId, user_id: schemas.UserId
+    ) -> DeleteSubscriptionResponse:
+        """
+        Delete Subscription
+        Deletes an Account Activity subscription for the given webhook and user ID.
+        Args:
+            webhook_id: webhook_id
+            user_id: user_id
+            Returns:
+            DeleteSubscriptionResponse: Response data
+        """
+        url = (
+            self.client.base_url
+            + "/2/account_activity/webhooks/{webhook_id}/subscriptions/{user_id}/all"
+        )
+        url = url.replace("{webhook_id}", urllib.parse.quote(str(webhook_id), safe=""))
+        url = url.replace("{user_id}", urllib.parse.quote(str(user_id), safe=""))
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("BearerToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "DELETE" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="DELETE",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "delete",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+            )
+        else:
+            response = self.client.session.delete(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return DeleteSubscriptionResponse.model_validate(response_data)
 
 
     def get_subscription_count(

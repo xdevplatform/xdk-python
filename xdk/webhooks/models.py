@@ -17,18 +17,6 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for create_stream_link
-CreateStreamLinkResponse = schemas.CreateWebhooksStreamLinkResponse
-
-
-# Response model for delete_stream_link
-DeleteStreamLinkResponse = schemas.DeleteWebhooksStreamLinkResponse
-
-
-# Response model for get_stream_links
-GetStreamLinksResponse = schemas.GetWebhooksStreamLinksResponse
-
-
 # Request model for create_webhook_replay_job
 CreateWebhookReplayJobRequest = schemas.CreateWebhookReplayJobRequest
 
@@ -47,6 +35,18 @@ CreateRequest = schemas.CreateWebhooksRequest
 
 # Response model for create
 CreateResponse = schemas.CreateWebhooksResponse
+
+
+# Response model for get_stream_links
+GetStreamLinksResponse = schemas.GetWebhooksStreamLinksResponse
+
+
+# Response model for create_stream_link
+CreateStreamLinkResponse = schemas.CreateWebhooksStreamLinkResponse
+
+
+# Response model for delete_stream_link
+DeleteStreamLinkResponse = schemas.DeleteWebhooksStreamLinkResponse
 
 
 # Response model for validate

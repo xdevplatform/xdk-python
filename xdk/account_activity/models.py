@@ -21,10 +21,6 @@ from .. import schemas
 GetSubscriptionsResponse = schemas.GetAccountActivitySubscriptionsResponse
 
 
-# Response model for delete_subscription
-DeleteSubscriptionResponse = schemas.DeleteAccountActivitySubscriptionResponse
-
-
 # Response model for validate_subscription
 ValidateSubscriptionResponse = schemas.ValidateAccountActivitySubscriptionResponse
 
@@ -59,6 +55,10 @@ class CreateSubscriptionRequest(
 
 # Response model for create_subscription
 CreateSubscriptionResponse = schemas.CreateAccountActivitySubscriptionResponse
+
+
+# Response model for delete_subscription
+DeleteSubscriptionResponse = schemas.DeleteAccountActivitySubscriptionResponse
 
 
 # Response model for get_subscription_count

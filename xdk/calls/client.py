@@ -24,21 +24,21 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
+    GetCallResponse,
     RespondToScheduledCallRequest,
     RespondToScheduledCallResponse,
+    JoinCallRequest,
+    JoinCallResponse,
     GetScheduledCallResponse,
     UpdateScheduledCallRequest,
     UpdateScheduledCallResponse,
     CancelScheduledCallResponse,
-    LeaveCallResponse,
     CreateCallRequest,
     CreateCallResponse,
     ListScheduledResponse,
     ScheduleCallRequest,
     ScheduleCallResponse,
-    GetCallResponse,
-    JoinCallRequest,
-    JoinCallResponse,
+    LeaveCallResponse,
 )
 
 
@@ -48,6 +48,182 @@ class CallsClient:
 
     def __init__(self, client: Client):
         self.client = client
+
+
+    def get_call(
+        self,
+        id: str,
+        call_fields: Optional[
+            List[
+                Literal[
+                    "conversation_id",
+                    "created_at",
+                    "id",
+                    "join_policy",
+                    "join_url",
+                    "participant_count",
+                    "title",
+                    "viewer_may_join",
+                ]
+            ]
+        ] = None,
+        expansions: Optional[List[Literal["host_id"]]] = None,
+        user_fields: Optional[
+            List[
+                Literal[
+                    "active_follower_count",
+                    "confirmed_email",
+                    "connection_status",
+                    "created_at",
+                    "description",
+                    "entities",
+                    "id",
+                    "is_identity_verified",
+                    "location",
+                    "name",
+                    "org_only",
+                    "parody",
+                    "profile_banner_url",
+                    "profile_image_url",
+                    "protected",
+                    "public_metrics",
+                    "receives_your_chat",
+                    "receives_your_dm",
+                    "subscriber_count",
+                    "subscribes_to_you",
+                    "subscription",
+                    "subscription_type",
+                    "url",
+                    "username",
+                    "verified",
+                    "verified_followers_count",
+                    "verified_type",
+                    "withheld",
+                ]
+            ]
+        ] = None,
+    ) -> GetCallResponse:
+        """
+        Get a Call
+        Returns a call's title, join policy, host and participant count, and whether the authenticated user may join it without asking the host.
+        Args:
+            id: id
+            call_fields: A comma separated list of Call fields to display.
+            expansions: A comma separated list of fields to expand.
+            user_fields: A comma separated list of User fields to display.
+            Returns:
+            GetCallResponse: Response data
+        """
+        url = self.client.base_url + "/2/calls/{id}"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        if call_fields is not None:
+            params["call.fields"] = ",".join(str(item) for item in call_fields)
+        if expansions is not None:
+            params["expansions"] = ",".join(str(item) for item in expansions)
+        if user_fields is not None:
+            params["user.fields"] = ",".join(str(item) for item in user_fields)
+        headers = {}
+        # Prepare request data
+        json_data = None
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        acceptable_schemes.append("UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="GET",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "get",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+            )
+        else:
+            response = self.client.session.get(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return GetCallResponse.model_validate(response_data)
 
 
     def respond_to_scheduled_call(
@@ -175,6 +351,130 @@ class CallsClient:
         response_data = response.json()
         # Convert to Pydantic model if applicable
         return RespondToScheduledCallResponse.model_validate(response_data)
+
+
+    def join_call(self, id: str, body: JoinCallRequest) -> JoinCallResponse:
+        """
+        Join a Call
+        Starts a media session that takes part in the call as the authenticated user. The response carries a media_url and a short-lived media_token: open a WebSocket to media_url with the token as a Bearer credential to exchange PCM16 audio and events with the call; the user enters the call when the WebSocket connects. On a closed or trusted call the session asks the host first (admission: requires_approval).
+        Args:
+            id: id
+            body: Request body
+        Returns:
+            JoinCallResponse: Response data
+        """
+        url = self.client.base_url + "/2/calls/{id}/join"
+        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
+        # Per-request authentication headers are built dynamically below without mutating session.headers
+        params = {}
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        # Prepare request data
+        json_data = None
+        if body is not None:
+            json_data = (
+                body.model_dump(exclude_none=True)
+                if hasattr(body, "model_dump")
+                else body
+            )
+        # Select authentication method based on endpoint requirements and available credentials
+        # Priority strategy (matches TypeScript):
+        # 1. If endpoint only accepts one method, use that (if available)
+        # 2. If endpoint accepts multiple methods:
+        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
+        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
+        # 3. If no security requirements in OpenAPI spec: omit Authorization header
+        selected_auth = None
+        # Check what auth methods we have available
+        available_bearer = bool(self.client.bearer_token)
+        available_oauth2 = bool(self.client.access_token)
+        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
+        # Count acceptable schemes
+        acceptable_schemes = []
+        acceptable_schemes.append("OAuth2UserToken")
+        # If only one scheme is acceptable, use it if available
+        if len(acceptable_schemes) == 1:
+            scheme = acceptable_schemes[0]
+            if scheme == "BearerToken" and available_bearer:
+                selected_auth = "bearer_token"
+            elif scheme == "OAuth2UserToken" and available_oauth2:
+                selected_auth = "oauth2_user_context"
+            elif scheme == "UserToken" and available_oauth1:
+                selected_auth = "oauth1"
+        # Multiple schemes acceptable - use priority based on operation type
+        elif len(acceptable_schemes) > 1:
+            is_write_operation = "POST" in ["POST", "PUT", "DELETE", "PATCH"]
+            if is_write_operation:
+                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
+                if "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+            else:
+                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
+                if "BearerToken" in acceptable_schemes and available_bearer:
+                    selected_auth = "bearer_token"
+                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
+                    selected_auth = "oauth2_user_context"
+                elif "UserToken" in acceptable_schemes and available_oauth1:
+                    selected_auth = "oauth1"
+        if not selected_auth and acceptable_schemes:
+            raise ValueError(
+                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
+                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
+            )
+        def _build_request_headers() -> Dict[str, str]:
+            req_headers = headers.copy()
+            if selected_auth == "oauth1":
+                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
+                full_url = url
+                if params:
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{url}?{query_string}" if query_string else url
+                req_headers["Authorization"] = self.client.auth.build_request_header(
+                    method="POST",
+                    url=full_url,
+                    body="",
+                )
+            elif selected_auth == "bearer_token":
+                if self.client.bearer_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
+                elif self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            elif selected_auth == "oauth2_user_context":
+                if (
+                    self.client.oauth2_auth
+                    and self.client.token
+                    and self.client.is_token_expired()
+                ):
+                    self.client.refresh_token()
+                if self.client.access_token:
+                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
+            return req_headers
+        # Make the request
+        if self.client.timeout is not None or self.client.max_retries > 0:
+            response = self.client._send_with_retry(
+                "post",
+                url,
+                params=params,
+                headers_factory=_build_request_headers,
+                json=json_data,
+            )
+        else:
+            response = self.client.session.post(
+                url,
+                params=params,
+                headers=_build_request_headers(),
+                json=json_data,
+            )
+        # Check for errors
+        response.raise_for_status()
+        # Parse the response data
+        response_data = response.json()
+        # Convert to Pydantic model if applicable
+        return JoinCallResponse.model_validate(response_data)
 
 
     def get_scheduled_call(
@@ -635,120 +935,6 @@ class CallsClient:
         return CancelScheduledCallResponse.model_validate(response_data)
 
 
-    def leave_call(self, id: str) -> LeaveCallResponse:
-        """
-        Leave a Call
-        Ends the authenticated user's media session in the call (its WebSocket receives session.ended with reason left) and removes the user from the call.
-        Args:
-            id: id
-            Returns:
-            LeaveCallResponse: Response data
-        """
-        url = self.client.base_url + "/2/calls/{id}/leave"
-        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements in OpenAPI spec: omit Authorization header
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "POST" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        if not selected_auth and acceptable_schemes:
-            raise ValueError(
-                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
-                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-            )
-        def _build_request_headers() -> Dict[str, str]:
-            req_headers = headers.copy()
-            if selected_auth == "oauth1":
-                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
-                full_url = url
-                if params:
-                    query_string = urllib.parse.urlencode(params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                req_headers["Authorization"] = self.client.auth.build_request_header(
-                    method="POST",
-                    url=full_url,
-                    body="",
-                )
-            elif selected_auth == "bearer_token":
-                if self.client.bearer_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif selected_auth == "oauth2_user_context":
-                if (
-                    self.client.oauth2_auth
-                    and self.client.token
-                    and self.client.is_token_expired()
-                ):
-                    self.client.refresh_token()
-                if self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            return req_headers
-        # Make the request
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "post",
-                url,
-                params=params,
-                headers_factory=_build_request_headers,
-            )
-        else:
-            response = self.client.session.post(
-                url,
-                params=params,
-                headers=_build_request_headers(),
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return LeaveCallResponse.model_validate(response_data)
-
-
     def create_call(self, body: CreateCallRequest) -> CreateCallResponse:
         """
         Create a Call
@@ -1204,206 +1390,22 @@ class CallsClient:
         return ScheduleCallResponse.model_validate(response_data)
 
 
-    def get_call(
-        self,
-        id: str,
-        call_fields: Optional[
-            List[
-                Literal[
-                    "conversation_id",
-                    "created_at",
-                    "id",
-                    "join_policy",
-                    "join_url",
-                    "participant_count",
-                    "title",
-                    "viewer_may_join",
-                ]
-            ]
-        ] = None,
-        expansions: Optional[List[Literal["host_id"]]] = None,
-        user_fields: Optional[
-            List[
-                Literal[
-                    "active_follower_count",
-                    "confirmed_email",
-                    "connection_status",
-                    "created_at",
-                    "description",
-                    "entities",
-                    "id",
-                    "is_identity_verified",
-                    "location",
-                    "name",
-                    "org_only",
-                    "parody",
-                    "profile_banner_url",
-                    "profile_image_url",
-                    "protected",
-                    "public_metrics",
-                    "receives_your_chat",
-                    "receives_your_dm",
-                    "subscriber_count",
-                    "subscribes_to_you",
-                    "subscription",
-                    "subscription_type",
-                    "url",
-                    "username",
-                    "verified",
-                    "verified_followers_count",
-                    "verified_type",
-                    "withheld",
-                ]
-            ]
-        ] = None,
-    ) -> GetCallResponse:
+    def leave_call(self, id: str) -> LeaveCallResponse:
         """
-        Get a Call
-        Returns a call's title, join policy, host and participant count, and whether the authenticated user may join it without asking the host.
+        Leave a Call
+        Ends the authenticated user's media session in the call (its WebSocket receives session.ended with reason left) and removes the user from the call.
         Args:
             id: id
-            call_fields: A comma separated list of Call fields to display.
-            expansions: A comma separated list of fields to expand.
-            user_fields: A comma separated list of User fields to display.
             Returns:
-            GetCallResponse: Response data
+            LeaveCallResponse: Response data
         """
-        url = self.client.base_url + "/2/calls/{id}"
-        url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
-        # Per-request authentication headers are built dynamically below without mutating session.headers
-        params = {}
-        if call_fields is not None:
-            params["call.fields"] = ",".join(str(item) for item in call_fields)
-        if expansions is not None:
-            params["expansions"] = ",".join(str(item) for item in expansions)
-        if user_fields is not None:
-            params["user.fields"] = ",".join(str(item) for item in user_fields)
-        headers = {}
-        # Prepare request data
-        json_data = None
-        # Select authentication method based on endpoint requirements and available credentials
-        # Priority strategy (matches TypeScript):
-        # 1. If endpoint only accepts one method, use that (if available)
-        # 2. If endpoint accepts multiple methods:
-        #    - For write operations (POST/PUT/DELETE/PATCH): Prefer OAuth1 > OAuth2 User Token > Bearer Token
-        #    - For read operations (GET): Prefer Bearer Token > OAuth2 User Token > OAuth1
-        # 3. If no security requirements in OpenAPI spec: omit Authorization header
-        selected_auth = None
-        # Check what auth methods we have available
-        available_bearer = bool(self.client.bearer_token)
-        available_oauth2 = bool(self.client.access_token)
-        available_oauth1 = bool(self.client.auth and self.client.auth.access_token)
-        # Count acceptable schemes
-        acceptable_schemes = []
-        acceptable_schemes.append("OAuth2UserToken")
-        acceptable_schemes.append("UserToken")
-        # If only one scheme is acceptable, use it if available
-        if len(acceptable_schemes) == 1:
-            scheme = acceptable_schemes[0]
-            if scheme == "BearerToken" and available_bearer:
-                selected_auth = "bearer_token"
-            elif scheme == "OAuth2UserToken" and available_oauth2:
-                selected_auth = "oauth2_user_context"
-            elif scheme == "UserToken" and available_oauth1:
-                selected_auth = "oauth1"
-        # Multiple schemes acceptable - use priority based on operation type
-        elif len(acceptable_schemes) > 1:
-            is_write_operation = "GET" in ["POST", "PUT", "DELETE", "PATCH"]
-            if is_write_operation:
-                # Priority for write operations: OAuth1 > OAuth2 User Token > Bearer Token
-                if "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-            else:
-                # Priority for read operations: Bearer Token > OAuth2 User Token > OAuth1
-                if "BearerToken" in acceptable_schemes and available_bearer:
-                    selected_auth = "bearer_token"
-                elif "OAuth2UserToken" in acceptable_schemes and available_oauth2:
-                    selected_auth = "oauth2_user_context"
-                elif "UserToken" in acceptable_schemes and available_oauth1:
-                    selected_auth = "oauth1"
-        if not selected_auth and acceptable_schemes:
-            raise ValueError(
-                f"Authentication required for this endpoint. Required schemes: {acceptable_schemes}. "
-                f"Available: {[s for s in acceptable_schemes if (s == 'BearerToken' and available_bearer) or (s == 'OAuth2UserToken' and available_oauth2) or (s == 'UserToken' and available_oauth1)]}"
-            )
-        def _build_request_headers() -> Dict[str, str]:
-            req_headers = headers.copy()
-            if selected_auth == "oauth1":
-                # Build OAuth1 header per attempt so retries generate a fresh nonce and timestamp
-                full_url = url
-                if params:
-                    query_string = urllib.parse.urlencode(params)
-                    full_url = f"{url}?{query_string}" if query_string else url
-                req_headers["Authorization"] = self.client.auth.build_request_header(
-                    method="GET",
-                    url=full_url,
-                    body="",
-                )
-            elif selected_auth == "bearer_token":
-                if self.client.bearer_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.bearer_token}"
-                elif self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            elif selected_auth == "oauth2_user_context":
-                if (
-                    self.client.oauth2_auth
-                    and self.client.token
-                    and self.client.is_token_expired()
-                ):
-                    self.client.refresh_token()
-                if self.client.access_token:
-                    req_headers["Authorization"] = f"Bearer {self.client.access_token}"
-            return req_headers
-        # Make the request
-        if self.client.timeout is not None or self.client.max_retries > 0:
-            response = self.client._send_with_retry(
-                "get",
-                url,
-                params=params,
-                headers_factory=_build_request_headers,
-            )
-        else:
-            response = self.client.session.get(
-                url,
-                params=params,
-                headers=_build_request_headers(),
-            )
-        # Check for errors
-        response.raise_for_status()
-        # Parse the response data
-        response_data = response.json()
-        # Convert to Pydantic model if applicable
-        return GetCallResponse.model_validate(response_data)
-
-
-    def join_call(self, id: str, body: JoinCallRequest) -> JoinCallResponse:
-        """
-        Join a Call
-        Starts a media session that takes part in the call as the authenticated user. The response carries a media_url and a short-lived media_token: open a WebSocket to media_url with the token as a Bearer credential to exchange PCM16 audio and events with the call; the user enters the call when the WebSocket connects. On a closed or trusted call the session asks the host first (admission: requires_approval).
-        Args:
-            id: id
-            body: Request body
-        Returns:
-            JoinCallResponse: Response data
-        """
-        url = self.client.base_url + "/2/calls/{id}/join"
+        url = self.client.base_url + "/2/calls/{id}/leave"
         url = url.replace("{id}", urllib.parse.quote(str(id), safe=""))
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
-        headers["Content-Type"] = "application/json"
         # Prepare request data
         json_data = None
-        if body is not None:
-            json_data = (
-                body.model_dump(exclude_none=True)
-                if hasattr(body, "model_dump")
-                else body
-            )
         # Select authentication method based on endpoint requirements and available credentials
         # Priority strategy (matches TypeScript):
         # 1. If endpoint only accepts one method, use that (if available)
@@ -1487,18 +1489,16 @@ class CallsClient:
                 url,
                 params=params,
                 headers_factory=_build_request_headers,
-                json=json_data,
             )
         else:
             response = self.client.session.post(
                 url,
                 params=params,
                 headers=_build_request_headers(),
-                json=json_data,
             )
         # Check for errors
         response.raise_for_status()
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return JoinCallResponse.model_validate(response_data)
+        return LeaveCallResponse.model_validate(response_data)

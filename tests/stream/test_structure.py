@@ -43,34 +43,42 @@ class TestStreamStructure:
         self.stream_client = getattr(self.client, "stream")
 
 
-    def test_likes_compliance_exists(self):
-        """Test that likes_compliance method exists with correct signature."""
+    def test_posts_firehose_ko_exists(self):
+        """Test that posts_firehose_ko method exists with correct signature."""
         # Check method exists
-        method = getattr(StreamClient, "likes_compliance", None)
+        method = getattr(StreamClient, "posts_firehose_ko", None)
         assert (
             method is not None
-        ), f"Method likes_compliance does not exist on StreamClient"
+        ), f"Method posts_firehose_ko does not exist on StreamClient"
         # Check method is callable
-        assert callable(method), f"likes_compliance is not callable"
+        assert callable(method), f"posts_firehose_ko is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
         assert (
             len(params) >= 1
-        ), f"likes_compliance should have at least 'self' parameter"
+        ), f"posts_firehose_ko should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
         # Check required parameters exist (excluding 'self')
-        required_params = []
+        required_params = [
+            "partition",
+        ]
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from likes_compliance"
+            ), f"Required parameter '{required_param}' missing from posts_firehose_ko"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
             "backfill_minutes",
+            "tweet_fields",
+            "expansions",
+            "media_fields",
+            "poll_fields",
+            "user_fields",
+            "place_fields",
             "start_time",
             "end_time",
         ]
@@ -82,14 +90,63 @@ class TestStreamStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_likes_compliance_return_annotation(self):
-        """Test that likes_compliance has proper return type annotation."""
-        method = getattr(StreamClient, "likes_compliance")
+    def test_posts_firehose_ko_return_annotation(self):
+        """Test that posts_firehose_ko has proper return type annotation."""
+        method = getattr(StreamClient, "posts_firehose_ko")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method likes_compliance should have return type annotation"
+        ), f"Method posts_firehose_ko should have return type annotation"
+
+
+    def test_posts_sample_exists(self):
+        """Test that posts_sample method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "posts_sample", None)
+        assert method is not None, f"Method posts_sample does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"posts_sample is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"posts_sample should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from posts_sample"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "tweet_fields",
+            "expansions",
+            "media_fields",
+            "poll_fields",
+            "user_fields",
+            "place_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_posts_sample_return_annotation(self):
+        """Test that posts_sample has proper return type annotation."""
+        method = getattr(StreamClient, "posts_sample")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method posts_sample should have return type annotation"
 
 
     def test_posts_firehose_ja_exists(self):
@@ -147,6 +204,210 @@ class TestStreamStructure:
         assert (
             sig.return_annotation is not inspect.Signature.empty
         ), f"Method posts_firehose_ja should have return type annotation"
+
+
+    def test_posts_compliance_exists(self):
+        """Test that posts_compliance method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "posts_compliance", None)
+        assert (
+            method is not None
+        ), f"Method posts_compliance does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"posts_compliance is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"posts_compliance should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "partition",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from posts_compliance"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_posts_compliance_return_annotation(self):
+        """Test that posts_compliance has proper return type annotation."""
+        method = getattr(StreamClient, "posts_compliance")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method posts_compliance should have return type annotation"
+
+
+    def test_activity_exists(self):
+        """Test that activity method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "activity", None)
+        assert method is not None, f"Method activity does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"activity is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"activity should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from activity"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_activity_return_annotation(self):
+        """Test that activity has proper return type annotation."""
+        method = getattr(StreamClient, "activity")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method activity should have return type annotation"
+
+
+    def test_users_compliance_exists(self):
+        """Test that users_compliance method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "users_compliance", None)
+        assert (
+            method is not None
+        ), f"Method users_compliance does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"users_compliance is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"users_compliance should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "partition",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from users_compliance"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_users_compliance_return_annotation(self):
+        """Test that users_compliance has proper return type annotation."""
+        method = getattr(StreamClient, "users_compliance")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method users_compliance should have return type annotation"
+
+
+    def test_posts_firehose_en_exists(self):
+        """Test that posts_firehose_en method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "posts_firehose_en", None)
+        assert (
+            method is not None
+        ), f"Method posts_firehose_en does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"posts_firehose_en is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"posts_firehose_en should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "partition",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from posts_firehose_en"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "tweet_fields",
+            "expansions",
+            "media_fields",
+            "poll_fields",
+            "user_fields",
+            "place_fields",
+            "start_time",
+            "end_time",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_posts_firehose_en_return_annotation(self):
+        """Test that posts_firehose_en has proper return type annotation."""
+        method = getattr(StreamClient, "posts_firehose_en")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method posts_firehose_en should have return type annotation"
 
 
     def test_posts_sample10_exists(self):
@@ -255,166 +516,6 @@ class TestStreamStructure:
         ), f"Method posts should have return type annotation"
 
 
-    def test_posts_firehose_pt_exists(self):
-        """Test that posts_firehose_pt method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "posts_firehose_pt", None)
-        assert (
-            method is not None
-        ), f"Method posts_firehose_pt does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"posts_firehose_pt is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"posts_firehose_pt should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "partition",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from posts_firehose_pt"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "tweet_fields",
-            "expansions",
-            "media_fields",
-            "poll_fields",
-            "user_fields",
-            "place_fields",
-            "start_time",
-            "end_time",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_posts_firehose_pt_return_annotation(self):
-        """Test that posts_firehose_pt has proper return type annotation."""
-        method = getattr(StreamClient, "posts_firehose_pt")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method posts_firehose_pt should have return type annotation"
-
-
-    def test_likes_sample10_exists(self):
-        """Test that likes_sample10 method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "likes_sample10", None)
-        assert (
-            method is not None
-        ), f"Method likes_sample10 does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"likes_sample10 is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"likes_sample10 should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "partition",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from likes_sample10"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "start_time",
-            "end_time",
-            "like_with_tweet_author_fields",
-            "expansions",
-            "media_fields",
-            "user_fields",
-            "tweet_fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_likes_sample10_return_annotation(self):
-        """Test that likes_sample10 has proper return type annotation."""
-        method = getattr(StreamClient, "likes_sample10")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method likes_sample10 should have return type annotation"
-
-
-    def test_posts_sample_exists(self):
-        """Test that posts_sample method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "posts_sample", None)
-        assert method is not None, f"Method posts_sample does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"posts_sample is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"posts_sample should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from posts_sample"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "tweet_fields",
-            "expansions",
-            "media_fields",
-            "poll_fields",
-            "user_fields",
-            "place_fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_posts_sample_return_annotation(self):
-        """Test that posts_sample has proper return type annotation."""
-        method = getattr(StreamClient, "posts_sample")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method posts_sample should have return type annotation"
-
-
     def test_posts_firehose_exists(self):
         """Test that posts_firehose method exists with correct signature."""
         # Check method exists
@@ -470,90 +571,31 @@ class TestStreamStructure:
         ), f"Method posts_firehose should have return type annotation"
 
 
-    def test_posts_firehose_ko_exists(self):
-        """Test that posts_firehose_ko method exists with correct signature."""
+    def test_likes_compliance_exists(self):
+        """Test that likes_compliance method exists with correct signature."""
         # Check method exists
-        method = getattr(StreamClient, "posts_firehose_ko", None)
+        method = getattr(StreamClient, "likes_compliance", None)
         assert (
             method is not None
-        ), f"Method posts_firehose_ko does not exist on StreamClient"
+        ), f"Method likes_compliance does not exist on StreamClient"
         # Check method is callable
-        assert callable(method), f"posts_firehose_ko is not callable"
+        assert callable(method), f"likes_compliance is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
         assert (
             len(params) >= 1
-        ), f"posts_firehose_ko should have at least 'self' parameter"
+        ), f"likes_compliance should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
         # Check required parameters exist (excluding 'self')
-        required_params = [
-            "partition",
-        ]
+        required_params = []
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from posts_firehose_ko"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "tweet_fields",
-            "expansions",
-            "media_fields",
-            "poll_fields",
-            "user_fields",
-            "place_fields",
-            "start_time",
-            "end_time",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_posts_firehose_ko_return_annotation(self):
-        """Test that posts_firehose_ko has proper return type annotation."""
-        method = getattr(StreamClient, "posts_firehose_ko")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method posts_firehose_ko should have return type annotation"
-
-
-    def test_posts_compliance_exists(self):
-        """Test that posts_compliance method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "posts_compliance", None)
-        assert (
-            method is not None
-        ), f"Method posts_compliance does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"posts_compliance is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"posts_compliance should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "partition",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from posts_compliance"
+            ), f"Required parameter '{required_param}' missing from likes_compliance"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
             "backfill_minutes",
@@ -568,14 +610,14 @@ class TestStreamStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_posts_compliance_return_annotation(self):
-        """Test that posts_compliance has proper return type annotation."""
-        method = getattr(StreamClient, "posts_compliance")
+    def test_likes_compliance_return_annotation(self):
+        """Test that likes_compliance has proper return type annotation."""
+        method = getattr(StreamClient, "likes_compliance")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method posts_compliance should have return type annotation"
+        ), f"Method likes_compliance should have return type annotation"
 
 
     def test_get_rule_counts_exists(self):
@@ -625,22 +667,22 @@ class TestStreamStructure:
         ), f"Method get_rule_counts should have return type annotation"
 
 
-    def test_posts_firehose_en_exists(self):
-        """Test that posts_firehose_en method exists with correct signature."""
+    def test_posts_firehose_pt_exists(self):
+        """Test that posts_firehose_pt method exists with correct signature."""
         # Check method exists
-        method = getattr(StreamClient, "posts_firehose_en", None)
+        method = getattr(StreamClient, "posts_firehose_pt", None)
         assert (
             method is not None
-        ), f"Method posts_firehose_en does not exist on StreamClient"
+        ), f"Method posts_firehose_pt does not exist on StreamClient"
         # Check method is callable
-        assert callable(method), f"posts_firehose_en is not callable"
+        assert callable(method), f"posts_firehose_pt is not callable"
         # Check method signature
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         # Should have 'self' as first parameter
         assert (
             len(params) >= 1
-        ), f"posts_firehose_en should have at least 'self' parameter"
+        ), f"posts_firehose_pt should have at least 'self' parameter"
         assert (
             params[0] == "self"
         ), f"First parameter should be 'self', got '{params[0]}'"
@@ -651,7 +693,7 @@ class TestStreamStructure:
         for required_param in required_params:
             assert (
                 required_param in params
-            ), f"Required parameter '{required_param}' missing from posts_firehose_en"
+            ), f"Required parameter '{required_param}' missing from posts_firehose_pt"
         # Check optional parameters have defaults (excluding 'self')
         optional_params = [
             "backfill_minutes",
@@ -672,213 +714,14 @@ class TestStreamStructure:
                 ), f"Optional parameter '{optional_param}' should have a default value"
 
 
-    def test_posts_firehose_en_return_annotation(self):
-        """Test that posts_firehose_en has proper return type annotation."""
-        method = getattr(StreamClient, "posts_firehose_en")
+    def test_posts_firehose_pt_return_annotation(self):
+        """Test that posts_firehose_pt has proper return type annotation."""
+        method = getattr(StreamClient, "posts_firehose_pt")
         sig = inspect.signature(method)
         # Check return annotation exists
         assert (
             sig.return_annotation is not inspect.Signature.empty
-        ), f"Method posts_firehose_en should have return type annotation"
-
-
-    def test_likes_firehose_exists(self):
-        """Test that likes_firehose method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "likes_firehose", None)
-        assert (
-            method is not None
-        ), f"Method likes_firehose does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"likes_firehose is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"likes_firehose should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "partition",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from likes_firehose"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "start_time",
-            "end_time",
-            "like_with_tweet_author_fields",
-            "expansions",
-            "media_fields",
-            "user_fields",
-            "tweet_fields",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_likes_firehose_return_annotation(self):
-        """Test that likes_firehose has proper return type annotation."""
-        method = getattr(StreamClient, "likes_firehose")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method likes_firehose should have return type annotation"
-
-
-    def test_labels_compliance_exists(self):
-        """Test that labels_compliance method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "labels_compliance", None)
-        assert (
-            method is not None
-        ), f"Method labels_compliance does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"labels_compliance is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"labels_compliance should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from labels_compliance"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "start_time",
-            "end_time",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_labels_compliance_return_annotation(self):
-        """Test that labels_compliance has proper return type annotation."""
-        method = getattr(StreamClient, "labels_compliance")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method labels_compliance should have return type annotation"
-
-
-    def test_users_compliance_exists(self):
-        """Test that users_compliance method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "users_compliance", None)
-        assert (
-            method is not None
-        ), f"Method users_compliance does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"users_compliance is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert (
-            len(params) >= 1
-        ), f"users_compliance should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = [
-            "partition",
-        ]
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from users_compliance"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "start_time",
-            "end_time",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_users_compliance_return_annotation(self):
-        """Test that users_compliance has proper return type annotation."""
-        method = getattr(StreamClient, "users_compliance")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method users_compliance should have return type annotation"
-
-
-    def test_activity_exists(self):
-        """Test that activity method exists with correct signature."""
-        # Check method exists
-        method = getattr(StreamClient, "activity", None)
-        assert method is not None, f"Method activity does not exist on StreamClient"
-        # Check method is callable
-        assert callable(method), f"activity is not callable"
-        # Check method signature
-        sig = inspect.signature(method)
-        params = list(sig.parameters.keys())
-        # Should have 'self' as first parameter
-        assert len(params) >= 1, f"activity should have at least 'self' parameter"
-        assert (
-            params[0] == "self"
-        ), f"First parameter should be 'self', got '{params[0]}'"
-        # Check required parameters exist (excluding 'self')
-        required_params = []
-        for required_param in required_params:
-            assert (
-                required_param in params
-            ), f"Required parameter '{required_param}' missing from activity"
-        # Check optional parameters have defaults (excluding 'self')
-        optional_params = [
-            "backfill_minutes",
-            "start_time",
-            "end_time",
-        ]
-        for optional_param in optional_params:
-            if optional_param in params:
-                param_obj = sig.parameters[optional_param]
-                assert (
-                    param_obj.default is not inspect.Parameter.empty
-                ), f"Optional parameter '{optional_param}' should have a default value"
-
-
-    def test_activity_return_annotation(self):
-        """Test that activity has proper return type annotation."""
-        method = getattr(StreamClient, "activity")
-        sig = inspect.signature(method)
-        # Check return annotation exists
-        assert (
-            sig.return_annotation is not inspect.Signature.empty
-        ), f"Method activity should have return type annotation"
+        ), f"Method posts_firehose_pt should have return type annotation"
 
 
     def test_get_rules_exists(self):
@@ -989,27 +832,184 @@ class TestStreamStructure:
         ), f"Method update_rules should have return type annotation"
 
 
+    def test_likes_firehose_exists(self):
+        """Test that likes_firehose method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "likes_firehose", None)
+        assert (
+            method is not None
+        ), f"Method likes_firehose does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"likes_firehose is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"likes_firehose should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "partition",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from likes_firehose"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+            "like_with_tweet_author_fields",
+            "expansions",
+            "media_fields",
+            "user_fields",
+            "tweet_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_likes_firehose_return_annotation(self):
+        """Test that likes_firehose has proper return type annotation."""
+        method = getattr(StreamClient, "likes_firehose")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method likes_firehose should have return type annotation"
+
+
+    def test_likes_sample10_exists(self):
+        """Test that likes_sample10 method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "likes_sample10", None)
+        assert (
+            method is not None
+        ), f"Method likes_sample10 does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"likes_sample10 is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert len(params) >= 1, f"likes_sample10 should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = [
+            "partition",
+        ]
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from likes_sample10"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+            "like_with_tweet_author_fields",
+            "expansions",
+            "media_fields",
+            "user_fields",
+            "tweet_fields",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_likes_sample10_return_annotation(self):
+        """Test that likes_sample10 has proper return type annotation."""
+        method = getattr(StreamClient, "likes_sample10")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method likes_sample10 should have return type annotation"
+
+
+    def test_labels_compliance_exists(self):
+        """Test that labels_compliance method exists with correct signature."""
+        # Check method exists
+        method = getattr(StreamClient, "labels_compliance", None)
+        assert (
+            method is not None
+        ), f"Method labels_compliance does not exist on StreamClient"
+        # Check method is callable
+        assert callable(method), f"labels_compliance is not callable"
+        # Check method signature
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        # Should have 'self' as first parameter
+        assert (
+            len(params) >= 1
+        ), f"labels_compliance should have at least 'self' parameter"
+        assert (
+            params[0] == "self"
+        ), f"First parameter should be 'self', got '{params[0]}'"
+        # Check required parameters exist (excluding 'self')
+        required_params = []
+        for required_param in required_params:
+            assert (
+                required_param in params
+            ), f"Required parameter '{required_param}' missing from labels_compliance"
+        # Check optional parameters have defaults (excluding 'self')
+        optional_params = [
+            "backfill_minutes",
+            "start_time",
+            "end_time",
+        ]
+        for optional_param in optional_params:
+            if optional_param in params:
+                param_obj = sig.parameters[optional_param]
+                assert (
+                    param_obj.default is not inspect.Parameter.empty
+                ), f"Optional parameter '{optional_param}' should have a default value"
+
+
+    def test_labels_compliance_return_annotation(self):
+        """Test that labels_compliance has proper return type annotation."""
+        method = getattr(StreamClient, "labels_compliance")
+        sig = inspect.signature(method)
+        # Check return annotation exists
+        assert (
+            sig.return_annotation is not inspect.Signature.empty
+        ), f"Method labels_compliance should have return type annotation"
+
+
     def test_all_expected_methods_exist(self):
         """Test that all expected methods exist on the client."""
         expected_methods = [
-            "likes_compliance",
+            "posts_firehose_ko",
+            "posts_sample",
             "posts_firehose_ja",
+            "posts_compliance",
+            "activity",
+            "users_compliance",
+            "posts_firehose_en",
             "posts_sample10",
             "posts",
-            "posts_firehose_pt",
-            "likes_sample10",
-            "posts_sample",
             "posts_firehose",
-            "posts_firehose_ko",
-            "posts_compliance",
+            "likes_compliance",
             "get_rule_counts",
-            "posts_firehose_en",
-            "likes_firehose",
-            "labels_compliance",
-            "users_compliance",
-            "activity",
+            "posts_firehose_pt",
             "get_rules",
             "update_rules",
+            "likes_firehose",
+            "likes_sample10",
+            "labels_compliance",
         ]
         for expected_method in expected_methods:
             assert hasattr(

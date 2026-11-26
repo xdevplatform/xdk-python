@@ -17,30 +17,32 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_conversation_pinned_messages
-GetConversationPinnedMessagesResponse = (
-    schemas.GetChatConversationPinnedMessagesResponse
-)
+# Request model for delete_conversation_message_ttl
+DeleteConversationMessageTtlRequest = schemas.DeleteChatConversationMessageTtlRequest
 
 
-# Request model for media_upload_append
-MediaUploadAppendRequest = schemas.ChatMediaUploadAppendRequest
+# Response model for delete_conversation_message_ttl
+DeleteConversationMessageTtlResponse = schemas.DeleteChatConversationMessageTtlResponse
 
 
-# Response model for media_upload_append
-MediaUploadAppendResponse = schemas.ChatMediaUploadAppendResponse
+# Response model for accept_message_request
+AcceptMessageRequestResponse = schemas.AcceptChatMessageRequestResponse
 
 
-# Request model for media_upload_finalize
-MediaUploadFinalizeRequest = schemas.ChatMediaUploadFinalizeRequest
+# Request model for mark_conversation_read
+MarkConversationReadRequest = schemas.MarkChatConversationReadRequest
 
 
-# Response model for media_upload_finalize
-MediaUploadFinalizeResponse = schemas.ChatMediaUploadFinalizeResponse
+# Response model for mark_conversation_read
+MarkConversationReadResponse = schemas.MarkChatConversationReadResponse
 
 
-# Response model for initialize_group
-InitializeGroupResponse = schemas.InitializeChatGroupResponse
+# Request model for add_group_admins
+AddGroupAdminsRequest = schemas.AddChatGroupAdminsRequest
+
+
+# Response model for add_group_admins
+AddGroupAdminsResponse = schemas.AddChatGroupAdminsResponse
 
 
 # Response model for get_conversation
@@ -55,92 +57,12 @@ UpdateGroupRequest = schemas.UpdateChatGroupRequest
 UpdateGroupResponse = schemas.UpdateChatGroupResponse
 
 
-# Request model for delete_conversation
-DeleteConversationRequest = schemas.DeleteChatConversationRequest
+# Request model for delete_conversation_legacy
+DeleteConversationLegacyRequest = schemas.DeleteChatConversationLegacyRequest
 
 
-# Response model for delete_conversation
-DeleteConversationResponse = schemas.DeleteChatConversationResponse
-
-
-# Response model for get_message_requests
-GetMessageRequestsResponse = schemas.GetChatMessageRequestsResponse
-
-
-# Response model for get_conversations
-GetConversationsResponse = schemas.GetChatConversationsResponse
-
-
-# Request model for mute_conversation
-MuteConversationRequest = schemas.MuteChatConversationRequest
-
-
-# Response model for mute_conversation
-MuteConversationResponse = schemas.MuteChatConversationResponse
-
-
-# Request model for unmute_conversation
-UnmuteConversationRequest = schemas.UnmuteChatConversationRequest
-
-
-# Response model for unmute_conversation
-UnmuteConversationResponse = schemas.UnmuteChatConversationResponse
-
-
-# Response model for get_settings
-GetSettingsResponse = schemas.GetChatSettingsResponse
-
-
-# Request model for update_settings
-UpdateSettingsRequest = schemas.UpdateChatSettingsRequest
-
-
-# Response model for update_settings
-UpdateSettingsResponse = schemas.UpdateChatSettingsResponse
-
-
-# Request model for mark_conversation_read
-MarkConversationReadRequest = schemas.MarkChatConversationReadRequest
-
-
-# Response model for mark_conversation_read
-MarkConversationReadResponse = schemas.MarkChatConversationReadResponse
-
-
-# Request model for update_group_admin_settings
-UpdateGroupAdminSettingsRequest = schemas.UpdateChatGroupAdminSettingsRequest
-
-
-# Response model for update_group_admin_settings
-UpdateGroupAdminSettingsResponse = schemas.UpdateChatGroupAdminSettingsResponse
-
-
-# Request model for add_conversation_keys
-AddConversationKeysRequest = schemas.AddConversationKeysRequest
-
-
-# Response model for add_conversation_keys
-AddConversationKeysResponse = schemas.AddConversationKeysResponse
-
-
-# Response model for get_conversation_events
-GetConversationEventsResponse = schemas.GetChatConversationEventsResponse
-
-
-# Request model for update_conversation_message_ttl
-UpdateConversationMessageTtlRequest = schemas.UpdateChatConversationMessageTtlRequest
-
-
-# Response model for update_conversation_message_ttl
-UpdateConversationMessageTtlResponse = schemas.UpdateChatConversationMessageTtlResponse
-
-
-# Request model for delete_conversation_message_ttl
-DeleteConversationMessageTtlRequest = schemas.DeleteChatConversationMessageTtlRequest
-
-
-# Response model for delete_conversation_message_ttl
-DeleteConversationMessageTtlResponse = schemas.DeleteChatConversationMessageTtlResponse
+# Response model for delete_conversation_legacy
+DeleteConversationLegacyResponse = schemas.DeleteChatConversationLegacyResponse
 
 
 # Request model for update_conversation_screen_capture
@@ -155,16 +77,20 @@ UpdateConversationScreenCaptureResponse = (
 )
 
 
-# Response model for get_message_request
-GetMessageRequestResponse = schemas.GetChatMessageRequestResponse
+# Request model for send_message
+SendMessageRequest = schemas.SendChatMessageRequest
 
 
-# Request model for add_group_admins
-AddGroupAdminsRequest = schemas.AddChatGroupAdminsRequest
+# Response model for send_message
+SendMessageResponse = schemas.SendChatMessageResponse
 
 
-# Response model for add_group_admins
-AddGroupAdminsResponse = schemas.AddChatGroupAdminsResponse
+# Request model for remove_group_members
+RemoveGroupMembersRequest = schemas.RemoveChatGroupMembersRequest
+
+
+# Response model for remove_group_members
+RemoveGroupMembersResponse = schemas.RemoveChatGroupMembersResponse
 
 
 # Response model for get_group_admin_requests
@@ -179,68 +105,12 @@ CreateGroupAdminRequestRequest = schemas.CreateChatGroupAdminRequestRequest
 CreateGroupAdminRequestResponse = schemas.CreateChatGroupAdminRequestResponse
 
 
-# Request model for remove_group_members
-RemoveGroupMembersRequest = schemas.RemoveChatGroupMembersRequest
-
-
-# Response model for remove_group_members
-RemoveGroupMembersResponse = schemas.RemoveChatGroupMembersResponse
-
-
-# Response model for send_typing_indicator
-SendTypingIndicatorResponse = schemas.SendChatTypingIndicatorResponse
-
-
-# Request model for create_conversation
-CreateConversationRequest = schemas.CreateChatConversationRequest
-
-
-# Response model for create_conversation
-CreateConversationResponse = schemas.CreateChatConversationResponse
-
-
-# Response model for accept_message_request
-AcceptMessageRequestResponse = schemas.AcceptChatMessageRequestResponse
-
-
 # Request model for approve_group_admin_request
 ApproveGroupAdminRequestRequest = schemas.ApproveChatGroupAdminRequestRequest
 
 
 # Response model for approve_group_admin_request
 ApproveGroupAdminRequestResponse = schemas.ApproveChatGroupAdminRequestResponse
-
-
-# Request model for delete_messages
-DeleteMessagesRequest = schemas.DeleteChatMessagesRequest
-
-
-# Response model for delete_messages
-DeleteMessagesResponse = schemas.DeleteChatMessagesResponse
-
-
-# Request model for archive_conversation
-ArchiveConversationRequest = schemas.ArchiveChatConversationRequest
-
-
-# Response model for archive_conversation
-ArchiveConversationResponse = schemas.ArchiveChatConversationResponse
-
-
-# Request model for unarchive_conversation
-UnarchiveConversationRequest = schemas.UnarchiveChatConversationRequest
-
-
-# Response model for unarchive_conversation
-UnarchiveConversationResponse = schemas.UnarchiveChatConversationResponse
-
-
-# Request model for add_group_members
-AddGroupMembersRequest = schemas.AddChatGroupMembersRequest
-
-
-# Response model for add_group_members
-AddGroupMembersResponse = schemas.AddChatGroupMembersResponse
 
 
 # Request model for media_upload_initialize
@@ -251,44 +121,12 @@ MediaUploadInitializeRequest = schemas.ChatMediaUploadInitializeRequest
 MediaUploadInitializeResponse = schemas.ChatMediaUploadInitializeResponse
 
 
-# Request model for remove_group_admins
-RemoveGroupAdminsRequest = schemas.RemoveChatGroupAdminsRequest
+# Request model for unmute_conversation
+UnmuteConversationRequest = schemas.UnmuteChatConversationRequest
 
 
-# Response model for remove_group_admins
-RemoveGroupAdminsResponse = schemas.RemoveChatGroupAdminsResponse
-
-
-# Request model for add_user_public_key
-AddUserPublicKeyRequest = schemas.AddUserPublicKeyRequest
-
-
-# Response model for add_user_public_key
-AddUserPublicKeyResponse = schemas.AddUserPublicKeyResponse
-
-
-# Request model for reject_group_admin_request
-RejectGroupAdminRequestRequest = schemas.RejectChatGroupAdminRequestRequest
-
-
-# Response model for reject_group_admin_request
-RejectGroupAdminRequestResponse = schemas.RejectChatGroupAdminRequestResponse
-
-
-# Request model for reject_group_join_requests
-RejectGroupJoinRequestsRequest = schemas.RejectChatGroupJoinRequestsRequest
-
-
-# Response model for reject_group_join_requests
-RejectGroupJoinRequestsResponse = schemas.RejectChatGroupJoinRequestsResponse
-
-
-# Request model for enable_group_invite
-EnableGroupInviteRequest = schemas.EnableChatGroupInviteRequest
-
-
-# Response model for enable_group_invite
-EnableGroupInviteResponse = schemas.EnableChatGroupInviteResponse
+# Response model for unmute_conversation
+UnmuteConversationResponse = schemas.UnmuteChatConversationResponse
 
 
 # Request model for disable_group_invite
@@ -299,16 +137,134 @@ DisableGroupInviteRequest = schemas.DisableChatGroupInviteRequest
 DisableGroupInviteResponse = schemas.DisableChatGroupInviteResponse
 
 
+# Response model for get_conversations
+GetConversationsResponse = schemas.GetChatConversationsResponse
+
+
+# Request model for archive_conversation
+ArchiveConversationRequest = schemas.ArchiveChatConversationRequest
+
+
+# Response model for archive_conversation
+ArchiveConversationResponse = schemas.ArchiveChatConversationResponse
+
+
+# Request model for unarchive_conversation_legacy
+UnarchiveConversationLegacyRequest = schemas.UnarchiveChatConversationLegacyRequest
+
+
+# Response model for unarchive_conversation_legacy
+UnarchiveConversationLegacyResponse = schemas.UnarchiveChatConversationLegacyResponse
+
+
+# Response model for get_message_request
+GetMessageRequestResponse = schemas.GetChatMessageRequestResponse
+
+
+# Request model for mute_conversation
+MuteConversationRequest = schemas.MuteChatConversationRequest
+
+
+# Response model for mute_conversation
+MuteConversationResponse = schemas.MuteChatConversationResponse
+
+
+# Response model for mark_conversation_unread
+MarkConversationUnreadResponse = schemas.MarkChatConversationUnreadResponse
+
+
+# Response model for get_settings
+GetSettingsResponse = schemas.GetChatSettingsResponse
+
+
+# Request model for update_settings
+UpdateSettingsRequest = schemas.UpdateChatSettingsRequest
+
+
+# Response model for update_settings
+UpdateSettingsResponse = schemas.UpdateChatSettingsResponse
+
+
+# Request model for add_conversation_keys
+AddConversationKeysRequest = schemas.AddConversationKeysRequest
+
+
+# Response model for add_conversation_keys
+AddConversationKeysResponse = schemas.AddConversationKeysResponse
+
+
+# Request model for add_user_public_key
+AddUserPublicKeyRequest = schemas.AddUserPublicKeyRequest
+
+
+# Response model for add_user_public_key
+AddUserPublicKeyResponse = schemas.AddUserPublicKeyResponse
+
+
+# Request model for add_group_members
+AddGroupMembersRequest = schemas.AddChatGroupMembersRequest
+
+
+# Response model for add_group_members
+AddGroupMembersResponse = schemas.AddChatGroupMembersResponse
+
+
+# Response model for initialize_group
+InitializeGroupResponse = schemas.InitializeChatGroupResponse
+
+
 # Response model for get_group_invite
 GetGroupInviteResponse = schemas.GetChatGroupInviteResponse
 
 
-# Request model for send_message
-SendMessageRequest = schemas.SendChatMessageRequest
+# Request model for update_conversation_message_ttl
+UpdateConversationMessageTtlRequest = schemas.UpdateChatConversationMessageTtlRequest
 
 
-# Response model for send_message
-SendMessageResponse = schemas.SendChatMessageResponse
+# Response model for update_conversation_message_ttl
+UpdateConversationMessageTtlResponse = schemas.UpdateChatConversationMessageTtlResponse
+
+
+# Response model for get_conversation_pinned_messages
+GetConversationPinnedMessagesResponse = (
+    schemas.GetChatConversationPinnedMessagesResponse
+)
+
+
+# Request model for reject_group_join_requests
+RejectGroupJoinRequestsRequest = schemas.RejectChatGroupJoinRequestsRequest
+
+
+# Response model for reject_group_join_requests
+RejectGroupJoinRequestsResponse = schemas.RejectChatGroupJoinRequestsResponse
+
+
+# Request model for media_upload_finalize
+MediaUploadFinalizeRequest = schemas.ChatMediaUploadFinalizeRequest
+
+
+# Response model for media_upload_finalize
+MediaUploadFinalizeResponse = schemas.ChatMediaUploadFinalizeResponse
+
+
+# Request model for delete_messages
+DeleteMessagesRequest = schemas.DeleteChatMessagesRequest
+
+
+# Response model for delete_messages
+DeleteMessagesResponse = schemas.DeleteChatMessagesResponse
+
+
+# Request model for unarchive_conversation
+UnarchiveConversationRequest = schemas.UnarchiveChatConversationRequest
+
+
+# Response model for unarchive_conversation
+UnarchiveConversationResponse = schemas.UnarchiveChatConversationResponse
+
+
+# Response model for get_conversation_events
+GetConversationEventsResponse = schemas.GetChatConversationEventsResponse
 
 
 # Request model for create_group_join_request
@@ -319,5 +275,65 @@ CreateGroupJoinRequestRequest = schemas.CreateChatGroupJoinRequestRequest
 CreateGroupJoinRequestResponse = schemas.CreateChatGroupJoinRequestResponse
 
 
-# Response model for mark_conversation_unread
-MarkConversationUnreadResponse = schemas.MarkChatConversationUnreadResponse
+# Response model for get_message_requests
+GetMessageRequestsResponse = schemas.GetChatMessageRequestsResponse
+
+
+# Request model for remove_group_admins
+RemoveGroupAdminsRequest = schemas.RemoveChatGroupAdminsRequest
+
+
+# Response model for remove_group_admins
+RemoveGroupAdminsResponse = schemas.RemoveChatGroupAdminsResponse
+
+
+# Request model for update_group_admin_settings
+UpdateGroupAdminSettingsRequest = schemas.UpdateChatGroupAdminSettingsRequest
+
+
+# Response model for update_group_admin_settings
+UpdateGroupAdminSettingsResponse = schemas.UpdateChatGroupAdminSettingsResponse
+
+
+# Request model for media_upload_append
+MediaUploadAppendRequest = schemas.ChatMediaUploadAppendRequest
+
+
+# Response model for media_upload_append
+MediaUploadAppendResponse = schemas.ChatMediaUploadAppendResponse
+
+
+# Request model for reject_group_admin_request
+RejectGroupAdminRequestRequest = schemas.RejectChatGroupAdminRequestRequest
+
+
+# Response model for reject_group_admin_request
+RejectGroupAdminRequestResponse = schemas.RejectChatGroupAdminRequestResponse
+
+
+# Request model for delete_conversation
+DeleteConversationRequest = schemas.DeleteChatConversationRequest
+
+
+# Response model for delete_conversation
+DeleteConversationResponse = schemas.DeleteChatConversationResponse
+
+
+# Response model for send_typing_indicator
+SendTypingIndicatorResponse = schemas.SendChatTypingIndicatorResponse
+
+
+# Request model for enable_group_invite
+EnableGroupInviteRequest = schemas.EnableChatGroupInviteRequest
+
+
+# Response model for enable_group_invite
+EnableGroupInviteResponse = schemas.EnableChatGroupInviteResponse
+
+
+# Request model for create_conversation
+CreateConversationRequest = schemas.CreateChatConversationRequest
+
+
+# Response model for create_conversation
+CreateConversationResponse = schemas.CreateChatConversationResponse

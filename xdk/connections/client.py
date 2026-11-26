@@ -24,11 +24,11 @@ from .. import schemas
 if TYPE_CHECKING:
     from ..client import Client
 from .models import (
-    DeleteAllResponse,
+    DeleteByEndpointResponse,
     GetConnectionHistoryResponse,
     DeleteByUuidsRequest,
     DeleteByUuidsResponse,
-    DeleteByEndpointResponse,
+    DeleteAllResponse,
 )
 
 
@@ -40,16 +40,37 @@ class ConnectionsClient:
         self.client = client
 
 
-    def delete_all(
+    def delete_by_endpoint(
         self,
-    ) -> DeleteAllResponse:
+        endpoint_id: Literal[
+            "filtered_stream",
+            "sample_stream",
+            "sample10_stream",
+            "firehose_stream",
+            "tweets_compliance_stream",
+            "users_compliance_stream",
+            "tweet_label_stream",
+            "firehose_stream_lang_en",
+            "firehose_stream_lang_ja",
+            "firehose_stream_lang_ko",
+            "firehose_stream_lang_pt",
+            "likes_firehose_stream",
+            "likes_sample10_stream",
+            "likes_compliance_stream",
+        ],
+    ) -> DeleteByEndpointResponse:
         """
-        Terminate All Connections
-        Terminates all active streaming connections for the authenticated application.
-        Returns:
-            DeleteAllResponse: Response data
+        Terminate Connections by Endpoint
+        Terminates all streaming connections for a specific endpoint ID for the authenticated application.
+        Args:
+            endpoint_id: endpoint_id
+            Returns:
+            DeleteByEndpointResponse: Response data
         """
-        url = self.client.base_url + "/2/connections/all"
+        url = self.client.base_url + "/2/connections/{endpoint_id}"
+        url = url.replace(
+            "{endpoint_id}", urllib.parse.quote(str(endpoint_id), safe="")
+        )
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
@@ -150,7 +171,7 @@ class ConnectionsClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteAllResponse.model_validate(response_data)
+        return DeleteByEndpointResponse.model_validate(response_data)
 
 
     def get_connection_history(
@@ -526,37 +547,16 @@ class ConnectionsClient:
         return DeleteByUuidsResponse.model_validate(response_data)
 
 
-    def delete_by_endpoint(
+    def delete_all(
         self,
-        endpoint_id: Literal[
-            "filtered_stream",
-            "sample_stream",
-            "sample10_stream",
-            "firehose_stream",
-            "tweets_compliance_stream",
-            "users_compliance_stream",
-            "tweet_label_stream",
-            "firehose_stream_lang_en",
-            "firehose_stream_lang_ja",
-            "firehose_stream_lang_ko",
-            "firehose_stream_lang_pt",
-            "likes_firehose_stream",
-            "likes_sample10_stream",
-            "likes_compliance_stream",
-        ],
-    ) -> DeleteByEndpointResponse:
+    ) -> DeleteAllResponse:
         """
-        Terminate Connections by Endpoint
-        Terminates all streaming connections for a specific endpoint ID for the authenticated application.
-        Args:
-            endpoint_id: endpoint_id
-            Returns:
-            DeleteByEndpointResponse: Response data
+        Terminate All Connections
+        Terminates all active streaming connections for the authenticated application.
+        Returns:
+            DeleteAllResponse: Response data
         """
-        url = self.client.base_url + "/2/connections/{endpoint_id}"
-        url = url.replace(
-            "{endpoint_id}", urllib.parse.quote(str(endpoint_id), safe="")
-        )
+        url = self.client.base_url + "/2/connections/all"
         # Per-request authentication headers are built dynamically below without mutating session.headers
         params = {}
         headers = {}
@@ -657,4 +657,4 @@ class ConnectionsClient:
         # Parse the response data
         response_data = response.json()
         # Convert to Pydantic model if applicable
-        return DeleteByEndpointResponse.model_validate(response_data)
+        return DeleteAllResponse.model_validate(response_data)

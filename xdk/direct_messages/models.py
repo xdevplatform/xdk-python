@@ -17,12 +17,12 @@ from pydantic import BaseModel, Field, ConfigDict, RootModel
 
 from .. import schemas
 
-# Response model for get_events_by_id
-GetEventsByIdResponse = schemas.GetDirectMessagesEventsByIdResponse
+# Request model for create_by_participant_id
+CreateByParticipantIdRequest = schemas.CreateDirectMessagesByParticipantIdRequest
 
 
-# Response model for delete_events
-DeleteEventsResponse = schemas.DeleteDirectMessagesEventsResponse
+# Response model for create_by_participant_id
+CreateByParticipantIdResponse = schemas.CreateDirectMessagesByParticipantIdResponse
 
 
 # Request model for create_by_conversation_id
@@ -33,12 +33,6 @@ CreateByConversationIdRequest = schemas.CreateDirectMessagesByConversationIdRequ
 CreateByConversationIdResponse = schemas.CreateDirectMessagesByConversationIdResponse
 
 
-# Response model for get_events_by_conversation_id
-GetEventsByConversationIdResponse = (
-    schemas.GetDirectMessagesEventsByConversationIdResponse
-)
-
-
 # Request model for create_conversation
 CreateConversationRequest = schemas.CreateDirectMessagesConversationRequest
 
@@ -47,19 +41,25 @@ CreateConversationRequest = schemas.CreateDirectMessagesConversationRequest
 CreateConversationResponse = schemas.CreateDirectMessagesConversationResponse
 
 
-# Response model for get_events
-GetEventsResponse = schemas.GetDirectMessagesEventsResponse
+# Response model for get_events_by_id
+GetEventsByIdResponse = schemas.GetDirectMessagesEventsByIdResponse
 
 
-# Request model for create_by_participant_id
-CreateByParticipantIdRequest = schemas.CreateDirectMessagesByParticipantIdRequest
+# Response model for delete_events
+DeleteEventsResponse = schemas.DeleteDirectMessagesEventsResponse
 
 
-# Response model for create_by_participant_id
-CreateByParticipantIdResponse = schemas.CreateDirectMessagesByParticipantIdResponse
+# Response model for get_events_by_conversation_id
+GetEventsByConversationIdResponse = (
+    schemas.GetDirectMessagesEventsByConversationIdResponse
+)
 
 
 # Response model for get_events_by_participant_id
 GetEventsByParticipantIdResponse = (
     schemas.GetDirectMessagesEventsByParticipantIdResponse
 )
+
+
+# Response model for get_events
+GetEventsResponse = schemas.GetDirectMessagesEventsResponse
